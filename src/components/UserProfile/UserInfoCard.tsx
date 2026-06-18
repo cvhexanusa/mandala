@@ -4,176 +4,180 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 
-export default function UserInfoCard() {
+interface Pegawai {
+  pegawai_id: string;
+  cadisdik_id: string;
+  nama_lengkap: string;
+  nip: string;
+  nik?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string;
+  alamat_lengkap?: string;
+  email: string;
+  jabatan: number;
+  jenis_kelamin: number;
+  nomor_telepon: string | null;
+  foto: string | null;
+  aktif: boolean;
+}
+
+interface UserInfoCardProps {
+  pegawaiData: Pegawai | null;
+}
+
+export default function UserInfoCard({ pegawaiData }: UserInfoCardProps) {
   const { isOpen, openModal, closeModal } = useModal();
   const handleSave = () => {
     // Handle save logic here
     console.log("Saving changes...");
     closeModal();
   };
+
+  if (!pegawaiData) return null;
+
+  // Format date if available
+  const formatDate = (dateString?: string) => {
+    if (!dateString || dateString === "-") return "-";
+    try {
+      const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+      return new Date(dateString).toLocaleDateString('id-ID', options);
+    } catch {
+      return dateString;
+    }
+  };
+
   return (
-    <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
-            Personal Information
+    <div className="p-6 border border-gray-200 rounded-2xl bg-white shadow-sm dark:border-gray-800 dark:bg-white/[0.03] lg:p-7 relative overflow-hidden">
+      {/* Subtle Background Decoration */}
+      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-brand-50 rounded-full opacity-50 dark:bg-brand-500/10 blur-2xl pointer-events-none"></div>
+      
+      <div className="flex flex-col gap-6 relative z-10">
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="text-xl font-bold text-gray-800 dark:text-white/90 flex items-center gap-2">
+            <svg className="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Informasi Pribadi
           </h4>
+          <button 
+            onClick={openModal}
+            className="text-sm font-medium text-brand-500 hover:text-brand-600 transition-colors flex items-center gap-1 bg-brand-50 px-3 py-1.5 rounded-lg dark:bg-brand-500/10 dark:hover:bg-brand-500/20"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            Lengkapi
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
+        <div className="grid grid-cols-1 gap-y-6 gap-x-8 md:grid-cols-2">
+          {/* NIK */}
+          <div className="flex items-start gap-3.5 group">
+            <div className="p-2.5 bg-gray-50 rounded-xl group-hover:bg-brand-50 dark:bg-white/5 dark:group-hover:bg-brand-500/10 transition-colors">
+              <svg className="w-5 h-5 text-gray-500 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+              </svg>
+            </div>
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                First Name
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Musharof
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">NIK Kependudukan</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white/90 font-mono tracking-wide">{pegawaiData.nik || <span className="text-error-400 italic font-sans text-xs">Belum diisi</span>}</p>
+            </div>
+          </div>
+
+          {/* Tempat & Tanggal Lahir */}
+          <div className="flex items-start gap-3.5 group">
+            <div className="p-2.5 bg-gray-50 rounded-xl group-hover:bg-brand-50 dark:bg-white/5 dark:group-hover:bg-brand-500/10 transition-colors">
+              <svg className="w-5 h-5 text-gray-500 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Tempat, Tanggal Lahir</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                {pegawaiData.tempat_lahir || "-"}, {formatDate(pegawaiData.tanggal_lahir)}
               </p>
             </div>
+          </div>
 
+          {/* Jenis Kelamin */}
+          <div className="flex items-start gap-3.5 group">
+            <div className="p-2.5 bg-gray-50 rounded-xl group-hover:bg-brand-50 dark:bg-white/5 dark:group-hover:bg-brand-500/10 transition-colors">
+              <svg className="w-5 h-5 text-gray-500 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Last Name
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Chowdhury
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Jenis Kelamin</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                {pegawaiData.jenis_kelamin === 0 ? "Laki-laki" : "Perempuan"}
               </p>
             </div>
+          </div>
 
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Email address
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                randomuser@pimjo.com
-              </p>
+          {/* Alamat */}
+          <div className="flex items-start gap-3.5 group md:col-span-2">
+            <div className="p-2.5 bg-gray-50 rounded-xl group-hover:bg-brand-50 dark:bg-white/5 dark:group-hover:bg-brand-500/10 transition-colors">
+              <svg className="w-5 h-5 text-gray-500 group-hover:text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
             </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Phone
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                +09 363 398 46
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Bio
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Team Manager
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Alamat Lengkap</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90 leading-relaxed">
+                {pegawaiData.alamat_lengkap && pegawaiData.alamat_lengkap !== "-" 
+                  ? pegawaiData.alamat_lengkap 
+                  : <span className="text-error-400 italic text-xs">Alamat belum dilengkapi. Silakan lengkapi profil Anda.</span>}
               </p>
             </div>
           </div>
         </div>
-
-        <button
-          onClick={openModal}
-          className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
-        >
-          <svg
-            className="fill-current"
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M15.0911 2.78206C14.2125 1.90338 12.7878 1.90338 11.9092 2.78206L4.57524 10.116C4.26682 10.4244 4.0547 10.8158 3.96468 11.2426L3.31231 14.3352C3.25997 14.5833 3.33653 14.841 3.51583 15.0203C3.69512 15.1996 3.95286 15.2761 4.20096 15.2238L7.29355 14.5714C7.72031 14.4814 8.11172 14.2693 8.42013 13.9609L15.7541 6.62695C16.6327 5.74827 16.6327 4.32365 15.7541 3.44497L15.0911 2.78206ZM12.9698 3.84272C13.2627 3.54982 13.7376 3.54982 14.0305 3.84272L14.6934 4.50563C14.9863 4.79852 14.9863 5.2734 14.6934 5.56629L14.044 6.21573L12.3204 4.49215L12.9698 3.84272ZM11.2597 5.55281L5.6359 11.1766C5.53309 11.2794 5.46238 11.4099 5.43238 11.5522L5.01758 13.5185L6.98394 13.1037C7.1262 13.0737 7.25666 13.003 7.35947 12.9002L12.9833 7.27639L11.2597 5.55281Z"
-              fill=""
-            />
-          </svg>
-          Edit
-        </button>
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Personal Information
+            <h4 className="mb-2 text-2xl font-bold text-gray-800 dark:text-white/90">
+              Lengkapi Informasi Pribadi
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Update your details to keep your profile up-to-date.
+              Lengkapi data NIK, Tempat/Tanggal Lahir, dan Alamat Anda.
             </p>
           </div>
           <form className="flex flex-col">
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
-                </h5>
-
+              <div className="mt-2">
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input
-                      type="text"
-                      value="https://www.facebook.com/PimjoHQ"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>X.com</Label>
-                    <Input type="text" value="https://x.com/PimjoHQ" />
-                  </div>
-
-                  <div>
-                    <Label>Linkedin</Label>
-                    <Input
-                      type="text"
-                      value="https://www.linkedin.com/company/pimjo"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input type="text" value="https://instagram.com/PimjoHQ" />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Personal Information
-                </h5>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name</Label>
-                    <Input type="text" value="Musharof" />
+                  <div className="col-span-2">
+                    <Label>Nomor Induk Kependudukan (NIK)</Label>
+                    <Input type="text" value={pegawaiData.nik || ""} placeholder="16 Digit NIK" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name</Label>
-                    <Input type="text" value="Chowdhury" />
+                    <Label>Tempat Lahir</Label>
+                    <Input type="text" value={pegawaiData.tempat_lahir || ""} placeholder="Contoh: Bandung" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Email Address</Label>
-                    <Input type="text" value="randomuser@pimjo.com" />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Phone</Label>
-                    <Input type="text" value="+09 363 398 46" />
+                    <Label>Tanggal Lahir</Label>
+                    <Input type="date" value={pegawaiData.tanggal_lahir || ""} />
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Bio</Label>
-                    <Input type="text" value="Team Manager" />
+                    <Label>Alamat Lengkap</Label>
+                    <textarea 
+                      className="w-full rounded-xl border border-gray-300 bg-transparent px-4 py-3 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-500"
+                      rows={3}
+                      placeholder="Jalan, RT/RW, Desa/Kelurahan..."
+                      value={pegawaiData.alamat_lengkap || ""}
+                    ></textarea>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
-                Close
+            <div className="flex items-center gap-3 px-2 mt-6 justify-end">
+              <Button size="sm" variant="outline" onClick={closeModal} className="rounded-xl">
+                Batal
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save Changes
+              <Button size="sm" onClick={handleSave} className="rounded-xl shadow-lg shadow-brand-500/20">
+                Simpan Data
               </Button>
             </div>
           </form>

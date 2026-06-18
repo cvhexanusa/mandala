@@ -9,29 +9,62 @@ import {
 import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import { dapodikService } from "../../services/dapodikService";
+import { EyeIcon } from "../../icons";
 
 interface PDKeluarTableProps {
-  onSelectionChange: (selectedIds: string[]) => void;
+  onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
+  onDetail?: (item: any) => void;
   searchTerm: string;
   itemsPerPage: number;
+  sekolahId?: string;
 }
 
-export default function PDKeluarTable({ onSelectionChange, searchTerm, itemsPerPage }: PDKeluarTableProps) {
+export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm, itemsPerPage, sekolahId }: PDKeluarTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const result = await dapodikService.getPesertaDidik(itemsPerPage, searchTerm, currentPage, undefined, 'non-aktif');
-        if (result.status === 'success') {
-          setData(result.data || []);
-          setTotal(result.meta?.total || 0);
+        const result = await dapodikService.getPesertaDidik(
+          itemsPerPage, 
+          searchTerm, 
+          currentPage, 
+          undefined, 
+          'non-aktif',
+          undefined,
+          sekolahId === 'all' ? undefined : sekolahId
+        );
+
+        console.log("API Response PD Keluar:", result);
+
+        let fetchedData = [];
+        let totalCount = 0;
+
+        if (result.status === 'success' || result.success === true) {
+          fetchedData = result.data || [];
+          totalCount = result.meta?.total || result.total || fetchedData.length;
+        } else if (Array.isArray(result)) {
+          fetchedData = result;
+          totalCount = result.length;
+        } else if (result.data && Array.isArray(result.data)) {
+          fetchedData = result.data;
+          totalCount = result.total || fetchedData.length;
         }
+
+        setData(fetchedData);
+        setTotal(totalCount);
       } catch (error) {
         console.error("Gagal mengambil data PD keluar:", error);
       } finally {
@@ -39,34 +72,50 @@ export default function PDKeluarTable({ onSelectionChange, searchTerm, itemsPerP
       }
     };
     fetchData();
-  }, [itemsPerPage, searchTerm, currentPage]);
+  }, [itemsPerPage, searchTerm, currentPage, sekolahId]);
 
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
 
   const handleSelectAll = (checked: boolean) => {
-    let newSelected: string[];
     if (checked) {
-      newSelected = [...new Set([...selectedRows, ...data.map((item) => item.peserta_didik_id)])];
+      const allIds = data.map((item) => item.identitas?.id);
+      const newSelectedIds = [...new Set([...selectedRows, ...allIds])];
+      const newSelectedObjects = [...selectedObjects];
+      data.forEach(item => {
+        if (!selectedRows.includes(item.identitas?.id)) {
+            newSelectedObjects.push(item);
+        }
+      });
+      setSelectedRows(newSelectedIds);
+      setSelectedObjects(newSelectedObjects);
+      onSelectionChange(newSelectedIds, newSelectedObjects);
     } else {
-      const currentIds = data.map((item) => item.peserta_didik_id);
-      newSelected = selectedRows.filter((id) => !currentIds.includes(id));
+      const currentIds = data.map((item) => item.identitas?.id);
+      const newSelectedIds = selectedRows.filter((id) => !currentIds.includes(id));
+      const newSelectedObjects = selectedObjects.filter((obj) => !currentIds.includes(obj.identitas?.id));
+      setSelectedRows(newSelectedIds);
+      setSelectedObjects(newSelectedObjects);
+      onSelectionChange(newSelectedIds, newSelectedObjects);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange(newSelected);
   };
 
-  const handleSelectRow = (id: string, checked: boolean) => {
-    let newSelected: string[];
+  const handleSelectRow = (item: any, checked: boolean) => {
+    const id = item.identitas?.id;
+    let newIds: string[];
+    let newObjects: any[];
     if (checked) {
-      newSelected = [...selectedRows, id];
+      newIds = [...selectedRows, id];
+      newObjects = [...selectedObjects, item];
     } else {
-      newSelected = selectedRows.filter((rowId) => rowId !== id);
+      newIds = selectedRows.filter((rowId) => rowId !== id);
+      newObjects = selectedObjects.filter((obj) => obj.identitas?.id !== id);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange(newSelected);
+    setSelectedRows(newIds);
+    setSelectedObjects(newObjects);
+    onSelectionChange(newIds, newObjects);
   };
 
-  const isAllSelected = data.length > 0 && data.every((item) => selectedRows.includes(item.peserta_didik_id));
+  const isAllSelected = data.length > 0 && data.every((item) => selectedRows.includes(item.identitas?.id));
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -90,42 +139,47 @@ export default function PDKeluarTable({ onSelectionChange, searchTerm, itemsPerP
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NISN</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tempat Lahir</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tanggal Lahir</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Terdaftar Sebagai</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Keluar Karena</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Alasan Keluar</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tingkat</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Rombel</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tgl Keluar</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {data.length > 0 ? (
               data.map((item) => (
-                <TableRow key={item.peserta_didik_id} className={`${selectedRows.includes(item.peserta_didik_id) ? "bg-gray-50 dark:bg-white/[0.02]" : ""}`}>
+                <TableRow key={item.identitas?.id} className={`${selectedRows.includes(item.identitas?.id) ? "bg-gray-50 dark:bg-white/[0.02]" : ""}`}>
                   <TableCell className="px-5 py-4 text-start">
                     <Checkbox
-                      checked={selectedRows.includes(item.peserta_didik_id)}
-                      onChange={(checked) => handleSelectRow(item.peserta_didik_id, checked)}
+                      checked={selectedRows.includes(item.identitas?.id)}
+                      onChange={(checked) => handleSelectRow(item, checked)}
                     />
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90 whitespace-nowrap">{item.nama}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_kelamin}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.nisn || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.tempat_lahir || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90 whitespace-nowrap">{item.identitas?.nama}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 text-center">{item.identitas?.jenis_kelamin}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.nisn || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.tempat_lahir || "-"}</TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : "-"}
+                    {item.identitas?.tanggal_lahir ? new Date(item.identitas?.tanggal_lahir).toLocaleDateString('id-ID') : "-"}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_pendaftaran_id_str || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_keluar_id || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 min-w-[200px]">{item.ket_keluar || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {item.tanggal_keluar ? new Date(item.tanggal_keluar).toLocaleDateString('id-ID') : "-"}
-                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 text-center">{item.akademik?.tingkat || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 whitespace-nowrap">{item.akademik?.nama_rombel || "-"}</TableCell>
                   <TableCell className="px-5 py-4 text-start">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-orange-600 border border-orange-500 hover:bg-orange-50 transition-colors">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Batal
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                      Non-Aktif
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {item.updated_at ? new Date(item.updated_at).toLocaleDateString('id-ID') : "-"}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-right">
+                    <button 
+                      onClick={() => onDetail?.(item)}
+                      className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
+                      title="Lihat Detail"
+                    >
+                      <EyeIcon className="size-5" />
                     </button>
                   </TableCell>
                 </TableRow>

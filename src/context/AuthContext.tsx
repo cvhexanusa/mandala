@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { dapodikService } from '../services/dapodikService';
 
 interface User {
   id: string;
   nama: string;
   email: string;
   role: string;
+  nip?: string;
+  foto?: string;
 }
 
 interface LoginResult {
@@ -30,28 +33,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MOCK_USER: User = {
+  id: '1',
+  nama: 'Abdul Gani, S.Ag.',
+  email: 'abdulgani@email.com',
+  role: 'Super Admin'
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const savedUser = localStorage.getItem('user_data');
-      const token = localStorage.getItem('auth_token');
-      
-      if (savedUser && token) {
-        try {
-          setUser(JSON.parse(savedUser));
-        } catch (err) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          setUser(null);
-        }
+    // Memeriksa localStorage untuk sesi yang tersimpan
+    const savedUser = localStorage.getItem('user_data');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error("Gagal membaca data user dari storage:", error);
       }
-      setLoading(false);
-    };
-
-    checkAuth();
+    }
+    setLoading(false);
   }, []);
 
   const setAuthData = (userData: User) => {
@@ -59,28 +62,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (username: string, password: string): Promise<LoginResult> => {
-    const response = await api.post('/auth/login', { username, password });
-    return response.data;
+    // Mock login success
+    const result = {
+      requires2FA: false,
+      accessToken: 'mock_token',
+      user: MOCK_USER
+    };
+    setUser(MOCK_USER);
+    return result;
   };
 
   const verify2FA = async (tempToken: string, code: string, secret?: string) => {
-    const response = await api.post('/auth/verify-2fa', { tempToken, code, secret });
-    const { accessToken, user: userData } = response.data;
-    
-    localStorage.setItem('auth_token', accessToken);
-    localStorage.setItem('user_data', JSON.stringify(userData));
-    setUser(userData);
+    setUser(MOCK_USER);
   };
 
   const logout = async () => {
-    try {
-      await api.post('/auth/logout');
-    } finally {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
-      setUser(null);
-      window.location.href = '/signin';
-    }
+    setUser(null);
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_data");
   };
 
   return (

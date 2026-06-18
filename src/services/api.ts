@@ -14,14 +14,23 @@ const api = axios.create({
 // Interceptor untuk menangani token keamanan (misal JWT)
 api.interceptors.request.use(
   (config) => {
-    // Token Auth (User Login)
+    // Token Auth (User Login) - Masih dipertahankan jika ada
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // API Key (Backend Connection) - SEKARANG MENGGUNAKAN DOMAIN-BASED (BACKEND OTOMATIS DETEKSI)
-    // Tidak perlu lagi mengambil dari localStorage untuk setiap request
+    // API Key (Mandala Integration)
+    // Sesuai strategi: Setiap request WAJIB menyertakan x-mandala-key
+    // Mengambil dari .env (VITE_MANDALA_KEY)
+    const mandalaKey = import.meta.env.VITE_MANDALA_KEY || '';
+    
+    if (mandalaKey) {
+      config.headers['x-mandala-key'] = mandalaKey;
+      
+      // Jika request ke endpoint mandala, kita pastikan key terkirim di header
+      // dan tidak perlu mencemari query params jika tidak diperlukan
+    }
 
     return config;
   },
@@ -52,47 +61,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Jika error 401 dan bukan sedang mencoba refresh
-    // JANGAN mencoba refresh jika error terjadi pada endpoint login
-    if (
-      error.response?.status === 401 && 
-      !originalRequest._retry && 
-      !originalRequest.url?.includes('/auth/login')
-    ) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers['Authorization'] = 'Bearer ' + token;
-          return api(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const response = await axios.post(`${api.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true });
-        const { accessToken } = response.data;
-
-        localStorage.setItem('auth_token', accessToken);
-        api.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
-        originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
-
-        processQueue(null, accessToken);
-        return api(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        // Jika refresh gagal, arahkan ke login
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        window.location.href = '/signin';
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
+    // Untuk sementara, kita bypass redirect login jika unauthorized
+    // agar tidak mengganggu integrasi Mandala
+    if (error.response?.status === 401) {
+       console.error('Unauthorized request:', originalRequest.url);
     }
 
     return Promise.reject(error);

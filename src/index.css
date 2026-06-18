@@ -841,3 +841,117 @@ span.flatpickr-weekday,
 .print-only {
   display: none;
 }
+
+/* Custom Leaflet Map Pin Styles */
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  position: relative;
+}
+
+.pin-pulse {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  bottom: 0px;
+}
+
+.pin-svg {
+  filter: drop-shadow(0px 3px 6px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease-in-out, filter 0.2s ease-in-out;
+}
+
+.custom-pin:hover .pin-svg {
+  transform: scale(1.15) translateY(-2px);
+}
+
+/* Custom Pin Colors */
+/* SMA: Blue */
+.custom-pin.pin-sma .pin-svg {
+  color: #3b82f6; /* blue-500 */
+}
+.custom-pin.pin-sma .pin-pulse {
+  background: rgba(59, 130, 246, 0.45);
+}
+.custom-pin.pin-sma:hover .pin-svg {
+  color: #2563eb; /* blue-600 */
+  filter: drop-shadow(0px 6px 10px rgba(59, 130, 246, 0.6));
+}
+
+/* SMK: Red */
+.custom-pin.pin-smk .pin-svg {
+  color: #ef4444; /* red-500 */
+}
+.custom-pin.pin-smk .pin-pulse {
+  background: rgba(239, 68, 68, 0.45);
+}
+.custom-pin.pin-smk:hover .pin-svg {
+  color: #dc2626; /* red-600 */
+  filter: drop-shadow(0px 6px 10px rgba(239, 68, 68, 0.6));
+}
+
+/* SLB: Purple */
+.custom-pin.pin-slb .pin-svg {
+  color: #a855f7; /* purple-500 */
+}
+.custom-pin.pin-slb .pin-pulse {
+  background: rgba(168, 85, 247, 0.45);
+}
+.custom-pin.pin-slb:hover .pin-svg {
+  color: #9333ea; /* purple-600 */
+  filter: drop-shadow(0px 6px 10px rgba(168, 85, 247, 0.6));
+}
+
+/* Others: Emerald/Green */
+.custom-pin.pin-others .pin-svg {
+  color: #10b981; /* emerald-500 */
+}
+.custom-pin.pin-others .pin-pulse {
+  background: rgba(16, 185, 129, 0.45);
+}
+.custom-pin.pin-others:hover .pin-svg {
+  color: #059669; /* emerald-600 */
+  filter: drop-shadow(0px 6px 10px rgba(16, 185, 129, 0.6));
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  80%, 100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Fullscreen Map Styles */
+.map-fullscreen-wrapper {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  background-color: #f9fafb;
+}
+
+.dark .map-fullscreen-wrapper {
+  background-color: #101828;
+}
+
+
+
+

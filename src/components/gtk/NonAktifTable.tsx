@@ -11,64 +11,60 @@ import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { EyeIcon } from "../../icons";
 
 interface NonAktifTableProps {
-  onSelectionChange: (selectedIds: string[]) => void;
+  onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
+  onDetail?: (item: any) => void;
   searchTerm: string;
   completenessFilter: string;
   itemsPerPage: number;
+  sekolahId?: string;
 }
 
-export default function NonAktifTable({ onSelectionChange, searchTerm, completenessFilter, itemsPerPage }: NonAktifTableProps) {
+export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm, completenessFilter: _completenessFilter, itemsPerPage, sekolahId }: NonAktifTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
 
-  const calculateCompleteness = (item: any) => {
-    const fields = [
-      'nama', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 
-      'nuptk', 'nik', 'no_kk', 'alamat_jalan', 'no_hp', 'email',
-      'sk_pengangkatan', 'tmt_pengangkatan', 'sumber_gaji', 'pendidikan_terakhir'
-    ];
-    let filled = 0;
-    fields.forEach(f => {
-      if (item[f] && item[f] !== '-' && item[f] !== '') {
-        filled++;
-      }
-    });
-    return Math.round((filled / fields.length) * 100);
-  };
+  useEffect(() => {
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const result = await dapodikService.getGTK(itemsPerPage, searchTerm, currentPage, undefined, 'non-aktif');
-        if (result.status === 'success') {
-          let fetchedData = result.data || [];
-          
-          // Add calculated completeness to each item
-          fetchedData = fetchedData.map((item: any) => ({
-            ...item,
-            lengkapData: calculateCompleteness(item)
-          }));
+        const result = await dapodikService.getGTK(
+          itemsPerPage, 
+          searchTerm, 
+          currentPage, 
+          undefined, 
+          'non-aktif',
+          sekolahId === 'all' ? undefined : sekolahId
+        );
+        
+        let fetchedData = [];
+        let totalCount = 0;
 
-          // Filter by completeness if filter is active
-          if (completenessFilter !== "all") {
-            if (completenessFilter === "100") {
-              fetchedData = fetchedData.filter((item: any) => item.lengkapData === 100);
-            } else if (completenessFilter === "99") {
-              fetchedData = fetchedData.filter((item: any) => item.lengkapData < 100);
-            } else if (completenessFilter === "50") {
-              fetchedData = fetchedData.filter((item: any) => item.lengkapData < 50);
-            }
-          }
-
-          setData(fetchedData);
-          setTotal(result.meta?.total || 0);
+        if (result && (result.status === 'success' || result.success === true)) {
+          fetchedData = result.data || [];
+          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
+        } else if (Array.isArray(result)) {
+          fetchedData = result;
+          totalCount = result.length;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          fetchedData = result.data;
+          totalCount = result.meta?.total_data || result.total || fetchedData.length;
         }
+
+        setData(fetchedData);
+        setTotal(totalCount);
       } catch (error) {
         console.error("Gagal mengambil data GTK non-aktif:", error);
       } finally {
@@ -76,34 +72,50 @@ export default function NonAktifTable({ onSelectionChange, searchTerm, completen
       }
     };
     fetchData();
-  }, [itemsPerPage, searchTerm, currentPage, completenessFilter]);
+  }, [itemsPerPage, searchTerm, currentPage, sekolahId]);
 
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
 
   const handleSelectAll = (checked: boolean) => {
-    let newSelected: string[];
     if (checked) {
-      newSelected = [...new Set([...selectedRows, ...data.map((item) => item.ptk_id)])];
+      const allIds = data.map((item) => item.identitas?.id);
+      const newSelectedIds = [...new Set([...selectedRows, ...allIds])];
+      const newSelectedObjects = [...selectedObjects];
+      data.forEach(item => {
+        if (!selectedRows.includes(item.identitas?.id)) {
+            newSelectedObjects.push(item);
+        }
+      });
+      setSelectedRows(newSelectedIds);
+      setSelectedObjects(newSelectedObjects);
+      onSelectionChange(newSelectedIds, newSelectedObjects);
     } else {
-      const currentIds = data.map((item) => item.ptk_id);
-      newSelected = selectedRows.filter((id) => !currentIds.includes(id));
+      const currentIds = data.map((item) => item.identitas?.id);
+      const newSelectedIds = selectedRows.filter((id) => !currentIds.includes(id));
+      const newSelectedObjects = selectedObjects.filter((obj) => !currentIds.includes(obj.identitas?.id));
+      setSelectedRows(newSelectedIds);
+      setSelectedObjects(newSelectedObjects);
+      onSelectionChange(newSelectedIds, newSelectedObjects);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange(newSelected);
   };
 
-  const handleSelectRow = (id: string, checked: boolean) => {
-    let newSelected: string[];
+  const handleSelectRow = (item: any, checked: boolean) => {
+    const id = item.identitas?.id;
+    let newIds: string[];
+    let newObjects: any[];
     if (checked) {
-      newSelected = [...selectedRows, id];
+      newIds = [...selectedRows, id];
+      newObjects = [...selectedObjects, item];
     } else {
-      newSelected = selectedRows.filter((rowId) => rowId !== id);
+      newIds = selectedRows.filter((rowId) => rowId !== id);
+      newObjects = selectedObjects.filter((obj) => obj.identitas?.id !== id);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange(newSelected);
+    setSelectedRows(newIds);
+    setSelectedObjects(newObjects);
+    onSelectionChange(newIds, newObjects);
   };
 
-  const isAllSelected = data.length > 0 && data.every((item) => selectedRows.includes(item.ptk_id));
+  const isAllSelected = data.length > 0 && data.every((item) => selectedRows.includes(item.identitas?.id));
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -122,93 +134,70 @@ export default function NonAktifTable({ onSelectionChange, searchTerm, completen
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Induk</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Lengkap Data</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tempat Lahir</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tanggal Lahir</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Ibu Kandung</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status Kepegawaian</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jenis GTK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jabatan GTK</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tempat Lahir</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tanggal Lahir</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Alamat</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NUPTK</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tgl Surat Tugas</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NIP</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Alasan</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tgl Keluar</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {data.length > 0 ? (
               data.map((item) => (
-                <TableRow key={item.ptk_id} className={`${selectedRows.includes(item.ptk_id) ? "bg-gray-50 dark:bg-white/[0.02]" : ""}`}>
+                <TableRow key={item.identitas?.id} className={`${selectedRows.includes(item.identitas?.id) ? "bg-gray-50 dark:bg-white/[0.02]" : ""}`}>
                   <TableCell className="px-5 py-4 text-start">
                     <Checkbox
-                      checked={selectedRows.includes(item.ptk_id)}
-                      onChange={(checked) => handleSelectRow(item.ptk_id, checked)}
+                      checked={selectedRows.includes(item.identitas?.id)}
+                      onChange={(checked) => handleSelectRow(item, checked)}
                     />
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-start">
-                    <Badge size="sm" color={item.ptk_induk === "1" || item.ptk_induk === 1 || item.ptk_induk === "Ya" ? "success" : "light"}>
-                      {item.ptk_induk === "1" || item.ptk_induk === 1 || item.ptk_induk === "Ya" ? "Ya" : "Tidak"}
-                    </Badge>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                        <Avatar src={item.foto} size="small" />
-                        <span className="font-medium text-gray-800 dark:text-white/90">{item.nama}</span>
+                        <Avatar src={item.identitas?.foto} size="small" />
+                        <span className="font-medium text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_kelamin}</TableCell>
-                  <TableCell className="px-5 py-4 text-start">
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 max-w-[60px]">
-                            <div 
-                              className={`h-1.5 rounded-full ${item.lengkapData === 100 ? 'bg-success-500' : item.lengkapData < 50 ? 'bg-error-500' : 'bg-warning-500'}`} 
-                              style={{ width: `${item.lengkapData}%` }}
-                            ></div>
-                        </div>
-                        <span className={`text-theme-xs font-medium ${item.lengkapData === 100 ? 'text-success-500' : item.lengkapData < 50 ? 'text-error-500' : 'text-warning-500'}`}>
-                            {item.lengkapData}%
-                        </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.tempat_lahir || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 text-center">{item.identitas?.jenis_kelamin}</TableCell>
+                  <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">{item.kepegawaian?.status_kepegawaian || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.kepegawaian?.jenis_ptk || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.kepegawaian?.jabatan || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.tempat_lahir || "-"}</TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : "-"}
+                    {item.identitas?.tanggal_lahir ? new Date(item.identitas?.tanggal_lahir).toLocaleDateString('id-ID') : "-"}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.nama_ibu_kandung || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">{item.status_kepegawaian_id_str || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_ptk_id_str || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jabatan_ptk_id_str || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 min-w-[200px]">{item.alamat_jalan || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.nuptk || "-"}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {item.tanggal_surat_tugas ? new Date(item.tanggal_surat_tugas).toLocaleDateString('id-ID') : "-"}
-                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 min-w-[200px]">{item.data_pendukung?.alamat_lengkap || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.nuptk || "-"}</TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.nip || "-"}</TableCell>
                   <TableCell className="px-5 py-4 text-start">
                     <Badge size="sm" color="error">
-                      {item.status || "Non-Aktif"}
+                      {item.kepegawaian?.status || "Non-Aktif"}
                     </Badge>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {item.updated_at ? new Date(item.updated_at).toLocaleDateString('id-ID') : "-"}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-start">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-orange-600 border border-orange-500 hover:bg-orange-50 transition-colors">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Batal
+                  <TableCell className="px-5 py-4 text-right">
+                    <button 
+                      onClick={() => onDetail?.(item)}
+                      className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
+                      title="Lihat Detail"
+                    >
+                      <EyeIcon className="size-5" />
                     </button>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={17} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                <TableCell colSpan={14} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                   Tidak ada data ditemukan untuk "{searchTerm}"
                 </TableCell>
               </TableRow>

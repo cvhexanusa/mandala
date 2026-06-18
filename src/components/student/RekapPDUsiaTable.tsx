@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { dapodikService } from "../../services/dapodikService";
 import {
   Table,
   TableBody,
@@ -5,9 +7,6 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-
-import { useState, useEffect } from "react";
-import { dapodikService } from "../../services/dapodikService";
 
 interface RekapPDUsia {
   rentangUsia: string;
@@ -19,50 +18,136 @@ interface RekapPDUsia {
   totalStatus: number;
 }
 
-export default function RekapPDUsiaTable() {
+export default function RekapPDUsiaTable({ sekolahId }: { sekolahId?: string }) {
   const [rekapData, setRekapData] = useState<RekapPDUsia[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
+      setLoading(true);
       try {
-        const response = await dapodikService.getPdRekapUsia();
-        const dataArray = Array.isArray(response) ? response : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []));
+        const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
+        let mappedData: RekapPDUsia[] = [];
         
-        if (dataArray && dataArray.length > 0) {
-          const mapped = dataArray.map((item: any) => ({
-            rentangUsia: item.usia,
-            lakiLaki: item.l || 0,
-            perempuan: item.p || 0,
-            totalJK: item.total || 0,
-            siswaBaru: 0, // Not implemented in backend yet for usia
-            pindahan: 0,
-            totalStatus: item.total || 0,
-          }));
-          setRekapData(mapped);
+        try {
+          // Attempt Strategy 1: Specialized endpoint (keep as fallback/try first)
+          const result = await dapodikService.getPdRekapUsia(targetSekolahId);
+          const responseData = result?.data ?? result;
+          
+          if (Array.isArray(responseData) && responseData.length > 0 && responseData[0].baru !== undefined) {
+            mappedData = responseData.map((item: any) => ({
+              rentangUsia: item.usia || item.rentang_usia || "-",
+              lakiLaki: item.l ?? item.laki_laki ?? 0,
+              perempuan: item.p ?? item.perempuan ?? 0,
+              totalJK: item.total ?? item.jumlah ?? ((item.l||0) + (item.p||0)),
+              siswaBaru: item.baru ?? 0,
+              pindahan: item.pindahan ?? 0,
+              totalStatus: item.total ?? item.jumlah ?? 0,
+            }));
+          } else {
+            throw new Error("Invalid or incomplete API rekap data");
+          }
+        } catch (apiError) {
+          console.warn("Rekap PD Usia API incomplete or failed, extracting from student list pages...");
+          
+          // Strategy 2: Extract from Student List (fetch ALL pages for accurate aggregation)
+          const firstPage = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, targetSekolahId);
+          const meta = firstPage?.meta || {};
+          const totalOverall = meta.total_data || firstPage.total || meta.total || 0;
+          
+          let allStudents: any[] = firstPage.data || [];
+          const maxLimit = 100;
+          const totalPages = Math.ceil(totalOverall / maxLimit);
+
+          // Fetch all remaining pages
+          if (totalPages > 1) {
+              const pagePromises = [];
+              for (let p = 2; p <= totalPages; p++) {
+                  pagePromises.push(dapodikService.getPesertaDidik(maxLimit, "", p, undefined, "aktif", undefined, targetSekolahId));
+              }
+              const otherPages = await Promise.all(pagePromises);
+              otherPages.forEach(pageRes => {
+                  const pageData = pageRes.data || (Array.isArray(pageRes) ? pageRes : []);
+                  allStudents = [...allStudents, ...pageData];
+              });
+          }
+
+          if (allStudents.length > 0) {
+            const ageGroups: Record<string, RekapPDUsia> = {
+              "< 15": { rentangUsia: "< 15 Tahun", lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 },
+              "15": { rentangUsia: "15 Tahun", lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 },
+              "16": { rentangUsia: "16 Tahun", lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 },
+              "17": { rentangUsia: "17 Tahun", lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 },
+              "18": { rentangUsia: "18 Tahun", lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 },
+              "> 18": { rentangUsia: "> 18 Tahun", lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 },
+            };
+            
+            const now = new Date();
+            allStudents.forEach((pd: any) => {
+              const birthDateStr = pd.identitas?.tanggal_lahir;
+              if (!birthDateStr) return;
+              
+              const birthDate = new Date(birthDateStr);
+              let age = now.getFullYear() - birthDate.getFullYear();
+              const m = now.getMonth() - birthDate.getMonth();
+              if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+                age--;
+              }
+              
+              let groupKey = "";
+              if (age < 15) groupKey = "< 15";
+              else if (age === 15) groupKey = "15";
+              else if (age === 16) groupKey = "16";
+              else if (age === 17) groupKey = "17";
+              else if (age === 18) groupKey = "18";
+              else groupKey = "> 18";
+              
+              const jk = (pd.identitas?.jenis_kelamin || "").toUpperCase();
+              const jenisDaftar = (pd.identitas?.jenis_pendaftaran_id_str || "").toLowerCase();
+              const isBaru = jenisDaftar.includes("baru");
+              
+              const g = ageGroups[groupKey];
+              if (g) {
+                  if (jk === "L") g.lakiLaki++; else g.perempuan++;
+                  g.totalJK++;
+                  
+                  if (isBaru) g.siswaBaru++; else g.pindahan++;
+                  g.totalStatus++;
+              }
+            });
+            
+            mappedData = Object.values(ageGroups).filter(g => g.totalStatus > 0);
+          }
         }
-      } catch (error) {
-        console.error("Failed to fetch pd rekap usia:", error);
+        
+        setRekapData(mappedData);
+      } catch (err) {
+        console.error("Gagal mengambil rekap usia:", err);
+        setRekapData([]);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [sekolahId]);
 
-  // Calculate Grand Totals
-  const totals = rekapData.reduce((acc, curr) => ({
+  const grandTotal = rekapData.reduce((acc, curr) => ({
     lakiLaki: acc.lakiLaki + curr.lakiLaki,
     perempuan: acc.perempuan + curr.perempuan,
     totalJK: acc.totalJK + curr.totalJK,
     siswaBaru: acc.siswaBaru + curr.siswaBaru,
     pindahan: acc.pindahan + curr.pindahan,
     totalStatus: acc.totalStatus + curr.totalStatus,
-  }), {
-    lakiLaki: 0, perempuan: 0, totalJK: 0,
-    siswaBaru: 0, pindahan: 0, totalStatus: 0,
-  });
+  }), { lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 });
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-500"></div>
+        <p className="text-sm text-gray-500 animate-pulse">Menganalisis usia seluruh peserta didik...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -84,39 +169,32 @@ export default function RekapPDUsiaTable() {
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">Loading...</TableCell>
-              </TableRow>
-            ) : rekapData.length > 0 ? (
+            {rekapData.length > 0 ? (
               <>
-                {rekapData.map((item, index) => (
-                  <TableRow key={index}>
+                {rekapData.map((item, idx) => (
+                  <TableRow key={idx}>
                     <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">{item.rentangUsia}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.lakiLaki}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.perempuan}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalJK}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.siswaBaru}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.pindahan}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalStatus}</TableCell>
-              </TableRow>
-            ))}
-            {/* Grand Total Row */}
-            <TableRow className="bg-gray-50 dark:bg-white/[0.02] font-bold text-gray-800 dark:text-white/90">
-              <TableCell className="px-5 py-4 text-start">Jumlah Total</TableCell>
-              <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.lakiLaki}</TableCell>
-              <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.perempuan}</TableCell>
-              <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500">{totals.totalJK}</TableCell>
-              <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.siswaBaru}</TableCell>
-              <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.pindahan}</TableCell>
-              <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500 font-extrabold">{totals.totalStatus}</TableCell>
-            </TableRow>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.lakiLaki.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.perempuan.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalJK.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.siswaBaru.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.pindahan.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalStatus.toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-gray-50 dark:bg-white/[0.02] font-bold">
+                  <TableCell className="px-5 py-4 text-start text-gray-800 dark:text-white/90">Jumlah Total</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.lakiLaki.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.perempuan.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-brand-500 font-bold">{grandTotal.totalJK.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.siswaBaru.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.pindahan.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-brand-500 font-bold">{grandTotal.totalStatus.toLocaleString()}</TableCell>
+                </TableRow>
               </>
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
-                  Tidak ada data rekap ditemukan.
-                </TableCell>
+                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">Tidak ada data rekap ditemukan.</TableCell>
               </TableRow>
             )}
           </TableBody>

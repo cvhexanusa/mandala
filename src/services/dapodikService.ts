@@ -1,14 +1,19 @@
 import api from './api';
 
 export const dapodikService = {
-  getPesertaDidik: async (limit: number = 10, search: string = '', page: number = 1, rombelName?: string, status?: 'aktif' | 'non-aktif', tingkat?: string) => {
+  getPesertaDidik: async (limit: number = 10, search: string = '', page: number = 1, rombelName?: string, status?: 'aktif' | 'non-aktif', tingkat?: string, sekolahId?: string) => {
     try {
-      let url = `/dapodik/peserta-didik?limit=${limit}&page=${page}&search=${search}`;
-      if (rombelName) url += `&rombel=${rombelName}`;
-      if (status) url += `&status=${status}`;
-      if (tingkat) url += `&tingkat=${tingkat}`;
-      
-      const response = await api.get(url);
+      const response = await api.get('/mandala/dapodik/peserta-didik', {
+        params: {
+          limit,
+          page,
+          search,
+          rombel: rombelName,
+          status,
+          tingkat,
+          sekolah_id: sekolahId
+        }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil data peserta didik:', error);
@@ -18,7 +23,7 @@ export const dapodikService = {
 
   getSummary: async () => {
     try {
-      const response = await api.get('/dapodik/summary');
+      const response = await api.get('/mandala/dapodik/summary');
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil data summary:', error);
@@ -28,10 +33,12 @@ export const dapodikService = {
 
   getSekolah: async () => {
     try {
-      const response = await api.get('/dapodik/sekolah');
+      console.log('Fetching schools with key:', import.meta.env.VITE_MANDALA_KEY);
+      const response = await api.get('/mandala/sekolah');
+      console.log('Schools API Response Detail:', response);
       return response.data;
     } catch (error: any) {
-      console.error('Gagal mengambil data sekolah:', error);
+      console.error('Gagal mengambil data sekolah:', error?.response?.data || error.message);
       throw error;
     }
   },
@@ -46,13 +53,18 @@ export const dapodikService = {
     }
   },
 
-  getGTK: async (limit: number = 10, search: string = '', page: number = 1, type?: 'guru' | 'tendik', status?: 'aktif' | 'non-aktif') => {
+  getGTK: async (limit: number = 10, search: string = '', page: number = 1, type?: 'guru' | 'tendik', status?: 'aktif' | 'non-aktif', sekolahId?: string) => {
     try {
-      let url = `/dapodik/gtk?limit=${limit}&page=${page}&search=${search}`;
-      if (type) url += `&type=${type}`;
-      if (status) url += `&status=${status}`;
-      
-      const response = await api.get(url);
+      const response = await api.get('/mandala/dapodik/gtk', {
+        params: {
+          limit,
+          page,
+          search,
+          type,
+          status,
+          sekolah_id: sekolahId
+        }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil data GTK:', error);
@@ -60,9 +72,11 @@ export const dapodikService = {
     }
   },
 
-  getGtkRekapKategori: async () => {
+  getGtkRekapKategori: async (sekolahId?: string) => {
     try {
-      const response = await api.get('/dapodik/gtk/rekap-kategori');
+      const response = await api.get('/mandala/dapodik/gtk/rekap-kategori', {
+        params: { sekolah_id: sekolahId }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil rekap kategori GTK:', error);
@@ -70,9 +84,11 @@ export const dapodikService = {
     }
   },
 
-  getGtkRekapPendidikan: async () => {
+  getGtkRekapPendidikan: async (sekolahId?: string) => {
     try {
-      const response = await api.get('/dapodik/gtk/rekap-pendidikan');
+      const response = await api.get('/mandala/dapodik/gtk/rekap-pendidikan', {
+        params: { sekolah_id: sekolahId }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil rekap pendidikan GTK:', error);
@@ -80,9 +96,11 @@ export const dapodikService = {
     }
   },
 
-  getGtkRekapUsia: async () => {
+  getGtkRekapUsia: async (sekolahId?: string) => {
     try {
-      const response = await api.get('/dapodik/gtk/rekap-usia');
+      const response = await api.get('/mandala/dapodik/gtk/rekap-usia', {
+        params: { sekolah_id: sekolahId }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil rekap usia GTK:', error);
@@ -92,7 +110,7 @@ export const dapodikService = {
 
   getMataPelajaran: async (limit: number = 10, search: string = '', page: number = 1) => {
     try {
-      const response = await api.get(`/dapodik/mata-pelajaran?limit=${limit}&page=${page}&search=${search}`);
+      const response = await api.get(`/mandala/dapodik/mata-pelajaran?limit=${limit}&page=${page}&search=${search}`);
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil data mata pelajaran:', error);
@@ -102,7 +120,7 @@ export const dapodikService = {
 
   getRombonganBelajar: async (type: 'reguler' | 'pilihan' = 'reguler', limit: number = 10, page: number = 1, search: string = '', tingkat: string = '') => {
     try {
-      let url = `/dapodik/rombongan-belajar?type=${type}&limit=${limit}&page=${page}&search=${search}`;
+      let url = `/mandala/dapodik/rombongan-belajar?type=${type}&limit=${limit}&page=${page}&search=${search}`;
       if (tingkat) url += `&tingkat=${tingkat}`;
       const response = await api.get(url);
       return response.data;
@@ -182,9 +200,11 @@ export const dapodikService = {
     }
   },
 
-  getPdRekapTingkat: async () => {
+  getPdRekapTingkat: async (sekolahId?: string) => {
     try {
-      const response = await api.get('/dapodik/peserta-didik/rekap-tingkat');
+      const response = await api.get('/mandala/dapodik/peserta-didik/rekap-tingkat', {
+        params: { sekolah_id: sekolahId }
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching pd rekap tingkat:', error);
@@ -192,9 +212,11 @@ export const dapodikService = {
     }
   },
 
-  getPdRekapKompetensi: async () => {
+  getPdRekapKompetensi: async (sekolahId?: string) => {
     try {
-      const response = await api.get('/dapodik/peserta-didik/rekap-kompetensi');
+      const response = await api.get('/mandala/dapodik/peserta-didik/rekap-kompetensi', {
+        params: { sekolah_id: sekolahId }
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching pd rekap kompetensi:', error);
@@ -202,9 +224,11 @@ export const dapodikService = {
     }
   },
 
-  getPdRekapUsia: async () => {
+  getPdRekapUsia: async (sekolahId?: string) => {
     try {
-      const response = await api.get('/dapodik/peserta-didik/rekap-usia');
+      const response = await api.get('/mandala/dapodik/peserta-didik/rekap-usia', {
+        params: { sekolah_id: sekolahId }
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching pd rekap usia:', error);
@@ -248,6 +272,88 @@ export const dapodikService = {
       return response.data;
     } catch (error) {
       console.error(`Error updating peserta didik ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // --- Cadisdik / Profil Instansi CRUD ---
+  getCadisdik: async () => {
+    try {
+      const response = await api.get('/mandala/cadisdik');
+      return response.data;
+    } catch (error) {
+      console.error('Gagal mengambil data cadisdik:', error);
+      throw error;
+    }
+  },
+
+  createCadisdik: async (data: any) => {
+    try {
+      const response = await api.post('/mandala/cadisdik', data);
+      return response.data;
+    } catch (error) {
+      console.error('Gagal membuat cadisdik:', error);
+      throw error;
+    }
+  },
+
+  updateCadisdik: async (id: string, data: any) => {
+    try {
+      const response = await api.patch(`/mandala/cadisdik/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal update cadisdik ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deleteCadisdik: async (id: string) => {
+    try {
+      const response = await api.delete(`/mandala/cadisdik/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal menghapus cadisdik ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // --- Pegawai CRUD ---
+  getPegawai: async () => {
+    try {
+      const response = await api.get('/mandala/pegawai');
+      return response.data;
+    } catch (error) {
+      console.error('Gagal mengambil data pegawai:', error);
+      throw error;
+    }
+  },
+
+  createPegawai: async (data: any) => {
+    try {
+      const response = await api.post('/mandala/pegawai', data);
+      return response.data;
+    } catch (error) {
+      console.error('Gagal membuat pegawai:', error);
+      throw error;
+    }
+  },
+
+  updatePegawai: async (id: string, data: any) => {
+    try {
+      const response = await api.patch(`/mandala/pegawai/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal update pegawai ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deletePegawai: async (id: string) => {
+    try {
+      const response = await api.delete(`/mandala/pegawai/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal menghapus pegawai ${id}:`, error);
       throw error;
     }
   }

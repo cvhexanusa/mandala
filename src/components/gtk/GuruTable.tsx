@@ -11,30 +11,62 @@ import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { EyeIcon } from "../../icons";
 
 interface GuruTableProps {
-  onSelectionChange: (selectedIds: string[]) => void;
+  onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
+  onDetail?: (item: any) => void;
   searchTerm: string;
   completenessFilter: string;
   itemsPerPage: number;
+  sekolahId?: string;
 }
 
-export default function GuruTable({ onSelectionChange, searchTerm, completenessFilter: _completenessFilter, itemsPerPage }: GuruTableProps) {
+export default function GuruTable({ onSelectionChange, onDetail, searchTerm, itemsPerPage, sekolahId }: GuruTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
+
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const result = await dapodikService.getGTK(itemsPerPage, searchTerm, currentPage, 'guru');
-        if (result.status === 'success') {
-          setData(result.data);
-          setTotal(result.meta.total);
+        const targetSekolahId = (sekolahId === 'all' || !sekolahId) ? undefined : sekolahId;
+        
+        const result = await dapodikService.getGTK(
+          itemsPerPage, 
+          searchTerm, 
+          currentPage, 
+          'guru', 
+          'aktif', 
+          targetSekolahId
+        );
+        
+        let fetchedData = [];
+        let totalCount = 0;
+
+        if (result && (result.status === 'success' || result.success === true)) {
+          fetchedData = result.data || [];
+          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
+        } else if (Array.isArray(result)) {
+          fetchedData = result;
+          totalCount = result.length;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          fetchedData = result.data;
+          totalCount = result.meta?.total_data || result.total || fetchedData.length;
         }
+
+        setData(fetchedData);
+        setTotal(totalCount);
       } catch (error) {
         console.error("Gagal mengambil data guru:", error);
       } finally {
@@ -43,40 +75,50 @@ export default function GuruTable({ onSelectionChange, searchTerm, completenessF
     };
 
     fetchData();
-  }, [currentPage, searchTerm, itemsPerPage]);
+  }, [currentPage, searchTerm, itemsPerPage, sekolahId]);
 
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
 
   const handleSelectAll = (checked: boolean) => {
-    let newSelected: string[];
     if (checked) {
-      newSelected = [...new Set([...selectedRows, ...data.map((item) => item.ptk_id)])];
+      const allIds = data.map((item) => item.identitas?.id);
+      const newSelectedIds = [...new Set([...selectedRows, ...allIds])];
+      const newSelectedObjects = [...selectedObjects];
+      data.forEach(item => {
+        if (!selectedRows.includes(item.identitas?.id)) {
+            newSelectedObjects.push(item);
+        }
+      });
+      setSelectedRows(newSelectedIds);
+      setSelectedObjects(newSelectedObjects);
+      onSelectionChange(newSelectedIds, newSelectedObjects);
     } else {
-      const currentIds = data.map((item) => item.ptk_id);
-      newSelected = selectedRows.filter((id) => !currentIds.includes(id));
+      const currentIds = data.map((item) => item.identitas?.id);
+      const newSelectedIds = selectedRows.filter((id) => !currentIds.includes(id));
+      const newSelectedObjects = selectedObjects.filter((obj) => !currentIds.includes(obj.identitas?.id));
+      setSelectedRows(newSelectedIds);
+      setSelectedObjects(newSelectedObjects);
+      onSelectionChange(newSelectedIds, newSelectedObjects);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange(newSelected);
   };
 
-  const handleSelectRow = (id: string, checked: boolean) => {
-    let newSelected: string[];
+  const handleSelectRow = (item: any, checked: boolean) => {
+    const id = item.identitas?.id;
+    let newIds: string[];
+    let newObjects: any[];
     if (checked) {
-      newSelected = [...selectedRows, id];
+      newIds = [...selectedRows, id];
+      newObjects = [...selectedObjects, item];
     } else {
-      newSelected = selectedRows.filter((rowId) => rowId !== id);
+      newIds = selectedRows.filter((rowId) => rowId !== id);
+      newObjects = selectedObjects.filter((obj) => obj.identitas?.id !== id);
     }
-    setSelectedRows(newSelected);
-    onSelectionChange(newSelected);
+    setSelectedRows(newIds);
+    setSelectedObjects(newObjects);
+    onSelectionChange(newIds, newObjects);
   };
 
-  const isAllSelected = data.length > 0 && data.every((item) => selectedRows.includes(item.ptk_id));
-
-  // Helper for completeness (calculate based on fields for now if not in DB)
-  const calculateCompleteness = (item: any) => {
-      // Logic could be more complex, but for now we use data from DB if available or dummy
-      return item.lengkap_data || 100; 
-  };
+  const isAllSelected = data.length > 0 && data.every((item) => selectedRows.includes(item.identitas?.id));
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] relative">
@@ -86,7 +128,7 @@ export default function GuruTable({ onSelectionChange, searchTerm, completenessF
         </div>
       )}
       <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <Table className="min-w-[1700px]">
+        <Table className="min-w-[1000px]">
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
               <TableCell isHeader className="px-5 py-3 text-start">
@@ -95,72 +137,50 @@ export default function GuruTable({ onSelectionChange, searchTerm, completenessF
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Induk</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Lengkap Data</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tempat Lahir</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tanggal Lahir</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Ibu Kandung</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Guru</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NUPTK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status Kepegawaian</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jenis GTK</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jabatan GTK</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Alamat</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NUPTK</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tgl Surat Tugas</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {data.length > 0 ? data.map((item) => (
-              <TableRow key={item.ptk_id} className={`${selectedRows.includes(item.ptk_id) ? "bg-gray-50 dark:bg-white/[0.02]" : ""}`}>
+              <TableRow key={item.identitas?.id} className={`${selectedRows.includes(item.identitas?.id) ? "bg-gray-50 dark:bg-white/[0.02]" : ""}`}>
                 <TableCell className="px-5 py-4 text-start">
                   <Checkbox
-                    checked={selectedRows.includes(item.ptk_id)}
-                    onChange={(checked) => handleSelectRow(item.ptk_id, checked)}
+                    checked={selectedRows.includes(item.identitas?.id)}
+                    onChange={(checked) => handleSelectRow(item, checked)}
                   />
-                </TableCell>
-                <TableCell className="px-5 py-4 text-start">
-                  <Badge size="sm" color={item.ptk_induk ? "success" : "light"}>
-                    {item.ptk_induk ? "Ya" : "Tidak"}
-                  </Badge>
                 </TableCell>
                 <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                        <Avatar src={item.foto} size="small" />
-                        <span className="font-medium text-gray-800 dark:text-white/90">{item.nama}</span>
+                        <Avatar src={item.identitas?.foto} size="small" />
+                        <span className="font-medium text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                     </div>
                 </TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_kelamin}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400">{item.identitas?.jenis_kelamin}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.nuptk || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-start">
-                  <div className="flex items-center gap-1.5">
-                      <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 max-w-[60px]">
-                          <div 
-                            className={`h-1.5 rounded-full ${calculateCompleteness(item) === 100 ? 'bg-success-500' : calculateCompleteness(item) < 50 ? 'bg-error-500' : 'bg-warning-500'}`} 
-                            style={{ width: `${calculateCompleteness(item)}%` }}
-                          ></div>
-                      </div>
-                      <span className={`text-theme-xs font-medium ${calculateCompleteness(item) === 100 ? 'text-success-500' : calculateCompleteness(item) < 50 ? 'text-error-500' : 'text-warning-500'}`}>
-                          {calculateCompleteness(item)}%
-                      </span>
-                  </div>
-                </TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.tempat_lahir}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : '-'}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.nama_ibu_kandung}</TableCell>
-                <TableCell className="px-5 py-4 text-start">
-                  <Badge size="sm" color={item.status_kepegawaian_id_str === "PNS" ? "success" : item.status_kepegawaian_id_str === "PPPK" ? "warning" : "light"}>
-                    {item.status_kepegawaian_id_str || '-'}
+                  <Badge size="sm" color={item.kepegawaian?.status_kepegawaian === "PNS" ? "success" : item.kepegawaian?.status_kepegawaian === "PPPK" ? "warning" : "light"}>
+                    {item.kepegawaian?.status_kepegawaian || '-'}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jenis_ptk_id_str}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.jabatan_ptk_id_str}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 min-w-[200px]">{item.alamat_jalan}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.nuptk}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.tanggal_surat_tugas ? new Date(item.tanggal_surat_tugas).toLocaleDateString('id-ID') : '-'}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.kepegawaian?.jenis_ptk || "-"}</TableCell>
+                <TableCell className="px-5 py-4 text-right">
+                  <button 
+                    onClick={() => onDetail?.(item)}
+                    className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
+                    title="Lihat Detail"
+                  >
+                    <EyeIcon className="size-5" />
+                  </button>
+                </TableCell>
               </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={14} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         Tidak ada data ditemukan
                     </TableCell>
                 </TableRow>

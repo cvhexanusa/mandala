@@ -11,23 +11,20 @@ import { dapodikService } from "../../services/dapodikService";
 
 interface RekapPDKompetensi {
   kompetensi: string;
-  xL: number;
-  xP: number;
-  xJml: number;
-  xiL: number;
-  xiP: number;
-  xiJml: number;
-  xiiL: number;
-  xiiP: number;
-  xiiJml: number;
-  grandTotal: number;
+  lakiLaki: number;
+  perempuan: number;
+  totalJK: number;
+  siswaBaru: number;
+  pindahan: number;
+  totalStatus: number;
 }
 
 interface RekapPDKompetensiTableProps {
   searchTerm: string;
+  sekolahId?: string;
 }
 
-export default function RekapPDKompetensiTable({ searchTerm }: RekapPDKompetensiTableProps) {
+export default function RekapPDKompetensiTable({ searchTerm, sekolahId }: RekapPDKompetensiTableProps) {
   const [rekapData, setRekapData] = useState<RekapPDKompetensi[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,109 +32,139 @@ export default function RekapPDKompetensiTable({ searchTerm }: RekapPDKompetensi
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await dapodikService.getPdRekapKompetensi();
-        const dataArray = Array.isArray(response) ? response : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []));
-        if (dataArray && dataArray.length > 0) {
-          setRekapData(dataArray);
+        const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
+        let mapped: RekapPDKompetensi[] = [];
+        
+        try {
+          const response = await dapodikService.getPdRekapKompetensi(targetSekolahId);
+          const dataArray = response?.data ?? response;
+          if (Array.isArray(dataArray) && dataArray.length > 0) {
+            mapped = dataArray.map((item: any) => ({
+              kompetensi: item.kompetensi || item.nama_kompetensi || item.jurusan || "-",
+              lakiLaki: item.l ?? item.laki_laki ?? 0,
+              perempuan: item.p ?? item.perempuan ?? 0,
+              totalJK: item.total ?? item.jumlah ?? ((item.l||0) + (item.p||0)),
+              siswaBaru: item.baru ?? 0,
+              pindahan: item.pindahan ?? 0,
+              totalStatus: item.total ?? item.jumlah ?? 0,
+            }));
+          } else {
+            throw new Error("Invalid API data");
+          }
+        } catch (apiError) {
+          console.warn("Rekap PD Kompetensi API failed, falling back to client-side aggregation:", apiError);
+          
+          const result = await dapodikService.getPesertaDidik(5000, "", 1, undefined, "aktif", undefined, targetSekolahId);
+          const pdData = result?.data || (Array.isArray(result) ? result : []);
+          
+          if (pdData.length > 0) {
+            const groups: Record<string, RekapPDKompetensi> = {};
+            
+            pdData.forEach((pd: any) => {
+              const kompetensi = pd.akademik?.jurusan || "Lainnya";
+              const jk = (pd.identitas?.jenis_kelamin || "").toUpperCase();
+              const jenisDaftar = (pd.identitas?.jenis_pendaftaran_id_str || "").toLowerCase();
+              const isBaru = jenisDaftar.includes("baru");
+              
+              if (!groups[kompetensi]) {
+                groups[kompetensi] = {
+                  kompetensi,
+                  lakiLaki: 0,
+                  perempuan: 0,
+                  totalJK: 0,
+                  siswaBaru: 0,
+                  pindahan: 0,
+                  totalStatus: 0
+                };
+              }
+              
+              const g = groups[kompetensi];
+              if (jk === "L") g.lakiLaki++; else g.perempuan++;
+              g.totalJK++;
+              if (isBaru) g.siswaBaru++; else g.pindahan++;
+              g.totalStatus++;
+            });
+            
+            mapped = Object.values(groups).sort((a, b) => a.kompetensi.localeCompare(b.kompetensi));
+          }
         }
+        
+        setRekapData(mapped);
       } catch (error) {
         console.error("Failed to fetch pd rekap kompetensi:", error);
+        setRekapData([]);
       } finally {
         setIsLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [sekolahId]);
 
   const filteredData = rekapData.filter(item => 
     item.kompetensi.toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a, b) => a.kompetensi.localeCompare(b.kompetensi));
+  );
 
-  // Calculate Grand Totals for filtered data
-  const totals = filteredData.reduce((acc, curr) => ({
-    xL: acc.xL + curr.xL,
-    xP: acc.xP + curr.xP,
-    xJml: acc.xJml + curr.xJml,
-    xiL: acc.xiL + curr.xiL,
-    xiP: acc.xiP + curr.xiP,
-    xiJml: acc.xiJml + curr.xiJml,
-    xiiL: acc.xiiL + curr.xiiL,
-    xiiP: acc.xiiP + curr.xiiP,
-    xiiJml: acc.xiiJml + curr.xiiJml,
-    grandTotal: acc.grandTotal + curr.grandTotal,
-  }), {
-    xL: 0, xP: 0, xJml: 0,
-    xiL: 0, xiP: 0, xiJml: 0,
-    xiiL: 0, xiiP: 0, xiiJml: 0,
-    grandTotal: 0,
-  });
+  const grandTotal = filteredData.reduce((acc, curr) => ({
+    lakiLaki: acc.lakiLaki + curr.lakiLaki,
+    perempuan: acc.perempuan + curr.perempuan,
+    totalJK: acc.totalJK + curr.totalJK,
+    siswaBaru: acc.siswaBaru + curr.siswaBaru,
+    pindahan: acc.pindahan + curr.pindahan,
+    totalStatus: acc.totalStatus + curr.totalStatus,
+  }), { lakiLaki: 0, perempuan: 0, totalJK: 0, siswaBaru: 0, pindahan: 0, totalStatus: 0 });
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <Table className="min-w-[1200px]">
+        <Table className="min-w-[1000px]">
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
-              <TableCell isHeader rowSpan={2} className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Kompetensi Keahlian</TableCell>
-              <TableCell isHeader colSpan={3} className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Tingkat X</TableCell>
-              <TableCell isHeader colSpan={3} className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Tingkat XI</TableCell>
-              <TableCell isHeader colSpan={3} className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Tingkat XII</TableCell>
-              <TableCell isHeader rowSpan={2} className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Total</TableCell>
+              <TableCell isHeader rowSpan={2} className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Kompetensi Keahlian (Jurusan)</TableCell>
+              <TableCell isHeader colSpan={3} className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Jenis Kelamin</TableCell>
+              <TableCell isHeader colSpan={3} className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Status Masuk</TableCell>
             </TableRow>
             <TableRow>
               <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">L</TableCell>
               <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">P</TableCell>
-              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">JML</TableCell>
-              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">L</TableCell>
-              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">P</TableCell>
-              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">JML</TableCell>
-              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">L</TableCell>
-              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">P</TableCell>
+              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Total</TableCell>
+              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Baru</TableCell>
+              <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">Pindahan</TableCell>
               <TableCell isHeader className="px-5 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">JML</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={11} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">Loading...</TableCell>
+                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-500 mx-auto"></div>
+                </TableCell>
               </TableRow>
             ) : filteredData.length > 0 ? (
               <>
-                {filteredData.map((item, index) => (
-                  <TableRow key={index}>
+                {filteredData.map((item, idx) => (
+                  <TableRow key={idx}>
                     <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">{item.kompetensi}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.xL}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.xP}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.xJml}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.xiL}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.xiP}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.xiJml}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.xiiL}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.xiiP}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.xiiJml}</TableCell>
-                    <TableCell className="px-5 py-4 text-brand-500 text-center text-theme-sm font-bold border-l border-gray-100 dark:border-white/[0.05]">{item.grandTotal}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.lakiLaki.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.perempuan.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalJK.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.siswaBaru.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.pindahan.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalStatus.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
-                {/* Grand Total Row */}
-                <TableRow className="bg-gray-50 dark:bg-white/[0.02] font-bold text-gray-800 dark:text-white/90">
-                  <TableCell className="px-5 py-4 text-start">Jumlah Total</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.xL}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.xP}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500">{totals.xJml}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.xiL}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.xiP}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500">{totals.xiJml}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.xiiL}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05]">{totals.xiiP}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500">{totals.xiiJml}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-600 dark:text-brand-400 font-extrabold">{totals.grandTotal}</TableCell>
+                <TableRow className="bg-gray-50 dark:bg-white/[0.02] font-bold">
+                  <TableCell className="px-5 py-4 text-start text-gray-800 dark:text-white/90">Jumlah Total</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.lakiLaki.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.perempuan.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-brand-500 font-bold">{grandTotal.totalJK.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.siswaBaru.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.pindahan.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-brand-500 font-bold">{grandTotal.totalStatus.toLocaleString()}</TableCell>
                 </TableRow>
               </>
             ) : (
               <TableRow>
-                <TableCell colSpan={11} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
-                  Tidak ada data rekap ditemukan.
-                </TableCell>
+                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">Tidak ada data rekap ditemukan.</TableCell>
               </TableRow>
             )}
           </TableBody>

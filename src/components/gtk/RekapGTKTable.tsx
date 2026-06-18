@@ -19,33 +19,102 @@ interface RekapGTK {
   totalStatus: number;
 }
 
-export default function RekapGTKTable({ searchTerm = "" }: { searchTerm?: string }) {
+export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTerm?: string; sekolahId?: string }) {
   const [rekapData, setRekapData] = useState<RekapGTK[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const result = await dapodikService.getGtkRekapKategori();
-        if (result && result.status === "success" && Array.isArray(result.data)) {
-          setRekapData(result.data);
+        const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
+        let mappedData: RekapGTK[] = [];
+        
+        try {
+          // Attempt Strategy 1: Specialized endpoint
+          const result = await dapodikService.getGtkRekapKategori(targetSekolahId);
+          const responseData = result?.data ?? result;
+
+          if (Array.isArray(responseData) && responseData.length > 0) {
+            mappedData = responseData.map((item: any, index: number) => {
+              const l = item.lakiLaki ?? item.laki_laki ?? item.L ?? item.jumlah_l ?? 0;
+              const p = item.perempuan ?? item.P ?? item.jumlah_p ?? 0;
+              const pns = item.pns ?? item.jumlah_pns ?? item.PNS ?? 0;
+              const pppk = item.pppk ?? item.jumlah_pppk ?? item.PPPK ?? 0;
+              const asn = item.asn ?? item.status_asn ?? item.jumlah_asn ?? (pns + pppk);
+              const honorer = item.honorer ?? item.jumlah_honorer ?? 0;
+              const nonAsn = item.nonAsn ?? item.status_non_asn ?? (honorer + (item.non_asn || 0) + (item.gty_pty || 0));
+              const totalJK = item.totalJK ?? (l + p);
+              const totalStatus = item.totalStatus ?? (asn + nonAsn);
+
+              return {
+                id: item.id || index,
+                kategori: item.kategori || item.nama_kategori || item.jenis_ptk || "-",
+                lakiLaki: l,
+                perempuan: p,
+                totalJK: totalJK,
+                asn: asn,
+                nonAsn: nonAsn,
+                totalStatus: totalStatus,
+              };
+            });
+          } else {
+              throw new Error("No rekap data found");
+          }
+        } catch (apiError) {
+          console.warn("Rekap GTK Kategori API failed, fetching ALL pages for accuracy...");
+          
+          // Strategy 2: Fetch ALL pages and aggregate manually
+          const firstPage = await dapodikService.getGTK(100, "", 1, undefined, "aktif", targetSekolahId);
+          const totalGTK = firstPage.meta?.total_data || firstPage.total || 0;
+          
+          let allGTK: any[] = firstPage.data || [];
+          const totalPages = Math.ceil(totalGTK / 100);
+
+          if (totalPages > 1) {
+              const promises = [];
+              for (let i = 2; i <= totalPages; i++) {
+                  promises.push(dapodikService.getGTK(100, "", i, undefined, "aktif", targetSekolahId));
+              }
+              const otherPages = await Promise.all(promises);
+              otherPages.forEach(p => allGTK = [...allGTK, ...(p.data || [])]);
+          }
+
+          if (allGTK.length > 0) {
+            const groups: Record<string, RekapGTK> = {};
+            allGTK.forEach((gtk: any) => {
+              const kategori = gtk.kepegawaian?.jenis_ptk || "Lainnya";
+              const jk = (gtk.identitas?.jenis_kelamin || "").toUpperCase();
+              const status = (gtk.kepegawaian?.status_kepegawaian || "").toUpperCase();
+              const isAsn = status === "PNS" || status === "PPPK";
+              
+              if (!groups[kategori]) {
+                groups[kategori] = { id: Object.keys(groups).length + 1, kategori, lakiLaki: 0, perempuan: 0, totalJK: 0, asn: 0, nonAsn: 0, totalStatus: 0 };
+              }
+              if (jk === "L") groups[kategori].lakiLaki++; else groups[kategori].perempuan++;
+              groups[kategori].totalJK++;
+              if (isAsn) groups[kategori].asn++; else groups[kategori].nonAsn++;
+              groups[kategori].totalStatus++;
+            });
+            mappedData = Object.values(groups);
+          }
         }
+
+        setRekapData(mappedData);
       } catch (err) {
         console.error("Gagal mengambil rekap GTK:", err);
+        setRekapData([]);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [sekolahId]);
 
-  const safeRekapData = Array.isArray(rekapData) ? rekapData : [];
-
-  const filteredData = safeRekapData.filter(item => 
+  const filteredData = rekapData.filter(item => 
     (item.kategori || "").toLowerCase().includes((searchTerm || "").toLowerCase())
   ).sort((a, b) => (a.kategori || "").localeCompare(b.kategori || ""));
 
-  // Calculate Grand Totals
   const grandTotal = filteredData.reduce((acc, curr) => ({
     lakiLaki: acc.lakiLaki + (curr.lakiLaki || 0),
     perempuan: acc.perempuan + (curr.perempuan || 0),
@@ -53,14 +122,7 @@ export default function RekapGTKTable({ searchTerm = "" }: { searchTerm?: string
     asn: acc.asn + (curr.asn || 0),
     nonAsn: acc.nonAsn + (curr.nonAsn || 0),
     totalStatus: acc.totalStatus + (curr.totalStatus || 0),
-  }), {
-    lakiLaki: 0,
-    perempuan: 0,
-    totalJK: 0,
-    asn: 0,
-    nonAsn: 0,
-    totalStatus: 0,
-  });
+  }), { lakiLaki: 0, perempuan: 0, totalJK: 0, asn: 0, nonAsn: 0, totalStatus: 0 });
 
   if (loading) {
     return (
@@ -95,23 +157,22 @@ export default function RekapGTKTable({ searchTerm = "" }: { searchTerm?: string
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">{item.kategori}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.lakiLaki}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.perempuan}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalJK}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.asn}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.nonAsn}</TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalStatus}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.lakiLaki.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.perempuan.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalJK.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.asn.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400 border-l border-gray-100 dark:border-white/[0.05]">{item.nonAsn.toLocaleString()}</TableCell>
+                    <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-semibold border-l border-gray-100 dark:border-white/[0.05]">{item.totalStatus.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
-                {/* Grand Total Row */}
                 <TableRow className="bg-gray-50 dark:bg-white/[0.02] font-bold">
                   <TableCell className="px-5 py-4 text-start text-gray-800 dark:text-white/90">Jumlah Total</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-gray-800 dark:text-white/90">{grandTotal.lakiLaki}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-gray-800 dark:text-white/90">{grandTotal.perempuan}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500 font-bold">{grandTotal.totalJK}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-gray-800 dark:text-white/90">{grandTotal.asn}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-gray-800 dark:text-white/90">{grandTotal.nonAsn}</TableCell>
-                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-brand-500 font-bold">{grandTotal.totalStatus}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.lakiLaki.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.perempuan.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-brand-500 font-bold">{grandTotal.totalJK.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.asn.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-gray-800 dark:text-white/90">{grandTotal.nonAsn.toLocaleString()}</TableCell>
+                  <TableCell className="px-5 py-4 text-center border-l border-gray-100 dark:border-white/[0.05] text-theme-sm text-brand-500 font-bold">{grandTotal.totalStatus.toLocaleString()}</TableCell>
                 </TableRow>
               </>
             ) : (

@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { dapodikService } from '../services/dapodikService';
-import { useAuth } from './AuthContext';
 
 interface Sekolah {
   sekolah_id: string;
@@ -20,35 +19,51 @@ const SekolahContext = createContext<SekolahContextType | undefined>(undefined);
 export const SekolahProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sekolah, setSekolah] = useState<Sekolah | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isAuthenticated, user } = useAuth();
 
-  const fetchSekolah = async () => {
-    const token = localStorage.getItem('auth_token');
-    if (!token || (user && user.role === 'Super Admin')) {
-      setSekolah(null);
-      setLoading(false);
-      return;
-    }
-
+  const refreshSekolah = async () => {
+    setLoading(true);
     try {
-      const result = await dapodikService.getSekolah();
-      if (result.status === 'success') {
-        setSekolah(result.data);
+      const response = await dapodikService.getSekolah();
+      let schoolData = null;
+
+      if (response && (response.status === 'success' || response.success === true)) {
+        schoolData = response.data;
+      } else if (response && response.data) {
+        schoolData = response.data;
+      } else {
+        schoolData = response;
       }
-    } catch (err) {
-      console.error('Gagal mengambil data sekolah:', err);
-      setSekolah(null);
+
+      // Jika data adalah array, ambil item pertama sebagai default
+      if (Array.isArray(schoolData) && schoolData.length > 0) {
+        const first = schoolData[0];
+        setSekolah({
+            sekolah_id: first.sekolah_id || first.id,
+            nama: first.nama,
+            npsn: first.npsn,
+            logo: first.logo || null
+        });
+      } else if (schoolData && typeof schoolData === 'object' && !Array.isArray(schoolData)) {
+        setSekolah({
+            sekolah_id: schoolData.sekolah_id || schoolData.id,
+            nama: schoolData.nama,
+            npsn: schoolData.npsn,
+            logo: schoolData.logo || null
+        });
+      }
+    } catch (error) {
+      console.error('Gagal mengambil data sekolah di context:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSekolah();
-  }, [isAuthenticated, user]);
+  React.useEffect(() => {
+    refreshSekolah();
+  }, []);
 
   return (
-    <SekolahContext.Provider value={{ sekolah, loading, refreshSekolah: fetchSekolah }}>
+    <SekolahContext.Provider value={{ sekolah, loading, refreshSekolah }}>
       {children}
     </SekolahContext.Provider>
   );

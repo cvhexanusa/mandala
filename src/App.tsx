@@ -1,25 +1,18 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
-import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import Home from "./pages/Dashboard/Home";
+import MandalaDashboard from "./pages/Dashboard/MandalaDashboard";
 import SchoolProfile from "./pages/DataMaster/SchoolProfile";
-import GTKData from "./pages/DataMaster/GTKData";
+import SchoolData from "./pages/DataMaster/SchoolData";
+import SchoolDetailPage from "./pages/DataMaster/SchoolDetailPage";
+import SpasialData from "./pages/DataMaster/SpasialData";
+import RekapitulasiSekolah from "./pages/DataMaster/RekapitulasiSekolah";
 import StudentData from "./pages/DataMaster/StudentData";
+import StudentDetailPage from "./pages/DataMaster/StudentDetailPage";
+import GTKData from "./pages/DataMaster/GTKData";
+import GTKDetailPage from "./pages/DataMaster/GTKDetailPage";
 import ClassData from "./pages/DataMaster/ClassData";
 import SubjectData from "./pages/DataMaster/SubjectData";
 import SarprasData from "./pages/DataMaster/SarprasData";
@@ -30,8 +23,6 @@ import PDCardPage from "./pages/DataMaster/PDCardPage";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import ApiSyncPage from "./pages/OtherPage/ApiSyncPage";
 import SyncGuard from "./components/common/SyncGuard";
-import { useAuth } from "./context/AuthContext";
-import { getRoleSlug } from "./services/roleUtils";
 import PengaturanJam from "./pages/Kurikulum/PengaturanJam";
 import JadwalPelajaran from "./pages/Kurikulum/JadwalPelajaran";
 import PresensiPD from "./pages/Kurikulum/Presensi/PresensiPD";
@@ -39,13 +30,19 @@ import PresensiGTK from "./pages/Kurikulum/Presensi/PresensiGTK";
 import HariLibur from "./pages/Kurikulum/Presensi/HariLibur";
 import Scanner from "./pages/Kurikulum/Presensi/Scanner";
 import IzinSakit from "./pages/Kurikulum/Presensi/IzinSakit";
+import ComponentPlaceholder from "./components/common/ComponentPlaceholder";
+import ProfileView from "./components/UserProfile/ProfileView";
+import InstansiView from "./components/school/InstansiView";
+import TablePlaceholder from "./components/common/TablePlaceholder";
+
+import DataPegawai from "./pages/Kepegawaian/DataPegawai";
+import MappingPengawasPage from "./pages/PKKS/MappingPengawas";
+
+import SignIn from "./pages/AuthPages/SignIn";
+import SignUp from "./pages/AuthPages/SignUp";
 
 function HomeRedirect() {
-  const { user, isAuthenticated } = useAuth();
-  if (isAuthenticated && user) {
-    return <Navigate to={`/${getRoleSlug(user.role)}`} replace />;
-  }
-  return <Navigate to="/signin" replace />;
+  return <Navigate to="/admin" replace />;
 }
 
 export default function App() {
@@ -53,6 +50,10 @@ export default function App() {
     <Router>
       <ScrollToTop />
       <Routes>
+        {/* Auth Routes */}
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+
         {/* Dashboard Layout */}
         <Route
           element={
@@ -67,9 +68,65 @@ export default function App() {
           <Route path="/" element={<HomeRedirect />} />
           
           <Route path="/:role">
-            <Route index element={<Home />} />
+            <Route index element={<MandalaDashboard />} />
 
-            {/* Data Master */}
+            {/* Profile */}
+            <Route path="profile" element={<ProfileView />} />
+            <Route path="profil-instansi" element={<InstansiView />} />
+
+            {/* Kepegawaian */}
+            <Route path="kepegawaian/data-pegawai" element={<DataPegawai />} />
+            <Route path="kepegawaian/tugas-pegawai" element={<TablePlaceholder title="Tugas Pegawai" columns={["Nama", "Tugas Utama", "Tugas Tambahan"]} />} />
+
+            {/* Satuan Pendidikan */}
+            <Route path="satuan-pendidikan/data" element={<SchoolData />} />
+            <Route path="satuan-pendidikan/detail/:id" element={<SchoolDetailPage />} />
+            <Route path="satuan-pendidikan/spasial" element={<SpasialData />} />
+            <Route path="satuan-pendidikan/rekapitulasi" element={<RekapitulasiSekolah />} />
+
+            {/* PKKS */}
+            <Route path="pkks/mapping-pengawas" element={<MappingPengawasPage />} />
+            <Route path="pkks/instrumen" element={<TablePlaceholder title="Instrumen Penilaian" columns={["Nama Instrumen", "Kategori", "Tahun"]} />} />
+            <Route path="pkks/bank-soal" element={<TablePlaceholder title="Bank Soal PKKS" columns={["Kode Soal", "Pertanyaan", "Kompetensi"]} />} />
+
+            {/* GTK */}
+            <Route path="gtk/guru" element={<GTKData />} />
+            <Route path="gtk/tendik" element={<GTKData />} />
+            <Route path="gtk/rekapitulasi" element={<GTKData />} />
+            <Route path="gtk/non-aktif" element={<GTKData />} />
+            <Route path="gtk/detail" element={<GTKDetailPage />} />
+
+            {/* Peserta Didik */}
+            <Route path="peserta-didik/data" element={<StudentData />} />
+            <Route path="peserta-didik/detail" element={<StudentDetailPage />} />
+            <Route path="peserta-didik/rekapitulasi" element={<StudentData />} />
+            <Route path="peserta-didik/non-aktif" element={<StudentData />} />
+
+            {/* Layanan */}
+            <Route path="layanan/gtk" element={<TablePlaceholder title="Layanan GTK" columns={["Jenis Layanan", "Pemohon", "Status Pengajuan"]} />} />
+            <Route path="layanan/peserta-didik" element={<TablePlaceholder title="Layanan Peserta Didik" columns={["Jenis Layanan", "Siswa", "Status"]} />} />
+
+            {/* Laporan Absensi */}
+            <Route path="laporan-absensi/gtk" element={<PresensiGTK />} />
+            <Route path="laporan-absensi/peserta-didik" element={<PresensiPD />} />
+            <Route path="laporan-absensi/rekap-terpadu" element={<ComponentPlaceholder title="Rekap Terpadu" description="Grafik dan rekapitulasi absensi seluruh warga sekolah." />} />
+
+            {/* Dokumen Layanan */}
+            <Route path="dokumen-layanan" element={<TablePlaceholder title="Dokumen Layanan" columns={["Nama Dokumen", "Kategori", "Tgl Upload"]} />} />
+
+            {/* Administrasi Surat */}
+            <Route path="administrasi-surat/masuk" element={<TablePlaceholder title="Surat Masuk" columns={["No. Surat", "Asal Surat", "Perihal", "Tgl Terima"]} />} />
+            <Route path="administrasi-surat/keluar" element={<TablePlaceholder title="Surat Keluar" columns={["No. Surat", "Tujuan", "Perihal", "Tgl Keluar"]} />} />
+            <Route path="administrasi-surat/arsip" element={<TablePlaceholder title="Arsip Surat" columns={["Kode Arsip", "Judul Arsip", "Tahun"]} />} />
+            <Route path="administrasi-surat/template" element={<TablePlaceholder title="Template Surat" columns={["Nama Template", "Kategori", "Preview"]} />} />
+
+            {/* Daftar Antrian */}
+            <Route path="daftar-antrian" element={<TablePlaceholder title="Daftar Antrian" columns={["No. Antrian", "Nama Pemohon", "Keperluan", "Status"]} />} />
+
+            {/* Pelaporan dan Dokumen */}
+            <Route path="pelaporan-dokumen" element={<TablePlaceholder title="Pelaporan dan Dokumen" columns={["Nama Laporan", "Periode", "Status Laporan"]} />} />
+
+            {/* Data Master (Legacy) */}
             <Route path="school-profile" element={<SchoolProfile />} />
             <Route path="gtk-data" element={<GTKData />} />
             <Route path="student-data" element={<StudentData />} />
@@ -95,37 +152,8 @@ export default function App() {
 
             {/* Other */}
             <Route path="sync-api" element={<ApiSyncPage />} />
-            
-            {/* Profile */}
-            <Route path="profile" element={<Blank />} />
           </Route>
         </Route>
-
-        {/* Auth Pages */}
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/blank" element={<Blank />} />
-
-        {/* Forms */}
-        <Route path="/form-elements" element={<FormElements />} />
-
-        {/* Tables */}
-        <Route path="/basic-tables" element={<BasicTables />} />
-
-        {/* Ui Elements */}
-        <Route path="/alerts" element={<Alerts />} />
-        <Route path="/avatars" element={<Avatars />} />
-        <Route path="/badge" element={<Badges />} />
-        <Route path="/buttons" element={<Buttons />} />
-        <Route path="/images" element={<Images />} />
-        <Route path="/videos" element={<Videos />} />
-
-        {/* Charts */}
-        <Route path="/line-chart" element={<LineChart />} />
-        <Route path="/bar-chart" element={<BarChart />} />
-
-        {/* Auth Layout */}
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />

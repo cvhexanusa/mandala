@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
-  BoxCubeIcon,
   BoxIcon,
   CalenderIcon,
   ChevronDownIcon,
@@ -9,13 +8,17 @@ import {
   DotIcon,
   GridIcon,
   HorizontaLDots,
-  ListIcon,
-  PageIcon,
-  PieChartIcon,
   PlugInIcon,
   TableIcon,
   UserCircleIcon,
   BoltIcon,
+  SchoolIcon,
+  GroupIcon,
+  TaskIcon,
+  UserIcon,
+  MailIcon,
+  ListIcon,
+  PieChartIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
@@ -40,320 +43,212 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <BoxIcon />,
-    name: "Data Master",
+    icon: <UserCircleIcon />,
+    name: "Profil Saya",
+    path: "/profile",
+  },
+  {
+    icon: <SchoolIcon />,
+    name: "Profil Instansi",
+    path: "/profil-instansi",
+  },
+  {
+    name: "Kepegawaian",
+    icon: <GroupIcon />,
     subItems: [
       {
-        name: "Profil Sekolah",
-        path: "/school-profile",
+        name: "Data Pegawai",
+        path: "/kepegawaian/data-pegawai",
         icon: <DotIcon />,
       },
       {
-        name: "GTK",
+        name: "Tugas Pegawai",
+        path: "/kepegawaian/tugas-pegawai",
         icon: <DotIcon />,
-        subItems: [
-          {
-            name: "Guru",
-            path: "/gtk-data?tab=guru",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Tendik",
-            path: "/gtk-data?tab=tendik",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Rekap GTK",
-            path: "/gtk-data?tab=rekap",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Kartu ID GTK",
-            path: "/gtk-card",
-            icon: <DotIcon />,
-          },
-          {
-            name: "GTK Non Aktif",
-            path: "/gtk-data?tab=nonaktif",
-            icon: <DotIcon />,
-            color: "text-red-500 dark:text-red-400",
-          },
-        ],
+      },
+    ],
+  },
+  {
+    name: "Satuan Pendidikan",
+    icon: <BoxIcon />,
+    subItems: [
+      {
+        name: "Data Satuan Pendidikan",
+        path: "/satuan-pendidikan/data",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Data Spasial",
+        path: "/satuan-pendidikan/spasial",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Rekapitulasi Sekolah",
+        path: "/satuan-pendidikan/rekapitulasi",
+        icon: <DotIcon />,
+      },
+    ],
+  },
+  {
+    name: "PKKS",
+    icon: <TaskIcon />,
+    subItems: [
+      {
+        name: "Mapping Pengawas Pembina",
+        path: "/pkks/mapping-pengawas",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Instrumen Penilaian",
+        path: "/pkks/instrumen",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Bank Soal PKKS",
+        path: "/pkks/bank-soal",
+        icon: <DotIcon />,
+      },
+    ],
+  },
+  {
+    name: "GTK",
+    icon: <GroupIcon />,
+    subItems: [
+      {
+        name: "Guru",
+        path: "/gtk/guru?tab=guru",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Tendik",
+        path: "/gtk/tendik?tab=tendik",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Rekapitulasi GTK",
+        path: "/gtk/rekapitulasi?tab=rekap",
+        icon: <DotIcon />,
+      },
+      {
+        name: "GTK Non-aktif",
+        path: "/gtk/non-aktif?tab=nonaktif",
+        icon: <DotIcon />,
+      },
+    ],
+  },
+  {
+    name: "Peserta Didik",
+    icon: <UserIcon />,
+    subItems: [
+      {
+        name: "Data Siswa",
+        path: "/peserta-didik/data?tab=aktif",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Rekapitulasi Siswa",
+        path: "/peserta-didik/rekapitulasi?tab=rekap",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Siswa Non-aktif",
+        path: "/peserta-didik/non-aktif?tab=keluar",
+        icon: <DotIcon />,
+      },
+    ],
+  },
+  {
+    name: "Layanan",
+    icon: <PlugInIcon />,
+    subItems: [
+      {
+        name: "Layanan GTK",
+        path: "/layanan/gtk",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Layanan Peserta Didik",
+        path: "/layanan/peserta-didik",
+        icon: <DotIcon />,
+      },
+    ],
+  },
+  {
+    name: "Laporan Presensi",
+    icon: <TableIcon />,
+    subItems: [
+      {
+        name: "GTK",
+        path: "/laporan-absensi/gtk",
+        icon: <DotIcon />,
       },
       {
         name: "Peserta Didik",
-        icon: <DotIcon />,
-        subItems: [
-          {
-            name: "Peserta Didik",
-            path: "/student-data?tab=aktif",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Rekap PD",
-            path: "/student-data?tab=rekap",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Kartu ID PD",
-            path: "/student-card",
-            icon: <DotIcon />,
-          },
-          {
-            name: "PD Keluar",
-            path: "/student-data?tab=keluar",
-            icon: <DotIcon />,
-            color: "text-red-500 dark:text-red-400",
-          },
-        ],
-      },
-      {
-        name: "Rombongan Belajar",
-        icon: <DotIcon />,
-        subItems: [
-          {
-            name: "Reguler",
-            path: "/class-data?tab=reguler",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Praktik",
-            path: "/class-data?tab=praktik",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Ekskul",
-            path: "/class-data?tab=ekskul",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Matpel Pilihan",
-            path: "/class-data?tab=pilihan",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Wali",
-            path: "/class-data?tab=wali",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Rekap Rombel",
-            path: "/class-data?tab=rekap",
-            icon: <DotIcon />,
-          },
-        ],
-      },
-      {
-        name: "Mata Pelajaran",
-        path: "/subject-data",
+        path: "/laporan-absensi/peserta-didik",
         icon: <DotIcon />,
       },
       {
-        name: "Sarpras",
-        path: "/sarpras-data",
+        name: "Rekap Terpadu",
+        path: "/laporan-absensi/rekap-terpadu",
         icon: <DotIcon />,
       },
     ],
   },
   {
     icon: <DocsIcon />,
-    name: "Akademik",
+    name: "Dokumen Layanan",
+    path: "/dokumen-layanan",
+  },
+  {
+    name: "Administrasi Surat",
+    icon: <MailIcon />,
     subItems: [
       {
-        name: "Tahun Pelajaran",
-        path: "/academic/year",
+        name: "Surat Masuk",
+        path: "/administrasi-surat/masuk",
         icon: <DotIcon />,
       },
       {
-        name: "Kompetensi Keahlian",
-        path: "/academic/competency",
+        name: "Surat Keluar",
+        path: "/administrasi-surat/keluar",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Arsip Surat",
+        path: "/administrasi-surat/arsip",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Template Surat",
+        path: "/administrasi-surat/template",
         icon: <DotIcon />,
       },
     ],
   },
   {
-    icon: <TableIcon />,
-    name: "Kurikulum",
-    subItems: [
-      {
-        name: "Pengaturan Jam",
-        path: "/kurikulum/pengaturan-jam",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Jadwal Pelajaran",
-        path: "/kurikulum/jadwal-pelajaran",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Presensi",
-        icon: <DotIcon />,
-        subItems: [
-          {
-            name: "Scanner QR",
-            path: "/kurikulum/presensi/scanner",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Presensi Peserta Didik",
-            path: "/kurikulum/presensi/pesertadidik",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Presensi GTK",
-            path: "/kurikulum/presensi/gtk",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Presensi Mapel",
-            path: "/kurikulum/presensi/mapel",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Izin",
-            path: "/kurikulum/presensi/izin",
-            icon: <DotIcon />,
-          },
-          {
-            name: "Hari Libur",
-            path: "/kurikulum/presensi/hari-libur",
-            icon: <DotIcon />,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    icon: <CalenderIcon />,
-    name: "Kalender",
-    path: "/calendar",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Profil Pengguna",
-    path: "/profile",
-  },
-  {
-    name: "Formulir",
     icon: <ListIcon />,
-    subItems: [
-      {
-        name: "Elemen Formulir",
-        path: "/form-elements",
-        icon: <DotIcon />,
-      },
-    ],
+    name: "Daftar Antrian",
+    path: "/daftar-antrian",
   },
   {
-    name: "Tabel",
-    icon: <TableIcon />,
-    subItems: [
-      {
-        name: "Tabel Dasar",
-        path: "/basic-tables",
-        icon: <DotIcon />,
-      },
-    ],
-    },
-    {
+    icon: <PieChartIcon />,
+    name: "Pelaporan dan Dokumen",
+    path: "/pelaporan-dokumen",
+  },
+  {
     name: "Pengaturan",
     icon: <PlugInIcon />,
     subItems: [
       {
-        name: "Sync API",
+        name: "Koneksi Mandala",
         path: "/sync-api",
         icon: <BoltIcon />,
       },
     ],
   },
-  {
-    name: "Halaman",
-    icon: <PageIcon />,
-    subItems: [
-      {
-        name: "Halaman Kosong",
-        path: "/blank",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Error 404",
-        path: "/error-404",
-        icon: <DotIcon />,
-      },
-    ],
-  },
 ];
 
-const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Grafik",
-    subItems: [
-      {
-        name: "Grafik Garis",
-        path: "/line-chart",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Grafik Batang",
-        path: "/bar-chart",
-        icon: <DotIcon />,
-      },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Elemen UI",
-    subItems: [
-      {
-        name: "Alert",
-        path: "/alerts",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Avatar",
-        path: "/avatars",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Badge",
-        path: "/badge",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Tombol",
-        path: "/buttons",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Gambar",
-        path: "/images",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Video",
-        path: "/videos",
-        icon: <DotIcon />,
-      },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Autentikasi",
-    subItems: [
-      {
-        name: "Masuk",
-        path: "/signin",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Daftar",
-        path: "/signup",
-        icon: <DotIcon />,
-      },
-    ],
-  },
-];
+const othersItems: NavItem[] = [];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -366,12 +261,10 @@ const AppSidebar: React.FC = () => {
   // Helper to prepend role prefix to path
   const getFullPath = (path?: string) => {
     if (!path || path === "/" || path.startsWith("/signin") || path.startsWith("/signup")) return path;
-    // Don't prepend if it already has the prefix
     if (path.startsWith(rolePrefix)) return path;
     return `${rolePrefix}${path}`;
   };
 
-  // Jika belum sinkron, hanya tampilkan menu Dashboard dan Sync API
   const filteredNavItems = sekolah 
     ? navItems 
     : navItems.filter(item => item.name === "Dashboard" || item.name === "Pengaturan");
@@ -548,43 +441,26 @@ const AppSidebar: React.FC = () => {
         <Link to={rolePrefix || "/"} className="flex items-center gap-3">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              {sekolah?.logo ? (
-                <img
-                  src={sekolah.logo}
-                  alt="Logo Sekolah"
-                  className="w-10 h-10 object-contain"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                  {sekolah?.nama?.charAt(0) || "S"}
-                </div>
-              )}
+              <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                M
+              </div>
               <div className="flex flex-col">
-                <span className="font-bold text-gray-900 dark:text-white leading-tight">
-                  {sekolah?.nama || "SIMAK"}
+                <span className="font-bold text-gray-900 dark:text-white leading-tight uppercase">
+                  MANDALA
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {sekolah?.npsn || "Sistem Informasi"}
+                  Sistem Informasi
                 </span>
               </div>
             </>
           ) : (
-            sekolah?.logo ? (
-              <img
-                src={sekolah.logo}
-                alt="Logo"
-                width={32}
-                height={32}
-              />
-            ) : (
-              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                {sekolah?.nama?.charAt(0) || "S"}
-              </div>
-            )
+            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+              M
+            </div>
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+      <div className="flex flex-col overflow-y-auto duration- duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>

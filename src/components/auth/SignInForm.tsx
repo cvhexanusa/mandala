@@ -64,7 +64,6 @@ export default function SignInForm() {
       await verify2FA(tempToken, otp, !is2FASetup ? setupSecret : undefined);
       setIs2FAModalOpen(false);
       
-      // Get role from user data in localStorage
       const savedUser = localStorage.getItem('user_data');
       if (savedUser) {
         const user = JSON.parse(savedUser);
@@ -73,7 +72,7 @@ export default function SignInForm() {
         navigate("/");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Kode 2FA tidak valid.");
+      setError(err.response?.data?.message || "Kode keamanan tidak valid.");
     } finally {
       setLoading(false);
     }
@@ -82,106 +81,101 @@ export default function SignInForm() {
   return (
     <div className="flex flex-col flex-1">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div>
-          <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Sign In
+        <div className="px-5 sm:px-0">
+          <div className="mb-8">
+            <h1 className="mb-2 font-bold text-gray-800 text-title-md dark:text-white/90">
+              Masuk ke MANDALA
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your username and password to sign in!
+              Silakan masukkan username dan kata sandi Anda.
             </p>
           </div>
 
           {error && !is2FAModalOpen && (
-            <div className="p-3 mb-6 text-sm text-red-500 bg-red-100 rounded-lg dark:bg-red-500/10">
+            <div className="p-4 mb-6 text-sm text-error-600 bg-error-50 border border-error-100 rounded-xl dark:bg-error-500/10 dark:border-error-500/20">
               {error}
             </div>
           )}
 
-          <div>
-            <form onSubmit={handleLogin}>
-              <div className="space-y-6">
-                <div>
-                  <Label>
-                    Username <span className="text-error-500">*</span>{" "}
-                  </Label>
+          <form onSubmit={handleLogin}>
+            <div className="space-y-5">
+              <div>
+                <Label>Username</Label>
+                <Input
+                  placeholder="Masukkan username Anda"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="rounded-xl"
+                />
+              </div>
+              <div>
+                <Label>Kata Sandi</Label>
+                <div className="relative">
                   <Input
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Masukkan kata sandi Anda"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="rounded-xl"
                   />
-                </div>
-                <div>
-                  <Label>
-                    Password <span className="text-error-500">*</span>{" "}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <span
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                    >
-                      {showPassword ? (
-                        <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      ) : (
-                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Link
-                    to="/reset-password"
-                    className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  <span
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
                   >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div>
-                  <Button
-                    className="w-full"
-                    size="sm"
-                    disabled={loading}
-                    type="submit"
-                  >
-                    {loading ? "Processing..." : "Sign In"}
-                  </Button>
+                    {showPassword ? (
+                      <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                    ) : (
+                      <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                    )}
+                  </span>
                 </div>
               </div>
-            </form>
 
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Don&apos;t have an account? {""}
+              <div className="flex items-center justify-end">
                 <Link
-                  to="/signup"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  to="/reset-password"
+                  className="text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400"
                 >
-                  Sign Up
+                  Lupa kata sandi?
                 </Link>
-              </p>
+              </div>
+              <div>
+                <Button
+                  className="w-full rounded-xl py-3 text-base font-semibold shadow-lg shadow-brand-500/20"
+                  size="md"
+                  disabled={loading}
+                  type="submit"
+                >
+                  {loading ? "Memproses..." : "Masuk Sekarang"}
+                </Button>
+              </div>
             </div>
+          </form>
+
+          <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-sm font-normal text-center text-gray-500 dark:text-gray-400 sm:text-start">
+              Belum punya akun? {""}
+              <Link
+                to="/signup"
+                className="font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400"
+              >
+                Hubungi Admin Instansi
+              </Link>
+            </p>
           </div>
         </div>
       </div>
 
-      {/* 2FA Modal */}
       <Modal
         isOpen={is2FAModalOpen}
         onClose={() => setIs2FAModalOpen(false)}
         className="max-w-[450px] p-6 sm:p-10"
       >
         <div className="text-center">
-          <h2 className="mb-2 text-xl font-semibold text-gray-800 dark:text-white/90 sm:text-2xl">
-            {is2FASetup ? "Verifikasi 2FA" : "Setup 2FA"}
+          <h2 className="mb-2 text-xl font-bold text-gray-800 dark:text-white/90 sm:text-2xl">
+            {is2FASetup ? "Verifikasi Keamanan" : "Aktivasi 2FA"}
           </h2>
           <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">
             {is2FASetup
@@ -190,7 +184,7 @@ export default function SignInForm() {
           </p>
 
           {error && is2FAModalOpen && (
-            <div className="p-3 mb-6 text-sm text-red-500 bg-red-100 rounded-lg dark:bg-red-500/10">
+            <div className="p-3 mb-6 text-sm text-error-600 bg-error-50 rounded-xl dark:bg-error-500/10">
               {error}
             </div>
           )}
@@ -199,32 +193,29 @@ export default function SignInForm() {
             <div className="space-y-6 text-left">
               {!is2FASetup && (
                 <div className="flex flex-col items-center space-y-4">
-                  <div className="p-4 bg-white border-2 border-gray-200 border-dashed rounded-2xl dark:border-gray-600">
-                    <QRCodeSVG value={qrCodeUrl} size={200} />
+                  <div className="p-4 bg-white border-2 border-gray-100 border-dashed rounded-3xl dark:bg-gray-800 dark:border-gray-700">
+                    <QRCodeSVG value={qrCodeUrl} size={180} />
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">
-                      Backup Key
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                      Kunci Cadangan
                     </p>
-                    <code className="px-3 py-1 font-mono text-sm font-bold text-blue-600 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-blue-400">
+                    <code className="px-3 py-1 font-mono text-sm font-bold text-brand-600 bg-brand-50 rounded-lg dark:bg-brand-500/10 dark:text-brand-400">
                       {setupSecret}
                     </code>
                   </div>
                 </div>
               )}
               <div>
-                <Label>
-                  6-Digit Kode Keamanan{" "}
-                  <span className="text-error-500">*</span>
-                </Label>
+                <Label>6 Digit Kode Keamanan</Label>
                 <Input
                   type="text"
-                  placeholder="000000"
+                  placeholder="000 000"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   maxLength={6}
                   required
-                  className="text-2xl tracking-[0.5em] text-center font-bold"
+                  className="text-2xl tracking-[0.5em] text-center font-bold rounded-xl"
                 />
               </div>
 
@@ -233,11 +224,11 @@ export default function SignInForm() {
                   type="button"
                   onClick={() => setIs2FAModalOpen(false)}
                   variant="outline"
-                  className="w-full"
+                  className="w-full rounded-xl"
                 >
                   Batal
                 </Button>
-                <Button disabled={loading} type="submit" className="w-full">
+                <Button disabled={loading} type="submit" className="w-full rounded-xl">
                   {loading ? "Verifikasi..." : "Verifikasi"}
                 </Button>
               </div>

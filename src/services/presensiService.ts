@@ -69,4 +69,31 @@ export const presensiService = {
     });
     return response.data;
   },
+
+  // Mandala Presensi (New Endpoints)
+  getMandalaPresensiPD: async (params: { 
+    sekolah_id?: string; 
+    tanggal?: string; 
+    limit?: number; 
+    page?: number; 
+    search?: string;
+    kabupaten_kota?: string;
+    kecamatan?: string;
+  }) => {
+    const response = await api.get('/mandala/presensi/peserta-didik', { params });
+    return response.data;
+  },
+
+  getMandalaPresensiGTK: async (params: { 
+    sekolah_id?: string; 
+    tanggal?: string; 
+    limit?: number; 
+    page?: number; 
+    search?: string;
+    kabupaten_kota?: string;
+    kecamatan?: string;
+  }) => {
+    const response = await api.get('/mandala/presensi/gtk', { params });
+    return response.data;
+  },
 };
