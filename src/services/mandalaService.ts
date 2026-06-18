@@ -125,9 +125,13 @@ export const mandalaService = {
     cadisdik_id: string; 
     kategori_keperluan_id: string; 
     nama_lengkap: string; 
+<<<<<<< HEAD
     instansi_tamu?: string; 
+=======
+    unit_instansi?: string; 
+>>>>>>> 9e3f7d7207ece25be215b9304e3b44d0db557991
     keperluan: string; 
-    nomor_telepon?: string;
+    nomor_hp?: string;
   }) => {
     const cleanedData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== ""));
     const response = await api.post('/mandala/antrian', cleanedData);
@@ -148,8 +152,12 @@ export const mandalaService = {
 };
 
 export interface KategoriKeperluan {
+<<<<<<< HEAD
   id?: string;
   kategori_id?: string;
+=======
+  kategori_keperluan_id: string;
+>>>>>>> 9e3f7d7207ece25be215b9304e3b44d0db557991
   cadisdik_id: string;
   nama: string;
   created_at: string;
@@ -159,18 +167,24 @@ export interface Antrian {
   id?: string;
   antrian_id?: string;
   cadisdik_id: string;
+<<<<<<< HEAD
   kategori_id?: string;
   kategori_keperluan_id?: string;
   nomor_antrian: number;
   nama_tamu?: string;
   nama_lengkap?: string;
   instansi_tamu: string | null;
+=======
+  kategori_keperluan_id: string;
+  nomor_antrian: number;
+  nama_lengkap: string;
+  unit_instansi: string | null;
+>>>>>>> 9e3f7d7207ece25be215b9304e3b44d0db557991
   keperluan: string;
-  nomor_telepon: string | null;
+  nomor_hp: string | null;
   status: number; // 0=Menunggu, 1=Dipanggil, 2=Dilayani, 3=Selesai, 4=Batal
-  tanggal_kunjungan: string;
   created_at: string;
-  kategori?: KategoriKeperluan;
+  kategori_keperluan?: KategoriKeperluan;
 }
 
 export interface AntrianRekap {
