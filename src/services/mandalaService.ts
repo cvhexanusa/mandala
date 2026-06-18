@@ -86,4 +86,93 @@ export const mandalaService = {
     const response = await api.delete(`/mandala/mapping-pengawas/${id}`);
     return response.data;
   },
+
+  // G. Kategori Keperluan (Antrian)
+  getKategoriKeperluan: async (cadisdik_id?: string) => {
+    const params: any = {};
+    if (cadisdik_id) params.cadisdik_id = cadisdik_id;
+    const response = await api.get('/mandala/kategori-keperluan', { params });
+    return response.data;
+  },
+
+  createKategoriKeperluan: async (data: { cadisdik_id: string; nama: string; deskripsi?: string }) => {
+    const response = await api.post('/mandala/kategori-keperluan', data);
+    return response.data;
+  },
+
+  updateKategoriKeperluan: async (id: string, data: { nama?: string; deskripsi?: string }) => {
+    const response = await api.patch(`/mandala/kategori-keperluan/${id}`, data);
+    return response.data;
+  },
+
+  deleteKategoriKeperluan: async (id: string) => {
+    const response = await api.delete(`/mandala/kategori-keperluan/${id}`);
+    return response.data;
+  },
+
+  // H. Antrian Tamu
+  getAntrian: async (params: { cadisdik_id?: string; status?: number | string; start_date?: string; end_date?: string }) => {
+    // Filter out empty strings or null values
+    const queryParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== "" && v !== null && v !== undefined)
+    );
+    const response = await api.get('/mandala/antrian', { params: queryParams });
+    return response.data;
+  },
+
+  createAntrian: async (data: { 
+    cadisdik_id: string; 
+    kategori_id: string; 
+    nama_tamu: string; 
+    instansi_tamu?: string; 
+    keperluan: string; 
+    nomor_telepon?: string;
+  }) => {
+    const response = await api.post('/mandala/antrian', data);
+    return response.data;
+  },
+
+  updateAntrianStatus: async (id: string, status: number) => {
+    const response = await api.patch(`/mandala/antrian/${id}/status`, { status });
+    return response.data;
+  },
+
+  getAntrianRekap: async (cadisdik_id?: string) => {
+    const params: any = {};
+    if (cadisdik_id) params.cadisdik_id = cadisdik_id;
+    const response = await api.get('/mandala/antrian/rekap', { params });
+    return response.data;
+  },
 };
+
+export interface KategoriKeperluan {
+  kategori_id: string;
+  cadisdik_id: string;
+  nama: string;
+  deskripsi: string | null;
+  created_at: string;
+}
+
+export interface Antrian {
+  antrian_id: string;
+  cadisdik_id: string;
+  kategori_id: string;
+  nomor_antrian: number;
+  nama_tamu: string;
+  instansi_tamu: string | null;
+  keperluan: string;
+  nomor_telepon: string | null;
+  status: number; // 0=Menunggu, 1=Dipanggil, 2=Dilayani, 3=Selesai, 4=Batal
+  tanggal_kunjungan: string;
+  created_at: string;
+  kategori?: KategoriKeperluan;
+}
+
+export interface AntrianRekap {
+  total: number;
+  menunggu: number;
+  dipanggil: number;
+  dilayani: number;
+  selesai: number;
+  batal: number;
+}

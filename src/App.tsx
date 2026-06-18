@@ -37,6 +37,7 @@ import TablePlaceholder from "./components/common/TablePlaceholder";
 
 import DataPegawai from "./pages/Kepegawaian/DataPegawai";
 import MappingPengawasPage from "./pages/PKKS/MappingPengawas";
+import DaftarAntrian from "./pages/Layanan/DaftarAntrian";
 
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
@@ -121,7 +122,7 @@ export default function App() {
             <Route path="administrasi-surat/template" element={<TablePlaceholder title="Template Surat" columns={["Nama Template", "Kategori", "Preview"]} />} />
 
             {/* Daftar Antrian */}
-            <Route path="daftar-antrian" element={<TablePlaceholder title="Daftar Antrian" columns={["No. Antrian", "Nama Pemohon", "Keperluan", "Status"]} />} />
+            <Route path="daftar-antrian" element={<DaftarAntrian />} />
 
             {/* Pelaporan dan Dokumen */}
             <Route path="pelaporan-dokumen" element={<TablePlaceholder title="Pelaporan dan Dokumen" columns={["Nama Laporan", "Periode", "Status Laporan"]} />} />
