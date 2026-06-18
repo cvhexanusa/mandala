@@ -122,11 +122,11 @@ export const mandalaService = {
 
   createAntrian: async (data: { 
     cadisdik_id: string; 
-    kategori_id: string; 
-    nama_tamu: string; 
-    instansi_tamu?: string; 
+    kategori_keperluan_id: string; 
+    nama_lengkap: string; 
+    unit_instansi?: string; 
     keperluan: string; 
-    nomor_telepon?: string;
+    nomor_hp?: string;
   }) => {
     const response = await api.post('/mandala/antrian', data);
     return response.data;
@@ -146,7 +146,7 @@ export const mandalaService = {
 };
 
 export interface KategoriKeperluan {
-  kategori_id: string;
+  kategori_keperluan_id: string;
   cadisdik_id: string;
   nama: string;
   created_at: string;
@@ -155,16 +155,15 @@ export interface KategoriKeperluan {
 export interface Antrian {
   antrian_id: string;
   cadisdik_id: string;
-  kategori_id: string;
+  kategori_keperluan_id: string;
   nomor_antrian: number;
-  nama_tamu: string;
-  instansi_tamu: string | null;
+  nama_lengkap: string;
+  unit_instansi: string | null;
   keperluan: string;
-  nomor_telepon: string | null;
+  nomor_hp: string | null;
   status: number; // 0=Menunggu, 1=Dipanggil, 2=Dilayani, 3=Selesai, 4=Batal
-  tanggal_kunjungan: string;
   created_at: string;
-  kategori?: KategoriKeperluan;
+  kategori_keperluan?: KategoriKeperluan;
 }
 
 export interface AntrianRekap {

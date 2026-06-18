@@ -40,11 +40,11 @@ export default function DaftarAntrian() {
 
   const [formData, setFormData] = useState({
     cadisdik_id: "",
-    kategori_id: "",
-    nama_tamu: "",
-    instansi_tamu: "",
+    kategori_keperluan_id: "",
+    nama_lengkap: "",
+    unit_instansi: "",
     keperluan: "",
-    nomor_telepon: "",
+    nomor_hp: "",
   });
 
   const [katFormData, setKatFormData] = useState({
@@ -139,7 +139,7 @@ export default function DaftarAntrian() {
   const handleSubmitAntrian = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!formData.kategori_id) {
+      if (!formData.kategori_keperluan_id) {
           Swal.fire("Peringatan", "Pilih kategori keperluan terlebih dahulu", "warning");
           return;
       }
@@ -158,7 +158,7 @@ export default function DaftarAntrian() {
           showConfirmButton: false,
       });
       setIsModalOpen(false);
-      setFormData(prev => ({ ...prev, nama_tamu: "", instansi_tamu: "", keperluan: "", nomor_telepon: "" }));
+      setFormData(prev => ({ ...prev, nama_lengkap: "", unit_instansi: "", keperluan: "", nomor_hp: "" }));
       fetchData(filters);
     } catch (error: any) {
       Swal.fire("Gagal", error.response?.data?.message || "Gagal menambah antrian", "error");
@@ -263,13 +263,13 @@ export default function DaftarAntrian() {
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-800 dark:text-white/90">{item.nama_tamu}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">{item.instansi_tamu || "Pribadi / Umum"}</span>
+                          <span className="font-medium text-gray-800 dark:text-white/90">{item.nama_lengkap}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{item.unit_instansi || "Pribadi / Umum"}</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider mb-0.5">{item.kategori?.nama}</span>
+                          <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider mb-0.5">{item.kategori_keperluan?.nama}</span>
                           <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{item.keperluan}</span>
                         </div>
                       </TableCell>
@@ -327,20 +327,20 @@ export default function DaftarAntrian() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Kategori Keperluan <span className="text-error-500">*</span></label>
               <Select 
-                options={kategori.map(k => ({ value: k.kategori_id, label: k.nama }))}
-                onChange={(val) => setFormData(prev => ({ ...prev, kategori_id: val }))}
+                options={kategori.map(k => ({ value: k.kategori_keperluan_id, label: k.nama }))}
+                onChange={(val) => setFormData(prev => ({ ...prev, kategori_keperluan_id: val }))}
                 placeholder="Pilih Kategori"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Nama Lengkap Tamu <span className="text-error-500">*</span></label>
-              <Input name="nama_tamu" value={formData.nama_tamu} onChange={handleInputChange} required placeholder="Masukkan nama lengkap tamu" />
+              <Input name="nama_lengkap" value={formData.nama_lengkap} onChange={handleInputChange} required placeholder="Masukkan nama lengkap tamu" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Asal Instansi</label>
-              <Input name="instansi_tamu" value={formData.instansi_tamu} onChange={handleInputChange} placeholder="Contoh: PT. Maju Jaya / Umum" />
+              <Input name="unit_instansi" value={formData.unit_instansi} onChange={handleInputChange} placeholder="Contoh: PT. Maju Jaya / Umum" />
             </div>
 
             <div>
@@ -358,7 +358,7 @@ export default function DaftarAntrian() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Nomor Telepon (WhatsApp)</label>
-              <Input name="nomor_telepon" value={formData.nomor_telepon} onChange={handleInputChange} placeholder="08xxxxxxxx" />
+              <Input name="nomor_hp" value={formData.nomor_hp} onChange={handleInputChange} placeholder="08xxxxxxxx" />
             </div>
 
             <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800">
@@ -387,7 +387,7 @@ export default function DaftarAntrian() {
           <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-3 px-1">Daftar Kategori Aktif</h4>
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {kategori.length > 0 ? kategori.map(k => (
-              <div key={k.kategori_id} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-xl dark:bg-white/[0.03] dark:border-white/5 hover:border-brand-500/50 transition-colors">
+              <div key={k.kategori_keperluan_id} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-xl dark:bg-white/[0.03] dark:border-white/5 hover:border-brand-500/50 transition-colors">
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-800 dark:text-white/90">{k.nama}</span>
                 </div>
@@ -405,7 +405,7 @@ export default function DaftarAntrian() {
                     }).then(async (result) => {
                       if (result.isConfirmed) {
                         try {
-                          await mandalaService.deleteKategoriKeperluan(k.kategori_id);
+                          await mandalaService.deleteKategoriKeperluan(k.kategori_keperluan_id);
                           fetchData(filters);
                         } catch (e: any) {
                           Swal.fire("Gagal", e.response?.data?.message || "Kategori tidak bisa dihapus karena masih digunakan", "error");
