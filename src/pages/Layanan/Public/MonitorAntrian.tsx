@@ -11,6 +11,7 @@ export default function MonitorAntrian() {
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isSpeaking, setIsSpeaking] = useState(false);
   
   const lastAnnouncedId = useRef<string | null>(null);
 
@@ -94,6 +95,7 @@ export default function MonitorAntrian() {
 
     // 2. Mainkan Suara Robot (Text-to-Speech)
     await new Promise<void>((resolve) => {
+      setIsSpeaking(true);
       const nomor = item.nomor_antrian;
       const nama = item.nama_lengkap || item.nama_tamu || "Tamu";
       const layanan = item.kategori?.nama || item.kategori_keperluan?.nama || "Pelayanan Umum";
@@ -107,8 +109,14 @@ export default function MonitorAntrian() {
       utterance.volume = 1;
 
       // Tunggu sampai AI selesai bicara
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
+      utterance.onend = () => {
+          setIsSpeaking(false);
+          resolve();
+      };
+      utterance.onerror = () => {
+          setIsSpeaking(false);
+          resolve();
+      };
 
       window.speechSynthesis.speak(utterance);
     });
@@ -308,7 +316,7 @@ export default function MonitorAntrian() {
         {/* Right Side - Information & Waiting List */}
         <div className="flex-[3] flex flex-col gap-8">
           
-          {/* Information Card (Replacing Video) */}
+          {/* Information Card (Alur Pelayanan) */}
           <div className="bg-white rounded-3xl border border-gray-100 p-8 flex flex-col justify-center shadow-lg">
              <h3 className="text-xl font-extrabold text-gray-800 mb-6 flex items-center gap-3 uppercase tracking-wide">
                <svg className="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
