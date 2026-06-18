@@ -202,7 +202,7 @@ export default function DataPegawai() {
 
       // Password Handling (Backend requires password for create)
       if (!editingData) {
-        payload.password = formData.password.trim() || "Pegawai123!";
+        payload.password = formData.password.trim() || "mandala123";
       } else if (formData.password.trim() !== "") {
         payload.password = formData.password.trim();
       }
@@ -442,13 +442,17 @@ export default function DataPegawai() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password {editingData && <span className="text-gray-400 font-normal text-xs">(Kosongkan jika tidak ingin diubah)</span>}</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Password 
+                    <span className="text-gray-400 font-normal text-xs ml-1">
+                        {editingData ? "(Kosongkan jika tidak ingin diubah)" : "(Kosongkan untuk default: mandala123)"}
+                    </span>
+                </label>
                 <Input 
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  required={!editingData}
                   placeholder="Password"
                 />
               </div>

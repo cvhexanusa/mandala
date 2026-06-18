@@ -33,7 +33,7 @@ export default function AuthLayout({
                 </div>
               </Link>
               <p className="text-center text-gray-400 dark:text-white/60 leading-relaxed">
-                Platform Terpadu Pengelolaan Data dan Layanan Pendidikan di Jawa Barat
+                Platform Terpadu Pengelolaan Data dan Layanan Pendidikan
               </p>
             </div>
           </div>
