@@ -18,9 +18,9 @@ export default function IsiAntrian() {
     cadisdik_id: cadisdik_id,
     kategori_keperluan_id: "",
     nama_lengkap: "",
-    instansi_tamu: "",
+    unit_instansi: "",
     keperluan: "",
-    nomor_telepon: "",
+    nomor_hp: "",
   });
 
   useEffect(() => {
@@ -75,9 +75,9 @@ export default function IsiAntrian() {
         cadisdik_id: cadisdik_id,
         kategori_keperluan_id: "",
         nama_lengkap: "",
-        instansi_tamu: "",
+        unit_instansi: "",
         keperluan: "",
-        nomor_telepon: "",
+        nomor_hp: "",
       });
     } catch (error: any) {
       Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan sistem.", "error");
@@ -123,7 +123,7 @@ export default function IsiAntrian() {
                 Layanan yang Dituju <span className="text-error-500">*</span>
               </label>
               <Select 
-                options={kategori.map(k => ({ value: k.id || k.kategori_id, label: k.nama }))}
+                options={kategori.map(k => ({ value: k.kategori_keperluan_id || k.id || k.kategori_id || "", label: k.nama }))}
                 onChange={(val) => setFormData(prev => ({ ...prev, kategori_keperluan_id: val }))}
                 placeholder="Pilih Kategori Layanan"
               />
@@ -147,8 +147,8 @@ export default function IsiAntrian() {
                 Asal Instansi / Keterangan
               </label>
               <Input 
-                name="instansi_tamu" 
-                value={formData.instansi_tamu} 
+                name="unit_instansi" 
+                value={formData.unit_instansi} 
                 onChange={handleInputChange} 
                 placeholder="Contoh: PT. Maju Jaya / Masyarakat Umum" 
               />
@@ -174,9 +174,9 @@ export default function IsiAntrian() {
                 Nomor Telepon / WhatsApp
               </label>
               <Input 
-                name="nomor_telepon" 
+                name="nomor_hp" 
                 type="tel"
-                value={formData.nomor_telepon} 
+                value={formData.nomor_hp} 
                 onChange={handleInputChange} 
                 placeholder="Contoh: 081234567890" 
               />
@@ -185,7 +185,7 @@ export default function IsiAntrian() {
             <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
               <Button 
                 type="submit" 
-                size="lg" 
+                size="md" 
                 className="w-full py-4 text-base font-bold shadow-md hover:shadow-lg transition-shadow"
                 disabled={isSubmitting}
               >
