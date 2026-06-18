@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
-import { dapodikService } from '../services/dapodikService';
 
 interface User {
   id: string;
@@ -33,13 +32,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MOCK_USER: User = {
-  id: '1',
-  nama: 'Abdul Gani, S.Ag.',
-  email: 'abdulgani@email.com',
-  role: 'Super Admin'
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,23 +54,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (username: string, password: string): Promise<LoginResult> => {
-    // Mock login success
-    const result = {
-      requires2FA: false,
-      accessToken: 'mock_token',
-      user: MOCK_USER
-    };
-    setUser(MOCK_USER);
-    return result;
+    try {
+      const response = await api.post('/mandala/auth/login', {
+        identifier: username,
+        password: password
+      });
+
+      const { requires2FA, tempToken, is2FASetup, qrCodeUrl, secret, accessToken, data } = response.data;
+
+      if (requires2FA) {
+        return {
+          requires2FA: true,
+          tempToken,
+          is2FASetup,
+          qrCodeUrl,
+          secret
+        };
+      }
+
+      // If no 2FA required (unlikely based on my backend implementation for Pegawai, 
+      // but good for completeness)
+      if (accessToken && data?.pegawai) {
+        const userData = data.pegawai;
+        localStorage.setItem("auth_token", accessToken);
+        localStorage.setItem("user_data", JSON.stringify(userData));
+        if (response.data.refreshToken) {
+            localStorage.setItem("refresh_token", response.data.refreshToken);
+        }
+        setUser(userData);
+        return { requires2FA: false, accessToken, user: userData };
+      }
+
+      throw new Error('Data login tidak lengkap');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const verify2FA = async (tempToken: string, code: string, secret?: string) => {
-    setUser(MOCK_USER);
+    try {
+      const response = await api.post('/mandala/auth/verify-2fa', {
+        tempToken,
+        code,
+        secretToSave: secret
+      });
+
+      if (response.data.status === 'success') {
+        const { accessToken, refreshToken, pegawai } = response.data.data;
+        localStorage.setItem("auth_token", accessToken);
+        localStorage.setItem("refresh_token", refreshToken);
+        localStorage.setItem("user_data", JSON.stringify(pegawai));
+        setUser(pegawai);
+      } else {
+        throw new Error(response.data.message || 'Verifikasi 2FA gagal');
+      }
+    } catch (error) {
+      console.error('2FA verification error:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
     setUser(null);
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_data");
   };
 

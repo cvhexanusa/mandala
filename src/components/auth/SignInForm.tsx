@@ -87,7 +87,7 @@ export default function SignInForm() {
               Masuk ke MANDALA
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Silakan masukkan username dan kata sandi Anda.
+              Silakan masukkan NIP dan kata sandi Anda.
             </p>
           </div>
 
@@ -100,9 +100,9 @@ export default function SignInForm() {
           <form onSubmit={handleLogin}>
             <div className="space-y-5">
               <div>
-                <Label>Username</Label>
+                <Label>NIP (Nomor Induk Pegawai)</Label>
                 <Input
-                  placeholder="Masukkan username Anda"
+                  placeholder="Masukkan NIP Anda"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
