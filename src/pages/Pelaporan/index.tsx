@@ -18,7 +18,7 @@ export default function PelaporanPage() {
   const { user } = useAuth();
   const roleSlug = user ? getRoleSlug(user.role) : "admin";
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Pelaporan[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,20 +26,56 @@ export default function PelaporanPage() {
   const [totalItems, setTotalItems] = useState(0);
 
   const fetchPelaporan = useCallback(async () => {
-    if (!user?.cadisdik_id) return;
+    console.log("fetchPelaporan dipanggil, user:", user);
+    if (!user?.cadisdik_id) {
+      console.warn("Fetch pelaporan dibatalkan: user.cadisdik_id tidak ditemukan");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
+      console.log("Requesting pelaporan for cadisdik_id:", user.cadisdik_id);
       const response = await mandalaService.getPelaporan(user.cadisdik_id, currentPage, itemsPerPage);
-      if (response.status === "success") {
-        setData(response.data);
-        setTotalItems(response.total);
+      console.log("API Response getPelaporan raw:", response);
+      
+      let pelaporanData: Pelaporan[] = [];
+      let total = 0;
+
+      // Skenario 1: Response adalah array langsung
+      if (Array.isArray(response)) {
+        pelaporanData = response;
+        total = response.length;
+      } 
+      // Skenario 2: Response memiliki property data (standar axios/service kita)
+      else if (response && response.data) {
+        if (Array.isArray(response.data)) {
+          pelaporanData = response.data;
+          total = response.total || response.data.length;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          pelaporanData = response.data.data;
+          total = response.data.total || response.data.data.length;
+        }
       }
+      // Skenario 3: Response sukses tapi format lain
+      else if (response && (response.status === "success" || !response.status)) {
+        // Coba cari property array apapun
+        const possibleArray = Object.values(response).find(v => Array.isArray(v));
+        if (possibleArray) {
+          pelaporanData = possibleArray as Pelaporan[];
+          total = response.total || pelaporanData.length;
+        }
+      }
+
+      setData(pelaporanData);
+      setTotalItems(total);
+      
+      console.log("Processed Pelaporan Data:", pelaporanData, "Total:", total);
     } catch (error) {
       console.error("Gagal mengambil data pelaporan:", error);
     } finally {
       setLoading(false);
     }
-  }, [user?.cadisdik_id, currentPage, itemsPerPage]);
+  }, [user, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchPelaporan();
@@ -130,7 +166,7 @@ export default function PelaporanPage() {
                       </TableCell>
                       <TableCell className="text-center">{item.jumlah_sekolah}</TableCell>
                       <TableCell className="text-center">
-                        <Badge color="brand" size="sm">{item.jumlah_dokumen}</Badge>
+                        <Badge color="primary" size="sm">{item.jumlah_dokumen}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         {item.aktif ? (

@@ -160,7 +160,7 @@ export const mandalaService = {
     deskripsi?: string;
     tanggal_mulai?: string;
     tanggal_selesai?: string;
-    sekolah_ids: string[];
+    sekolah_ids?: string[];
   }) => {
     const response = await api.post('/mandala/pelaporan', data);
     return response.data;

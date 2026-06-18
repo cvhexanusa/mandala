@@ -17,9 +17,6 @@ export default function CreatePelaporanPage() {
   const roleSlug = user ? getRoleSlug(user.role) : "admin";
 
   const [loading, setLoading] = useState(false);
-  const [schools, setSchools] = useState<MandalaSchool[]>([]);
-  const [selectedSchools, setSelectedSchools] = useState<string[]>([]);
-  const [searchSchool, setSearchSchool] = useState("");
 
   const [formData, setFormData] = useState({
     judul: "",
@@ -28,48 +25,16 @@ export default function CreatePelaporanPage() {
     tanggal_selesai: "",
   });
 
-  useEffect(() => {
-    const fetchSchools = async () => {
-      try {
-        const response = await mandalaService.getSchools();
-        if (response.status === "success") {
-          setSchools(response.data);
-        }
-      } catch (error) {
-        console.error("Gagal mengambil data sekolah:", error);
-      }
-    };
-    fetchSchools();
-  }, []);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const toggleSchool = (id: string) => {
-    setSelectedSchools((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAll = () => {
-    if (selectedSchools.length === filteredSchools.length) {
-      setSelectedSchools([]);
-    } else {
-      setSelectedSchools(filteredSchools.map((s) => s.sekolah_id));
-    }
-  };
-
-  const filteredSchools = schools.filter((s) =>
-    s.nama.toLowerCase().includes(searchSchool.toLowerCase()) ||
-    s.npsn.includes(searchSchool)
-  );
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedSchools.length === 0) {
-      Swal.fire("Peringatan", "Pilih minimal satu sekolah", "warning");
+
+    if (!user?.cadisdik_id) {
+      Swal.fire("Peringatan", "ID Cadisdik tidak ditemukan pada profil Anda. Silakan Logout dan Login kembali untuk memperbarui sesi.", "warning");
       return;
     }
 
@@ -77,12 +42,12 @@ export default function CreatePelaporanPage() {
     try {
       const response = await mandalaService.createPelaporan({
         ...formData,
-        cadisdik_id: user?.cadisdik_id || "",
-        sekolah_ids: selectedSchools,
+        cadisdik_id: user.cadisdik_id,
+        sekolah_ids: [], // Pass empty array if backend expects the field
       });
 
       if (response.status === "success") {
-        Swal.fire("Berhasil", "Permintaan pelaporan berhasil dibuat", "success");
+        Swal.fire("Berhasil", "Permintaan pelaporan berhasil dibuat untuk semua sekolah di wilayah Anda", "success");
         navigate(`/${roleSlug}/pelaporan-dokumen`);
       }
     } catch (error: any) {
@@ -145,69 +110,6 @@ export default function CreatePelaporanPage() {
                   value={formData.tanggal_selesai}
                   onChange={handleInputChange}
                 />
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex justify-between items-center mb-4">
-                <Label className="mb-0">Pilih Sekolah <span className="text-error-500">*</span></Label>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-64">
-                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <SearchIcon className="size-4" />
-                     </span>
-                     <input
-                        type="text"
-                        placeholder="Cari sekolah..."
-                        className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg dark:bg-white/[0.02] dark:border-gray-700 outline-none"
-                        value={searchSchool}
-                        onChange={(e) => setSearchSchool(e.target.value)}
-                     />
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={toggleAll}
-                    className="text-xs font-medium text-brand-500 hover:text-brand-600"
-                  >
-                    {selectedSchools.length === filteredSchools.length ? "Batal Pilih Semua" : "Pilih Semua Terfilter"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto custom-scrollbar p-1">
-                {filteredSchools.map((s) => (
-                  <div 
-                    key={s.sekolah_id}
-                    onClick={() => toggleSchool(s.sekolah_id)}
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
-                      selectedSchools.includes(s.sekolah_id)
-                        ? "bg-brand-50 border-brand-200 dark:bg-brand-500/10 dark:border-brand-500/30"
-                        : "bg-white border-gray-100 dark:bg-white/[0.02] dark:border-white/5 hover:border-brand-500/50"
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                       selectedSchools.includes(s.sekolah_id) ? "bg-brand-500 border-brand-500" : "border-gray-300 dark:border-gray-600"
-                    }`}>
-                       {selectedSchools.includes(s.sekolah_id) && (
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
-                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                       )}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-semibold text-gray-800 dark:text-white/90 truncate">{s.nama}</span>
-                      <span className="text-[10px] text-gray-500">{s.npsn}</span>
-                    </div>
-                  </div>
-                ))}
-                {filteredSchools.length === 0 && (
-                  <div className="col-span-full py-10 text-center text-gray-500 text-sm italic">
-                    Sekolah tidak ditemukan.
-                  </div>
-                )}
-              </div>
-              <div className="mt-2 text-[10px] text-gray-500">
-                Terpilih: <span className="font-bold text-brand-500">{selectedSchools.length}</span> sekolah
               </div>
             </div>
 

@@ -72,7 +72,10 @@ export default function DetailPelaporanPage() {
 
   return (
     <>
-      <PageMeta title={`Detail Pelaporan - ${detail.judul} | MANDALA`} />
+      <PageMeta 
+        title={`Detail Pelaporan - ${detail.judul} | MANDALA`} 
+        description={`Detail permintaan pelaporan dokumen ${detail.judul}`}
+      />
       <PageBreadcrumb pageTitle="Detail Pelaporan" />
 
       <div className="space-y-6">

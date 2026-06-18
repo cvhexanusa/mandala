@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 
 interface ButtonProps {
   children: ReactNode; // Button text or content
-  size?: "sm" | "md"; // Button size
+  size?: "sm" | "md" | "lg"; // Button size
   variant?: "primary" | "outline" | "warning" | "error" | "primary-outline" | "warning-outline" | "error-outline" | "success-outline"; // Button variant
   startIcon?: ReactNode; // Icon before the text
   endIcon?: ReactNode; // Icon after the text
@@ -10,6 +10,7 @@ interface ButtonProps {
   disabled?: boolean; // Disabled state
   className?: string; // Additional classes
   type?: "button" | "submit" | "reset"; // Button type
+  loading?: boolean; // Loading state
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -22,11 +23,13 @@ const Button: React.FC<ButtonProps> = ({
   className = "",
   disabled = false,
   type = "button",
+  loading = false,
 }) => {
   // Size Classes
   const sizeClasses = {
     sm: "px-4 py-3 text-sm",
     md: "px-5 py-3.5 text-sm",
+    lg: "px-7 py-4 text-base",
   };
 
   // Variant Classes
@@ -55,14 +58,21 @@ const Button: React.FC<ButtonProps> = ({
       className={`inline-flex items-center justify-center gap-2 rounded-lg transition ${className} ${
         sizeClasses[size]
       } ${variantClasses[variant]} ${
-        disabled ? "cursor-not-allowed opacity-50" : ""
+        disabled || loading ? "cursor-not-allowed opacity-50" : ""
       }`}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
     >
-      {startIcon && <span className="flex items-center">{startIcon}</span>}
+      {loading ? (
+        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      ) : (
+        startIcon && <span className="flex items-center">{startIcon}</span>
+      )}
       {children}
-      {endIcon && <span className="flex items-center">{endIcon}</span>}
+      {endIcon && !loading && <span className="flex items-center">{endIcon}</span>}
     </button>
   );
 };

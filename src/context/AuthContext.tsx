@@ -8,6 +8,8 @@ interface User {
   role: string;
   nip?: string;
   foto?: string;
+  cadisdik_id?: string;
+  instansi_id?: string;
 }
 
 interface LoginResult {
