@@ -34,6 +34,7 @@ import ComponentPlaceholder from "./components/common/ComponentPlaceholder";
 import ProfileView from "./components/UserProfile/ProfileView";
 import InstansiView from "./components/school/InstansiView";
 import TablePlaceholder from "./components/common/TablePlaceholder";
+import LayananMandalaPage from "./pages/Layanan/LayananMandalaPage";
 
 import DataPegawai from "./pages/Kepegawaian/DataPegawai";
 import MappingPengawasPage from "./pages/PKKS/MappingPengawas";
@@ -104,8 +105,8 @@ export default function App() {
             <Route path="peserta-didik/non-aktif" element={<StudentData />} />
 
             {/* Layanan */}
-            <Route path="layanan/gtk" element={<TablePlaceholder title="Layanan GTK" columns={["Jenis Layanan", "Pemohon", "Status Pengajuan"]} />} />
-            <Route path="layanan/peserta-didik" element={<TablePlaceholder title="Layanan Peserta Didik" columns={["Jenis Layanan", "Siswa", "Status"]} />} />
+            <Route path="layanan/gtk" element={<LayananMandalaPage />} />
+            <Route path="layanan/peserta-didik" element={<LayananMandalaPage />} />
 
             {/* Laporan Absensi */}
             <Route path="laporan-absensi/gtk" element={<PresensiGTK />} />
