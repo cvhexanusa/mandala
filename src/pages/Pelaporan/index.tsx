@@ -1,0 +1,176 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import PageMeta from "../../components/common/PageMeta";
+import ComponentCard from "../../components/common/ComponentCard";
+import Button from "../../components/ui/button/Button";
+import Select from "../../components/form/Select";
+import Input from "../../components/form/input/InputField";
+import Badge from "../../components/ui/badge/Badge";
+import { SearchIcon, PlusIcon, BoltIcon } from "../../icons";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
+import Pagination from "../../components/common/Pagination";
+import { mandalaService, Pelaporan } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
+import { getRoleSlug } from "../../services/roleUtils";
+
+export default function PelaporanPage() {
+  const { user } = useAuth();
+  const roleSlug = user ? getRoleSlug(user.role) : "admin";
+
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Pelaporan[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const fetchPelaporan = useCallback(async () => {
+    if (!user?.cadisdik_id) return;
+    setLoading(true);
+    try {
+      const response = await mandalaService.getPelaporan(user.cadisdik_id, currentPage, itemsPerPage);
+      if (response.status === "success") {
+        setData(response.data);
+        setTotalItems(response.total);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil data pelaporan:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.cadisdik_id, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    fetchPelaporan();
+  }, [fetchPelaporan]);
+
+  const filteredData = data.filter((item) =>
+    item.judul.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  const rowsPerPageOptions = [
+    { value: "10", label: "10" },
+    { value: "50", label: "50" },
+    { value: "100", label: "100" },
+  ];
+
+  return (
+    <>
+      <PageMeta
+        title="Pelaporan Dokumen | MANDALA"
+        description="Manajemen permintaan pelaporan dokumen ke sekolah"
+      />
+      <PageBreadcrumb pageTitle="Pelaporan Dokumen" />
+
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <Link to={`/${roleSlug}/pelaporan-dokumen/create`}>
+            <Button size="sm" startIcon={<PlusIcon />}>
+              Buat Permintaan Pelaporan
+            </Button>
+          </Link>
+        </div>
+
+        <ComponentCard title="Daftar Permintaan Pelaporan">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between no-print">
+            <div className="w-20">
+              <Select
+                options={rowsPerPageOptions}
+                defaultValue={itemsPerPage.toString()}
+                onChange={(value) => setItemsPerPage(parseInt(value))}
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 max-w-sm w-full lg:justify-end">
+              <div className="relative w-full">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <SearchIcon className="size-5" />
+                </span>
+                <Input
+                  type="text"
+                  placeholder="Cari judul pelaporan..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableCell isHeader>Judul Pelaporan</TableCell>
+                  <TableCell isHeader>Periode</TableCell>
+                  <TableCell isHeader className="text-center">Sekolah</TableCell>
+                  <TableCell isHeader className="text-center">Dokumen</TableCell>
+                  <TableCell isHeader className="text-center">Status</TableCell>
+                  <TableCell isHeader className="text-center">Aksi</TableCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                      Memuat data...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredData.length > 0 ? (
+                  filteredData.map((item) => (
+                    <TableRow key={item.pelaporan_id}>
+                      <TableCell className="font-medium text-gray-800 dark:text-white/90">
+                        {item.judul}
+                      </TableCell>
+                      <TableCell className="text-xs text-gray-500">
+                        {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString("id-ID") : "-"} s/d{" "}
+                        {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString("id-ID") : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">{item.jumlah_sekolah}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge color="brand" size="sm">{item.jumlah_dokumen}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {item.aktif ? (
+                          <Badge color="success" size="sm">Aktif</Badge>
+                        ) : (
+                          <Badge color="error" size="sm">Non-aktif</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}>
+                          <button className="text-brand-500 hover:text-brand-600 font-medium text-sm">
+                            Detail
+                          </button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                      Tidak ada data pelaporan ditemukan.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="mt-6 flex justify-between items-center">
+             <p className="text-sm text-gray-500">
+                Menampilkan {filteredData.length} dari {totalItems} data
+             </p>
+             <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+             />
+          </div>
+        </ComponentCard>
+      </div>
+    </>
+  );
+}

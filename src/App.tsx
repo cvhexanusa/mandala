@@ -39,6 +39,9 @@ import LayananMandalaPage from "./pages/Layanan/LayananMandalaPage";
 import DataPegawai from "./pages/Kepegawaian/DataPegawai";
 import MappingPengawasPage from "./pages/PKKS/MappingPengawas";
 import DaftarAntrian from "./pages/Layanan/DaftarAntrian";
+import PelaporanPage from "./pages/Pelaporan/index";
+import CreatePelaporanPage from "./pages/Pelaporan/create";
+import DetailPelaporanPage from "./pages/Pelaporan/detail";
 
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
@@ -126,7 +129,9 @@ export default function App() {
             <Route path="daftar-antrian" element={<DaftarAntrian />} />
 
             {/* Pelaporan dan Dokumen */}
-            <Route path="pelaporan-dokumen" element={<TablePlaceholder title="Pelaporan dan Dokumen" columns={["Nama Laporan", "Periode", "Status Laporan"]} />} />
+            <Route path="pelaporan-dokumen" element={<PelaporanPage />} />
+            <Route path="pelaporan-dokumen/create" element={<CreatePelaporanPage />} />
+            <Route path="pelaporan-dokumen/detail/:id" element={<DetailPelaporanPage />} />
 
             {/* Data Master (Legacy) */}
             <Route path="school-profile" element={<SchoolProfile />} />

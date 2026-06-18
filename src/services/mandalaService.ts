@@ -143,7 +143,75 @@ export const mandalaService = {
     const response = await api.get('/mandala/antrian/rekap', { params });
     return response.data;
   },
+
+  // I. Pelaporan Dokumen
+  getPelaporan: async (cadisdik_id: string, page: number = 1, limit: number = 10) => {
+    const response = await api.get('/mandala/pelaporan', {
+      params: { cadisdik_id, page, limit }
+    });
+    return response.data;
+  },
+
+  createPelaporan: async (data: {
+    cadisdik_id: string;
+    judul: string;
+    deskripsi?: string;
+    tanggal_mulai?: string;
+    tanggal_selesai?: string;
+    sekolah_ids: string[];
+  }) => {
+    const response = await api.post('/mandala/pelaporan', data);
+    return response.data;
+  },
+
+  getPelaporanDetail: async (id: string, cadisdik_id: string) => {
+    const response = await api.get(`/mandala/pelaporan/${id}`, {
+      params: { cadisdik_id }
+    });
+    return response.data;
+  },
+
+  getPelaporanDokumenSekolah: async (id: string, sekolahId: string, cadisdik_id: string) => {
+    const response = await api.get(`/mandala/pelaporan/${id}/sekolah/${sekolahId}`, {
+      params: { cadisdik_id }
+    });
+    return response.data;
+  },
 };
+
+export interface Pelaporan {
+  pelaporan_id: string;
+  judul: string;
+  tanggal_mulai: string | null;
+  tanggal_selesai: string | null;
+  jumlah_sekolah: number;
+  jumlah_dokumen: number;
+  aktif: boolean;
+  created_at: string;
+}
+
+export interface PelaporanDetail {
+  pelaporan_id: string;
+  judul: string;
+  deskripsi: string | null;
+  tanggal_mulai: string | null;
+  tanggal_selesai: string | null;
+  aktif: boolean;
+  daftar_sekolah: {
+    pelaporan_sekolah_id: string;
+    sekolah_id: string;
+    nama_sekolah: string;
+    jumlah_dokumen: number;
+  }[];
+}
+
+export interface PelaporanDokumen {
+  pelaporan_dokumen_id: string;
+  nama_file: string;
+  file_url: string;
+  ukuran_file: number | null;
+  created_at: string;
+}
 
 export interface KategoriKeperluan {
   kategori_keperluan_id: string;
