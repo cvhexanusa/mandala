@@ -95,12 +95,12 @@ export const mandalaService = {
     return response.data;
   },
 
-  createKategoriKeperluan: async (data: { cadisdik_id: string; nama: string; deskripsi?: string }) => {
+  createKategoriKeperluan: async (data: { cadisdik_id: string; nama: string; }) => {
     const response = await api.post('/mandala/kategori-keperluan', data);
     return response.data;
   },
 
-  updateKategoriKeperluan: async (id: string, data: { nama?: string; deskripsi?: string }) => {
+  updateKategoriKeperluan: async (id: string, data: { nama?: string; }) => {
     const response = await api.patch(`/mandala/kategori-keperluan/${id}`, data);
     return response.data;
   },
@@ -149,7 +149,6 @@ export interface KategoriKeperluan {
   kategori_id: string;
   cadisdik_id: string;
   nama: string;
-  deskripsi: string | null;
   created_at: string;
 }
 

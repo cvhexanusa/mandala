@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
@@ -6,7 +6,7 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
-import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, TimeIcon, CheckCircleIcon, CloseIcon } from "../../icons";
+import { TrashBinIcon, PlusIcon, TimeIcon, CheckCircleIcon, CloseIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { mandalaService, Antrian, KategoriKeperluan, AntrianRekap } from "../../services/mandalaService";
 import { dapodikService } from "../../services/dapodikService";
@@ -50,7 +50,6 @@ export default function DaftarAntrian() {
   const [katFormData, setKatFormData] = useState({
     cadisdik_id: "",
     nama: "",
-    deskripsi: "",
   });
 
   // Fungsi Fetch Data Utama
@@ -183,7 +182,7 @@ export default function DaftarAntrian() {
           showConfirmButton: false,
       });
       setIsKategoriModalOpen(false);
-      setKatFormData(prev => ({ ...prev, nama: "", deskripsi: "" }));
+      setKatFormData(prev => ({ ...prev, nama: "" }));
       fetchData(filters);
     } catch (error: any) {
       Swal.fire("Gagal", error.response?.data?.message || "Gagal menambah kategori", "error");
@@ -382,9 +381,6 @@ export default function DaftarAntrian() {
             <div>
               <Input name="nama" value={katFormData.nama} onChange={handleKatInputChange} required placeholder="Nama Kategori (Contoh: Legalisir)" />
             </div>
-            <div>
-              <Input name="deskripsi" value={katFormData.deskripsi} onChange={handleKatInputChange} placeholder="Deskripsi singkat (opsional)" />
-            </div>
             <Button type="submit" className="w-full" size="sm">Simpan Kategori</Button>
           </form>
           
@@ -394,7 +390,6 @@ export default function DaftarAntrian() {
               <div key={k.kategori_id} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-xl dark:bg-white/[0.03] dark:border-white/5 hover:border-brand-500/50 transition-colors">
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-800 dark:text-white/90">{k.nama}</span>
-                  {k.deskripsi && <span className="text-xs text-gray-500 dark:text-gray-400">{k.deskripsi}</span>}
                 </div>
                 <button 
                   onClick={async () => {
