@@ -96,7 +96,8 @@ export const mandalaService = {
   },
 
   createKategoriKeperluan: async (data: { cadisdik_id: string; nama: string; }) => {
-    const response = await api.post('/mandala/kategori-keperluan', data);
+    const cleanedData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== ""));
+    const response = await api.post('/mandala/kategori-keperluan', cleanedData);
     return response.data;
   },
 
@@ -128,7 +129,8 @@ export const mandalaService = {
     keperluan: string; 
     nomor_hp?: string;
   }) => {
-    const response = await api.post('/mandala/antrian', data);
+    const cleanedData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== ""));
+    const response = await api.post('/mandala/antrian', cleanedData);
     return response.data;
   },
 
@@ -214,23 +216,32 @@ export interface PelaporanDokumen {
 }
 
 export interface KategoriKeperluan {
-  kategori_keperluan_id: string;
+  id?: string;
+  kategori_id?: string;
+  kategori_keperluan_id?: string;
   cadisdik_id: string;
   nama: string;
   created_at: string;
 }
 
 export interface Antrian {
-  antrian_id: string;
+  id?: string;
+  antrian_id?: string;
   cadisdik_id: string;
-  kategori_keperluan_id: string;
+  kategori_id?: string;
+  kategori_keperluan_id?: string;
   nomor_antrian: number;
-  nama_lengkap: string;
-  unit_instansi: string | null;
+  nama_tamu?: string;
+  nama_lengkap?: string;
+  instansi_tamu?: string | null;
+  unit_instansi?: string | null;
   keperluan: string;
-  nomor_hp: string | null;
+  nomor_hp?: string | null;
+  nomor_telepon?: string | null;
   status: number; // 0=Menunggu, 1=Dipanggil, 2=Dilayani, 3=Selesai, 4=Batal
+  tanggal_kunjungan?: string;
   created_at: string;
+  kategori?: KategoriKeperluan;
   kategori_keperluan?: KategoriKeperluan;
 }
 

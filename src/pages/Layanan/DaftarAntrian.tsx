@@ -50,15 +50,15 @@ export default function DaftarAntrian() {
   const [katFormData, setKatFormData] = useState({
     cadisdik_id: "",
     nama: "",
+    deskripsi: "",
   });
 
   // Fungsi Fetch Data Utama
-  const fetchData = useCallback(async (currentFilters: typeof filters) => {
+  const fetchData = useCallback(async (currentFilters: typeof filters, silent = false) => {
     if (!currentFilters.cadisdik_id) return;
     
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
-      console.log("Fetching queue data for:", currentFilters.cadisdik_id);
       const [antrianRes, kategoriRes, rekapRes] = await Promise.all([
         mandalaService.getAntrian(currentFilters),
         mandalaService.getKategoriKeperluan(currentFilters.cadisdik_id),
@@ -75,13 +75,13 @@ export default function DaftarAntrian() {
           Swal.fire({
               icon: "error",
               title: "Gagal Memuat Data",
-              text: "Terjadi kesalahan saat mengambil data dari server (Error 500). Hubungi administrator.",
+              text: "Terjadi kesalahan saat mengambil data dari server. Hubungi administrator.",
               timer: 3000,
               showConfirmButton: false
           });
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -103,7 +103,7 @@ export default function DaftarAntrian() {
           const newFilters = { ...filters, cadisdik_id: initialId };
           setFilters(newFilters);
           setFormData(prev => ({ ...prev, cadisdik_id: initialId }));
-          setKatFormData(prev => ({ ...prev, cadisdik_id: initialId }));
+          setKatFormData(prev => ({ ...prev, cadisdik_id: initialId, nama: "", deskripsi: "" }));
           setIsInitialized(true);
           
           // Jalankan fetch pertama kali
@@ -119,10 +119,17 @@ export default function DaftarAntrian() {
     }
   }, [user, fetchData]);
 
-  // Re-fetch saat filter berubah (kecuali inisialisasi)
+  // Re-fetch saat filter berubah (kecuali inisialisasi) dan Auto-Refresh
   useEffect(() => {
     if (isInitialized) {
       fetchData(filters);
+
+      // Polling setiap 5 detik untuk sinkronisasi real-time dengan buku tamu
+      const interval = setInterval(() => {
+        fetchData(filters, true); // true = silent fetch, tanpa loading spinner
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
   }, [filters, isInitialized, fetchData]);
 
@@ -189,8 +196,12 @@ export default function DaftarAntrian() {
     }
   };
 
-  const handleUpdateStatus = async (id: string, status: number) => {
+  const handleUpdateStatus = async (id: string, status: number, isRecall: boolean = false) => {
     try {
+      if (isRecall) {
+        // Gunakan localStorage untuk mengirim sinyal "Panggil Ulang" antar tab ke MonitorAntrian
+        localStorage.setItem('recall_antrian_id', `${id}_${Date.now()}`);
+      }
       await mandalaService.updateAntrianStatus(id, status);
       fetchData(filters);
     } catch (error: any) {
@@ -228,6 +239,18 @@ export default function DaftarAntrian() {
             />
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => {
+              if (filters.cadisdik_id) window.open(`/monitor-antrian?cadisdik_id=${filters.cadisdik_id}`, '_blank');
+              else Swal.fire("Peringatan", "Pilih instansi terlebih dahulu", "warning");
+            }}>
+              Layar Monitor
+            </Button>
+            <Button variant="outline" onClick={() => {
+              if (filters.cadisdik_id) window.open(`/isi-antrian?cadisdik_id=${filters.cadisdik_id}`, '_blank');
+              else Swal.fire("Peringatan", "Pilih instansi terlebih dahulu", "warning");
+            }}>
+              Buku Tamu
+            </Button>
             <Button variant="outline" onClick={() => setIsKategoriModalOpen(true)}>
               Kelola Kategori
             </Button>
@@ -257,7 +280,7 @@ export default function DaftarAntrian() {
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {antrian.length > 0 ? (
                   antrian.map((item) => (
-                    <TableRow key={item.antrian_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                    <TableRow key={item.id || item.antrian_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-xl font-semibold text-brand-500">#{item.nomor_antrian}</span>
                       </TableCell>
@@ -281,22 +304,27 @@ export default function DaftarAntrian() {
                       <TableCell className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-1">
                           {item.status === 0 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 1)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="Panggil Tamu">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 1)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="Panggil Tamu">
                               <TimeIcon className="size-4" />
                             </button>
                           )}
                           {item.status === 1 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 2)} className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors" title="Mulai Layani">
-                              <CheckCircleIcon className="size-4" />
-                            </button>
+                            <>
+                              <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 1)} className="p-2 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors" title="Panggil Ulang">
+                                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                              </button>
+                              <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 2)} className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors" title="Mulai Layani">
+                                <CheckCircleIcon className="size-4" />
+                              </button>
+                            </>
                           )}
                           {item.status === 2 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 3)} className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors" title="Selesaikan">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 3)} className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors" title="Selesaikan">
                               <CheckCircleIcon className="size-4" />
                             </button>
                           )}
                           {item.status < 3 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 4)} className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors" title="Batalkan">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 4)} className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors" title="Batalkan">
                               <CloseIcon className="size-4" />
                             </button>
                           )}
@@ -327,7 +355,7 @@ export default function DaftarAntrian() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Kategori Keperluan <span className="text-error-500">*</span></label>
               <Select 
-                options={kategori.map(k => ({ value: k.kategori_keperluan_id, label: k.nama }))}
+                options={kategori.map(k => ({ value: k.kategori_keperluan_id || k.id || k.kategori_id || "", label: k.nama }))}
                 onChange={(val) => setFormData(prev => ({ ...prev, kategori_keperluan_id: val }))}
                 placeholder="Pilih Kategori"
               />
@@ -405,7 +433,7 @@ export default function DaftarAntrian() {
                     }).then(async (result) => {
                       if (result.isConfirmed) {
                         try {
-                          await mandalaService.deleteKategoriKeperluan(k.kategori_keperluan_id);
+                          await mandalaService.deleteKategoriKeperluan(k.kategori_keperluan_id || "");
                           fetchData(filters);
                         } catch (e: any) {
                           Swal.fire("Gagal", e.response?.data?.message || "Kategori tidak bisa dihapus karena masih digunakan", "error");

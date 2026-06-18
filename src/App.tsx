@@ -42,6 +42,8 @@ import DaftarAntrian from "./pages/Layanan/DaftarAntrian";
 import PelaporanPage from "./pages/Pelaporan/index";
 import CreatePelaporanPage from "./pages/Pelaporan/create";
 import DetailPelaporanPage from "./pages/Pelaporan/detail";
+import IsiAntrian from "./pages/Layanan/Public/IsiAntrian";
+import MonitorAntrian from "./pages/Layanan/Public/MonitorAntrian";
 
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
@@ -58,6 +60,10 @@ export default function App() {
         {/* Auth Routes */}
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+
+        {/* Public Layanan Routes */}
+        <Route path="/isi-antrian" element={<IsiAntrian />} />
+        <Route path="/monitor-antrian" element={<MonitorAntrian />} />
 
         {/* Dashboard Layout */}
         <Route
