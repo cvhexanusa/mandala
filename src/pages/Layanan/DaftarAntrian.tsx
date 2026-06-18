@@ -40,8 +40,8 @@ export default function DaftarAntrian() {
 
   const [formData, setFormData] = useState({
     cadisdik_id: "",
-    kategori_id: "",
-    nama_tamu: "",
+    kategori_keperluan_id: "",
+    nama_lengkap: "",
     instansi_tamu: "",
     keperluan: "",
     nomor_telepon: "",
@@ -50,6 +50,7 @@ export default function DaftarAntrian() {
   const [katFormData, setKatFormData] = useState({
     cadisdik_id: "",
     nama: "",
+    deskripsi: "",
   });
 
   // Fungsi Fetch Data Utama
@@ -103,7 +104,7 @@ export default function DaftarAntrian() {
           const newFilters = { ...filters, cadisdik_id: initialId };
           setFilters(newFilters);
           setFormData(prev => ({ ...prev, cadisdik_id: initialId }));
-          setKatFormData(prev => ({ ...prev, cadisdik_id: initialId }));
+          setKatFormData(prev => ({ ...prev, cadisdik_id: initialId, nama: "", deskripsi: "" }));
           setIsInitialized(true);
           
           // Jalankan fetch pertama kali
@@ -139,7 +140,7 @@ export default function DaftarAntrian() {
   const handleSubmitAntrian = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!formData.kategori_id) {
+      if (!formData.kategori_keperluan_id) {
           Swal.fire("Peringatan", "Pilih kategori keperluan terlebih dahulu", "warning");
           return;
       }
@@ -158,7 +159,7 @@ export default function DaftarAntrian() {
           showConfirmButton: false,
       });
       setIsModalOpen(false);
-      setFormData(prev => ({ ...prev, nama_tamu: "", instansi_tamu: "", keperluan: "", nomor_telepon: "" }));
+      setFormData(prev => ({ ...prev, nama_lengkap: "", instansi_tamu: "", keperluan: "", nomor_telepon: "" }));
       fetchData(filters);
     } catch (error: any) {
       Swal.fire("Gagal", error.response?.data?.message || "Gagal menambah antrian", "error");
@@ -228,6 +229,18 @@ export default function DaftarAntrian() {
             />
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => {
+              if (filters.cadisdik_id) window.open(`/monitor-antrian?cadisdik_id=${filters.cadisdik_id}`, '_blank');
+              else Swal.fire("Peringatan", "Pilih instansi terlebih dahulu", "warning");
+            }}>
+              Layar Monitor
+            </Button>
+            <Button variant="outline" onClick={() => {
+              if (filters.cadisdik_id) window.open(`/isi-antrian?cadisdik_id=${filters.cadisdik_id}`, '_blank');
+              else Swal.fire("Peringatan", "Pilih instansi terlebih dahulu", "warning");
+            }}>
+              Buku Tamu
+            </Button>
             <Button variant="outline" onClick={() => setIsKategoriModalOpen(true)}>
               Kelola Kategori
             </Button>
@@ -257,13 +270,13 @@ export default function DaftarAntrian() {
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {antrian.length > 0 ? (
                   antrian.map((item) => (
-                    <TableRow key={item.antrian_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                    <TableRow key={item.id || item.antrian_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-xl font-semibold text-brand-500">#{item.nomor_antrian}</span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-800 dark:text-white/90">{item.nama_tamu}</span>
+                          <span className="font-medium text-gray-800 dark:text-white/90">{item.nama_lengkap || item.nama_tamu}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-400">{item.instansi_tamu || "Pribadi / Umum"}</span>
                         </div>
                       </TableCell>
@@ -281,22 +294,22 @@ export default function DaftarAntrian() {
                       <TableCell className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-1">
                           {item.status === 0 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 1)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="Panggil Tamu">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 1)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors" title="Panggil Tamu">
                               <TimeIcon className="size-4" />
                             </button>
                           )}
                           {item.status === 1 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 2)} className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors" title="Mulai Layani">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 2)} className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors" title="Mulai Layani">
                               <CheckCircleIcon className="size-4" />
                             </button>
                           )}
                           {item.status === 2 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 3)} className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors" title="Selesaikan">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 3)} className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors" title="Selesaikan">
                               <CheckCircleIcon className="size-4" />
                             </button>
                           )}
                           {item.status < 3 && (
-                            <button onClick={() => handleUpdateStatus(item.antrian_id, 4)} className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors" title="Batalkan">
+                            <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 4)} className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors" title="Batalkan">
                               <CloseIcon className="size-4" />
                             </button>
                           )}
@@ -327,15 +340,15 @@ export default function DaftarAntrian() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Kategori Keperluan <span className="text-error-500">*</span></label>
               <Select 
-                options={kategori.map(k => ({ value: k.kategori_id, label: k.nama }))}
-                onChange={(val) => setFormData(prev => ({ ...prev, kategori_id: val }))}
+                options={kategori.map(k => ({ value: k.id || k.kategori_id, label: k.nama }))}
+                onChange={(val) => setFormData(prev => ({ ...prev, kategori_keperluan_id: val }))}
                 placeholder="Pilih Kategori"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Nama Lengkap Tamu <span className="text-error-500">*</span></label>
-              <Input name="nama_tamu" value={formData.nama_tamu} onChange={handleInputChange} required placeholder="Masukkan nama lengkap tamu" />
+              <Input name="nama_lengkap" value={formData.nama_lengkap} onChange={handleInputChange} required placeholder="Masukkan nama lengkap tamu" />
             </div>
 
             <div>
