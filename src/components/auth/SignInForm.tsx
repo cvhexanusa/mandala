@@ -184,7 +184,7 @@ export default function SignInForm() {
           </p>
 
           {error && is2FAModalOpen && (
-            <div className="p-3 mb-6 text-sm text-error-600 bg-error-50 rounded-xl dark:bg-error-500/10">
+            <div className="p-4 mb-6 text-sm text-error-600 bg-error-50 border border-error-100 rounded-xl dark:bg-error-500/10 dark:border-error-500/20">
               {error}
             </div>
           )}
