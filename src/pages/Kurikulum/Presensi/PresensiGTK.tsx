@@ -17,6 +17,7 @@ import Input from "../../../components/form/input/InputField";
 import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
 import { SearchIcon } from "../../../icons";
+import { getFotoUrl } from "../../../utils/image";
 
 interface GtkAttendance {
   ptk_id: string;
@@ -164,11 +165,6 @@ const PresensiGTK: React.FC = () => {
 
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
-  const getBackendBaseURL = () => {
-    return import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api', '') 
-      : 'https://centralsimak.smakniscjr.sch.id';
-  };
 
   const formatTime = (isoString: string | null) => {
     if (!isoString) return "-";
@@ -352,9 +348,7 @@ const PresensiGTK: React.FC = () => {
                       }
                     }
 
-                    const fotoUrl = gtk?.foto 
-                      ? `${getBackendBaseURL()}/storage/${gtk.foto}` 
-                      : '';
+                    const fotoUrl = getFotoUrl(gtk?.foto, '');
 
                     return (
                       <TableRow key={item.ptk_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">

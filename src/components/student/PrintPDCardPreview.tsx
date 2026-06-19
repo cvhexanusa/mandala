@@ -3,6 +3,7 @@ import { Modal } from "../ui/modal";
 import { PrinterIcon } from "../../icons";
 import { dapodikService } from "../../services/dapodikService";
 import { QRCodeSVG } from "qrcode.react";
+import { getFotoUrl } from "../../utils/image";
 
 interface Student {
   peserta_didik_id: string;
@@ -104,7 +105,7 @@ const PrintPDCardPreview: React.FC<PrintPDCardPreviewProps> = ({ isOpen, onClose
                 {/* Photo Area */}
                 <div className="w-18 h-22 bg-gray-50 dark:bg-gray-800 p-0.5 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden">
                   <img 
-                    src={student.foto ? `/storage/${student.foto}` : "/images/user/user-01.jpg"} 
+                    src={getFotoUrl(student.foto, "/images/user/user-01.jpg")} 
                     alt={student.nama} 
                     className="w-full h-full object-cover rounded" 
                   />

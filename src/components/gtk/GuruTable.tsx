@@ -12,6 +12,7 @@ import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
 import { EyeIcon } from "../../icons";
+import { getFotoUrl } from "../../utils/image";
 
 interface GuruTableProps {
   onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
@@ -156,7 +157,7 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
                 </TableCell>
                 <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                        <Avatar src={item.identitas?.foto} size="small" />
+                        <Avatar src={getFotoUrl(item.identitas?.foto, "")} size="small" />
                         <span className="font-medium text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                     </div>
                 </TableCell>
