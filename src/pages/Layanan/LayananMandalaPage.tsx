@@ -49,7 +49,6 @@ export default function LayananMandalaPage() {
   ];
 
   // Modals
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
   const [isSyaratModalOpen, setIsSyaratModalOpen] = useState(false);
   
@@ -82,6 +81,71 @@ export default function LayananMandalaPage() {
     fetchData();
   }, [fetchData]);
 
+  const getFileUrl = (url: string) => {
+    if (!url) return "#";
+    const baseUrl = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') 
+      : 'https://centralsimak.smakniscjr.sch.id';
+    return `${baseUrl}${url}`;
+  };
+
+  const handleUpdateFileStatus = async (fileId: string, currentStatus: number) => {
+    const result = await Swal.fire({
+      title: 'Verifikasi Dokumen',
+      text: 'Pilih status verifikasi untuk dokumen ini:',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'Valid (Setuju)',
+      denyButtonText: 'Perlu Revisi',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#22c55e',
+      denyButtonColor: '#ef4444',
+    });
+
+    let status = 0;
+    let catatan = '';
+
+    if (result.isConfirmed) {
+      status = 1;
+    } else if (result.isDenied) {
+      status = 2;
+      const { value: noteText } = await Swal.fire({
+        title: 'Catatan Revisi',
+        input: 'textarea',
+        inputPlaceholder: 'Tuliskan catatan perbaikan untuk sekolah...',
+        required: true,
+        showCancelButton: true,
+        confirmButtonText: 'Simpan Catatan',
+        cancelButtonText: 'Batal',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Catatan revisi wajib diisi!';
+          }
+        }
+      });
+
+      if (!noteText) return; // Cancelled
+      catatan = noteText;
+    } else {
+      return; // Cancelled/Dismissed
+    }
+
+    try {
+      await layananMandalaService.updateFileStatus(fileId, { status, catatan });
+      Swal.fire('Berhasil', 'Status dokumen berhasil diperbarui.', 'success');
+      
+      // Refresh selectedPermohonan details
+      if (selectedPermohonan) {
+        const response = await layananMandalaService.getPermohonanById(selectedPermohonan.permohonan_layanan_id);
+        setSelectedPermohonan(response.data);
+        fetchData();
+      }
+    } catch (error: any) {
+      Swal.fire('Gagal', error.response?.data?.message || 'Gagal memperbarui status dokumen.', 'error');
+    }
+  };
+
   // --- Permohonan Handlers ---
   const handleUpdateStatus = async () => {
     if (!selectedPermohonan || !user?.id || statusUpdate.status === 0) return;
@@ -92,7 +156,7 @@ export default function LayananMandalaPage() {
         pegawai_id: user.id
       });
       Swal.fire("Berhasil", "Status permohonan berhasil diperbarui.", "success");
-      setIsDetailModalOpen(false);
+      setSelectedPermohonan(null);
       fetchData();
     } catch (error: any) {
       Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan.", "error");
@@ -171,11 +235,11 @@ export default function LayananMandalaPage() {
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 1: return <Badge color="light">Diajukan</Badge>;
-      case 2: return <Badge color="info">Diverifikasi</Badge>;
-      case 3: return <Badge color="primary">Diproses</Badge>;
-      case 4: return <Badge color="success">Selesai</Badge>;
-      case 5: return <Badge color="error">Ditolak</Badge>;
-      case 9: return <Badge color="warning">Dibatalkan</Badge>;
+      case 2: return <Badge color="info">Diverifikasi Staff</Badge>;
+      case 3: return <Badge color="warning">Menunggu Perbaikan</Badge>;
+      case 4: return <Badge color="info">Menunggu Kasubag</Badge>;
+      case 5: return <Badge color="success">Disetujui / Selesai</Badge>;
+      case 6: return <Badge color="error">Ditolak</Badge>;
       default: return <Badge color="light">Draft</Badge>;
     }
   };
@@ -202,6 +266,144 @@ export default function LayananMandalaPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage, activeTab]);
+
+  if (selectedPermohonan && activeTab === "permohonan") {
+    return (
+      <>
+        <PageMeta
+          title={`Detail Permohonan | MANDALA`}
+          description="Portal Layanan Terpadu Mandala"
+        />
+
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 mb-6">
+            <div>
+              <button 
+                onClick={() => setSelectedPermohonan(null)}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white mb-2 transition"
+              >
+                ← Kembali ke Daftar
+              </button>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">
+                Detail Permohonan: {selectedPermohonan.nomor_permohonan}
+              </h3>
+            </div>
+            <div>{getStatusBadge(selectedPermohonan.status)}</div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Info Column */}
+            <div className="lg:col-span-1 space-y-6">
+              <ComponentCard title="Informasi Pengajuan">
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-xs text-gray-400 font-semibold uppercase">Sekolah</span>
+                    <p className="text-sm font-bold text-gray-800 dark:text-white/90">{selectedPermohonan.sekolah?.nama}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400 font-semibold uppercase">Jenis Layanan</span>
+                    <p className="text-sm font-medium">{selectedPermohonan.layanan?.nama_layanan}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400 font-semibold uppercase">Pemohon</span>
+                    <p className="text-sm font-medium">{categoryInt === 0 ? selectedPermohonan.ptk?.nama : selectedPermohonan.peserta_didik?.nama}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400 font-semibold uppercase">ID / NISN</span>
+                    <p className="text-sm font-medium">{categoryInt === 0 ? selectedPermohonan.ptk?.nuptk : selectedPermohonan.peserta_didik?.nisn || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400 font-semibold uppercase">Keterangan Pemohon</span>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedPermohonan.keterangan || "-"}</p>
+                  </div>
+                </div>
+              </ComponentCard>
+
+              {/* Status Update Control */}
+              <ComponentCard title="Tindak Lanjut & Verifikasi">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Update Status</label>
+                    <select
+                      value={statusUpdate.status}
+                      onChange={(e) => setStatusUpdate({ ...statusUpdate, status: parseInt(e.target.value) })}
+                      className="w-full appearance-none rounded-lg border border-gray-300 bg-transparent py-2.5 px-4 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white/90"
+                    >
+                      <option value={1}>Diajukan</option>
+                      <option value={2}>Diverifikasi Mandala</option>
+                      <option value={3}>Menunggu Perbaikan</option>
+                      <option value={4}>Menunggu Persetujuan Kasubag</option>
+                      <option value={5}>Disetujui / Approved</option>
+                      <option value={6}>Ditolak / Rejected</option>
+                    </select>
+                  </div>
+                  <div>
+                     <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Catatan</label>
+                     <Input 
+                      placeholder="Catatan petugas (opsional)..."
+                      value={statusUpdate.catatan}
+                      onChange={(e) => setStatusUpdate({ ...statusUpdate, catatan: e.target.value })}
+                      className="w-full"
+                     />
+                  </div>
+                  <Button variant="primary" size="sm" onClick={handleUpdateStatus} className="w-full" startIcon={<CheckCircleIcon className="size-4 fill-current" />}>
+                    Update Status
+                  </Button>
+                </div>
+              </ComponentCard>
+            </div>
+
+            {/* Right Document Verification Column */}
+            <div className="lg:col-span-2 space-y-6">
+              <ComponentCard title="Dokumen Lampiran">
+                <div className="space-y-4">
+                  {selectedPermohonan.permohonan_layanan_file?.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic text-center py-4">Tidak ada dokumen yang diunggah</p>
+                  ) : (
+                    selectedPermohonan.permohonan_layanan_file?.map((f: any) => (
+                      <div key={f.permohonan_layanan_file_id} className="flex flex-col gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/30">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-700 dark:text-white/80">
+                              {f.jenis_file === 0 ? "Surat Permohonan Awal" : f.layanan_syarat?.nama_syarat || "File Pendukung"}
+                            </span>
+                            <a 
+                              href={getFileUrl(f.file_url)} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="text-xs text-brand-500 hover:underline font-semibold mt-1"
+                            >
+                              Lihat Dokumen
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge color={f.status === 1 ? "success" : f.status === 2 ? "error" : "light"}>
+                              {f.status === 1 ? "Valid" : f.status === 2 ? "Revisi" : "Menunggu"}
+                            </Badge>
+                            <button
+                              onClick={() => handleUpdateFileStatus(f.permohonan_layanan_file_id, f.status)}
+                              className="px-3 py-1 text-xs font-bold rounded-lg border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition"
+                            >
+                              Ubah Status
+                            </button>
+                          </div>
+                        </div>
+                        {f.status === 2 && f.catatan && (
+                          <div className="text-xs text-red-500 bg-red-50/50 dark:bg-red-500/5 p-2.5 rounded border border-red-100 dark:border-red-900/30">
+                            <strong>Catatan Perbaikan:</strong> {f.catatan}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ComponentCard>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -342,7 +544,6 @@ export default function LayananMandalaPage() {
                               onClick={() => {
                                 setSelectedPermohonan(item);
                                 setStatusUpdate({ status: item.status, catatan: "" });
-                                setIsDetailModalOpen(true);
                               }}
                               className="px-3 py-1 text-xs font-bold rounded-lg border border-brand-500 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/5 transition"
                             >
@@ -423,103 +624,7 @@ export default function LayananMandalaPage() {
         </ComponentCard>
       </div>
 
-      {/* Modal: Detail & Proses Permohonan */}
-      <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} className="max-w-[800px] p-6 bg-white dark:bg-gray-900 rounded-3xl">
-        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-6">Detail Permohonan Layanan</h3>
-        {selectedPermohonan && (
-          <div className="space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar pr-2">
-             <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800/40 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div>
-                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Nomor Permohonan</span>
-                <p className="font-bold text-gray-800 dark:text-white">{selectedPermohonan.nomor_permohonan}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Status Saat Ini</span>
-                <div className="mt-1">{getStatusBadge(selectedPermohonan.status)}</div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold border-b pb-2 flex items-center gap-2">
-                  <BoltIcon className="size-4 text-brand-500" /> Informasi Pengajuan
-                </h4>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Sekolah</span>
-                    <p className="text-sm font-bold">{selectedPermohonan.sekolah?.nama}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Jenis Layanan</span>
-                    <p className="text-sm font-medium">{selectedPermohonan.layanan?.nama_layanan}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-400 font-semibold uppercase">Pemohon</span>
-                    <p className="text-sm font-medium">{categoryInt === 0 ? selectedPermohonan.ptk?.nama : selectedPermohonan.peserta_didik?.nama}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold border-b pb-2 flex items-center gap-2">
-                  <CheckCircleIcon className="size-4 text-brand-500" /> Verifikasi Dokumen
-                </h4>
-                <div className="space-y-2">
-                  {selectedPermohonan.permohonan_layanan_file?.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">Tidak ada dokumen yang diunggah</p>
-                  ) : (
-                    selectedPermohonan.permohonan_layanan_file?.map((f) => (
-                      <div key={f.permohonan_layanan_file_id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/30">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-gray-700 dark:text-white/80">{f.layanan_syarat?.nama_syarat || "File Pendukung"}</span>
-                          <span className="text-[10px] text-brand-500 cursor-pointer hover:underline" onClick={() => window.open(f.file_url, '_blank')}>Lihat Dokumen</span>
-                        </div>
-                        <Badge color={f.status === 1 ? "success" : f.status === 2 ? "error" : "light"}>
-                          {f.status === 1 ? "Valid" : f.status === 2 ? "Revisi" : "Menunggu"}
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t dark:border-gray-800">
-              <h4 className="text-sm font-bold mb-4">Proses Permohonan</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Update Status</label>
-                  <select
-                    value={statusUpdate.status}
-                    onChange={(e) => setStatusUpdate({ ...statusUpdate, status: parseInt(e.target.value) })}
-                    className="w-full appearance-none rounded-lg border border-gray-300 bg-transparent py-2.5 px-4 text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:text-white/90"
-                  >
-                    <option value={1}>Diajukan</option>
-                    <option value={2}>Diverifikasi Mandala</option>
-                    <option value={3}>Menunggu Perbaikan</option>
-                    <option value={4}>Menunggu Persetujuan Kasubag</option>
-                    <option value={5}>Disetujui / Approved</option>
-                    <option value={6}>Ditolak / Rejected</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                   <Input 
-                    placeholder="Catatan petugas (opsional)..."
-                    value={statusUpdate.catatan}
-                    onChange={(e) => setStatusUpdate({ ...statusUpdate, catatan: e.target.value })}
-                    className="flex-1"
-                   />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-6 border-t dark:border-gray-800">
-              <Button variant="outline" size="sm" onClick={() => setIsDetailModalOpen(false)}>Tutup</Button>
-              <Button variant="primary" size="sm" onClick={handleUpdateStatus} startIcon={<CheckCircleIcon className="size-4 fill-current" />}>Update Status</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Detail Modal removed (now rendered inline) */}
 
       {/* Modal: Create/Edit Master Layanan */}
       <Modal isOpen={isMasterModalOpen} onClose={() => setIsMasterModalOpen(false)} className="max-w-[500px] p-6 bg-white dark:bg-gray-900 rounded-3xl">
