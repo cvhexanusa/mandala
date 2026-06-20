@@ -12,6 +12,10 @@ import RekapitulasiSekolah from "./pages/DataMaster/RekapitulasiSekolah";
 import StudentData from "./pages/DataMaster/StudentData";
 import StudentDetailPage from "./pages/DataMaster/StudentDetailPage";
 import GTKData from "./pages/DataMaster/GTKData";
+import KepalaSekolahData from "./pages/DataMaster/KepalaSekolahData";
+import ResiduData from "./pages/Analisa/ResiduData";
+import PendidikanGTKData from "./pages/Analisa/PendidikanGTKData";
+import AuditPendidikanGTK from "./pages/Analisa/AuditPendidikanGTK";
 import GTKDetailPage from "./pages/DataMaster/GTKDetailPage";
 import ClassData from "./pages/DataMaster/ClassData";
 import SubjectData from "./pages/DataMaster/SubjectData";
@@ -27,9 +31,12 @@ import PengaturanJam from "./pages/Kurikulum/PengaturanJam";
 import JadwalPelajaran from "./pages/Kurikulum/JadwalPelajaran";
 import PresensiPD from "./pages/Kurikulum/Presensi/PresensiPD";
 import PresensiGTK from "./pages/Kurikulum/Presensi/PresensiGTK";
+import AuditPresensiPD from "./pages/Kurikulum/Presensi/AuditPresensiPD";
+import AuditPresensiGTK from "./pages/Kurikulum/Presensi/AuditPresensiGTK";
 import HariLibur from "./pages/Kurikulum/Presensi/HariLibur";
 import Scanner from "./pages/Kurikulum/Presensi/Scanner";
 import IzinSakit from "./pages/Kurikulum/Presensi/IzinSakit";
+import RekapTerpadu from "./pages/Kurikulum/Presensi/RekapTerpadu";
 import ComponentPlaceholder from "./components/common/ComponentPlaceholder";
 import ProfileView from "./components/UserProfile/ProfileView";
 import InstansiView from "./components/school/InstansiView";
@@ -95,6 +102,14 @@ export default function App() {
             <Route path="satuan-pendidikan/spasial" element={<SpasialData />} />
             <Route path="satuan-pendidikan/rekapitulasi" element={<RekapitulasiSekolah />} />
 
+            {/* Kepala Sekolah */}
+            <Route path="kepala-sekolah" element={<KepalaSekolahData />} />
+
+            {/* Analisa Residu */}
+            <Route path="analisa/residu/:type" element={<ResiduData />} />
+            <Route path="analisa/pendidikan-gtk" element={<PendidikanGTKData />} />
+            <Route path="analisa/pendidikan-gtk/audit/:sekolahId" element={<AuditPendidikanGTK />} />
+
             {/* PKKS */}
             <Route path="pkks/mapping-pengawas" element={<MappingPengawasPage />} />
             <Route path="pkks/instrumen" element={<TablePlaceholder title="Instrumen Penilaian" columns={["Nama Instrumen", "Kategori", "Tahun"]} />} />
@@ -119,8 +134,10 @@ export default function App() {
 
             {/* Laporan Absensi */}
             <Route path="laporan-absensi/gtk" element={<PresensiGTK />} />
+            <Route path="laporan-absensi/gtk/audit/:sekolahId" element={<AuditPresensiGTK />} />
             <Route path="laporan-absensi/peserta-didik" element={<PresensiPD />} />
-            <Route path="laporan-absensi/rekap-terpadu" element={<ComponentPlaceholder title="Rekap Terpadu" description="Grafik dan rekapitulasi absensi seluruh warga sekolah." />} />
+            <Route path="laporan-absensi/peserta-didik/audit/:sekolahId" element={<AuditPresensiPD />} />
+            <Route path="laporan-absensi/rekap-terpadu" element={<RekapTerpadu />} />
 
             {/* Dokumen Layanan */}
             <Route path="dokumen-layanan" element={<TablePlaceholder title="Dokumen Layanan" columns={["Nama Dokumen", "Kategori", "Tgl Upload"]} />} />

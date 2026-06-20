@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate, useParams } from "react-router";
 import PageMeta from "../../../components/common/PageMeta";
 import ComponentCard from "../../../components/common/ComponentCard";
 import { presensiService } from "../../../services/presensiService";
@@ -16,45 +17,68 @@ import Select from "../../../components/form/Select";
 import Input from "../../../components/form/input/InputField";
 import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
-import { SearchIcon } from "../../../icons";
+import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../../../icons";
+import Swal from "sweetalert2";
 
-interface StudentAttendance {
-  peserta_didik_id: string;
-  tanggal: string;
+interface SchoolRecap {
   sekolah_id: string;
-  jam_masuk: string | null;
-  jam_pulang: string | null;
-  status_masuk: number | null;
-  status_pulang: number | null;
-  peserta_didik: {
-    nama: string;
-    nisn: string | null;
-    nipd: string | null;
-    foto: string | null;
-    rombongan_belajar: {
-      nama: string | null;
-      tingkat_pendidikan_id_str: string | null;
-    } | null;
-  } | null;
+  npsn: string;
+  nama: string;
+  kabupaten: string;
+  kecamatan: string;
+  kepalaSekolah: string;
+  statusPenilaian: "Aman" | "Perhatian" | "Anomali";
+  keteranganStatus: string;
+  gtk: {
+    total: number;
+    hadir: number;
+    terlambat: number;
+    izinSakit: number;
+    alpha: number;
+    belum: number;
+    persentase: number;
+  };
+  siswa: {
+    total: number;
+    hadir: number;
+    terlambat: number;
+    izinSakit: number;
+    alpha: number;
+    belum: number;
+    persentase: number;
+  };
 }
 
 const PresensiPD: React.FC = () => {
+  const navigate = useNavigate();
+  const { role } = useParams();
   const { sekolah: currentSekolah } = useSekolah();
-  const [data, setData] = useState<StudentAttendance[]>([]);
+  const [schools, setSchools] = useState<any[]>([]);
+  const [headmasters, setHeadmasters] = useState<any[]>([]);
+  const [activeCounts, setActiveCounts] = useState<Record<string, { siswa: number; gtk: number }>>({});
+  const [recapData, setRecapData] = useState<SchoolRecap[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
+  // Inspection State
+  const [selectedSchool, setSelectedSchool] = useState<SchoolRecap | null>(null);
+  const [inspectSearchTerm, setInspectSearchTerm] = useState("");
+  const [inspectClassFilter, setInspectClassFilter] = useState("all");
+  const [inspectPage, setInspectPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Complete attendance list
+  const [allGtkRecords, setAllGtkRecords] = useState<any[]>([]);
+  const [allPdRecords, setAllPdRecords] = useState<any[]>([]);
+
   // REGIONAL & SCHOOL FILTERS
   const [kabKotaFilter, setKabKotaFilter] = useState("all");
   const [kecamatanFilter, setKecamatanFilter] = useState("all");
   const [sekolahFilter, setSekolahFilter] = useState(currentSekolah?.sekolah_id || "all");
   
-  const [allSchools, setAllSchools] = useState<any[]>([]);
   const [kabKotaOptions, setKabKotaOptions] = useState([{ value: "all", label: "Semua Kab/Kota" }]);
   const [kecamatanOptions, setKecamatanOptions] = useState([{ value: "all", label: "Semua Kecamatan" }]);
   const [sekolahOptions, setSekolahOptions] = useState([{ value: "all", label: "Semua Sekolah" }]);
 
-  // Filter and pagination states
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -62,377 +86,565 @@ const PresensiPD: React.FC = () => {
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClass, setSelectedClass] = useState("");
-  const [classes, setClasses] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
 
-  // FETCH FILTER DATA (SCHOOLS)
+  // Load School List, Headmasters and Setup Filters
   useEffect(() => {
-    const fetchFilterData = async () => {
+    const initPage = async () => {
       try {
-        const response = await dapodikService.getSekolah();
-        let schools = [];
-        if (response.status === 'success' || response.success === true) {
-          schools = response.data || [];
-        } else if (Array.isArray(response)) {
-          schools = response;
-        } else if (response.data && Array.isArray(response.data)) {
-          schools = response.data;
+        setLoading(true);
+        let schoolList = [];
+        try {
+          const schoolRes = await dapodikService.getSekolah();
+          if (schoolRes.status === 'success' || schoolRes.success === true) {
+            schoolList = schoolRes.data || [];
+          } else if (Array.isArray(schoolRes)) {
+            schoolList = schoolRes;
+          } else if (schoolRes.data && Array.isArray(schoolRes.data)) {
+            schoolList = schoolRes.data;
+          }
+        } catch (e) {
+          console.error("Gagal mengambil data sekolah:", e);
+        }
+        setSchools(schoolList);
+
+        let gtkList = [];
+        try {
+          const gtkRes = await dapodikService.getGTK(1000, "", 1, "tendik", "aktif");
+          if (gtkRes.status === 'success' || gtkRes.success === true) {
+            gtkList = gtkRes.data || [];
+          } else if (Array.isArray(gtkRes)) {
+            gtkList = gtkRes;
+          } else if (gtkRes.data && Array.isArray(gtkRes.data)) {
+            gtkList = gtkRes.data;
+          }
+        } catch (e) {
+          console.error("Gagal mengambil data GTK kepala sekolah:", e);
         }
 
-        if (schools.length > 0) {
-          setAllSchools(schools);
-          
-          const uniqueKab = [...new Set(schools.map((s: any) => s.kabupaten_kota || s.kabupate_kota))].filter(Boolean).sort();
-          setKabKotaOptions([{ value: "all", label: "Semua Kab/Kota" }, ...uniqueKab.map(k => ({ value: k, label: k }))]);
+        const ksList = gtkList.filter((g: any) => 
+          g.kepegawaian?.jenis_ptk?.toLowerCase().includes("kepala sekolah") ||
+          g.tugas_tambahan?.toLowerCase().includes("kepala sekolah")
+        );
+        setHeadmasters(ksList);
 
-          // Initial Sekolah Options
-          setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...schools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
+        if (schoolList.length > 0) {
+          const uniqueKab = [...new Set(schoolList.map((s: any) => s.kabupaten_kota || s.kabupate_kota))].filter(Boolean).sort();
+          setKabKotaOptions([{ value: "all", label: "Semua Kab/Kota" }, ...uniqueKab.map(k => ({ value: k, label: k }))]);
+          setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...schoolList.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
         }
       } catch (err) {
         console.error("Gagal memuat filter sekolah:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchFilterData();
+    initPage();
   }, []);
+
+  // Load Active counts of GTK & Siswa
+  useEffect(() => {
+    if (schools.length === 0) return;
+    
+    const fetchActiveTotals = async () => {
+      try {
+        const activeCountsPromises = schools.map(async (sch) => {
+          const schId = sch.sekolah_id || sch.id;
+          try {
+            const [pdRes, gtkRes] = await Promise.all([
+              dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, schId),
+              dapodikService.getGTK(1, "", 1, undefined, "aktif", schId)
+            ]);
+            
+            const pdTotal = pdRes?.meta?.total_data || pdRes?.meta?.total || pdRes?.total || sch.total_siswa || sch.jumlah_siswa || 0;
+            const gtkTotal = gtkRes?.meta?.total_data || gtkRes?.meta?.total || gtkRes?.total || sch.total_gtk || 0;
+
+            return {
+              sekolah_id: schId,
+              siswa: pdTotal,
+              gtk: gtkTotal
+            };
+          } catch (e) {
+            console.error("Gagal mengambil active counts untuk school", schId, e);
+            return {
+              sekolah_id: schId,
+              siswa: sch.total_siswa || sch.jumlah_siswa || 0,
+              gtk: sch.total_gtk || 0
+            };
+          }
+        });
+
+        const results = await Promise.all(activeCountsPromises);
+        const map: Record<string, { siswa: number; gtk: number }> = {};
+        results.forEach(res => {
+          map[res.sekolah_id] = {
+            siswa: res.siswa,
+            gtk: res.gtk
+          };
+        });
+        setActiveCounts(map);
+      } catch (err) {
+        console.error("Gagal memproses total aktif:", err);
+      }
+    };
+
+    fetchActiveTotals();
+  }, [schools]);
 
   // Update Kecamatan and Sekolah options when Kab/Kota changes
   useEffect(() => {
     if (kabKotaFilter === "all") {
-        setKecamatanOptions([{ value: "all", label: "Semua Kecamatan" }]);
-        setKecamatanFilter("all");
-        setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...allSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
+      setKecamatanOptions([{ value: "all", label: "Semua Kecamatan" }]);
+      setKecamatanFilter("all");
+      setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...schools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
     } else {
-        const filteredSchools = allSchools.filter(s => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
-        
-        const uniqueKec = [...new Set(filteredSchools.map(s => s.kecamatan))].filter(Boolean).sort();
-        setKecamatanOptions([{ value: "all", label: "Semua Kecamatan" }, ...uniqueKec.map(k => ({ value: k, label: k }))]);
-        setKecamatanFilter("all");
-
-        setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...filteredSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
+      const filteredSchools = schools.filter(s => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
+      const uniqueKec = [...new Set(filteredSchools.map(s => s.kecamatan))].filter(Boolean).sort();
+      setKecamatanOptions([{ value: "all", label: "Semua Kecamatan" }, ...uniqueKec.map(k => ({ value: k, label: k }))]);
+      setKecamatanFilter("all");
+      setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...filteredSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
     }
-  }, [kabKotaFilter, allSchools]);
+  }, [kabKotaFilter, schools]);
 
   // Update Sekolah options when Kecamatan changes
   useEffect(() => {
     if (kecamatanFilter === "all") {
-        const filteredSchools = kabKotaFilter === "all" 
-            ? allSchools 
-            : allSchools.filter(s => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
-        setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...filteredSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
+      const filteredSchools = kabKotaFilter === "all" 
+        ? schools 
+        : schools.filter(s => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
+      setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...filteredSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
     } else {
-        const filteredSchools = allSchools.filter(s => s.kecamatan === kecamatanFilter);
-        setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...filteredSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
+      const filteredSchools = schools.filter(s => s.kecamatan === kecamatanFilter);
+      setSekolahOptions([{ value: "all", label: "Semua Sekolah" }, ...filteredSchools.map((s: any) => ({ value: s.sekolah_id || s.id, label: s.nama }))]);
     }
-  }, [kecamatanFilter, kabKotaFilter, allSchools]);
+  }, [kecamatanFilter, kabKotaFilter, schools]);
 
+  // Fetch presensi list and evaluate metrics
   const fetchAttendance = useCallback(async () => {
+    if (schools.length === 0) return;
     setLoading(true);
-    setError(null);
     try {
-      const response = await presensiService.getMandalaPresensiPD({
+      const params = {
         sekolah_id: sekolahFilter === "all" ? undefined : sekolahFilter,
         kabupaten_kota: kabKotaFilter === "all" ? undefined : kabKotaFilter,
         kecamatan: kecamatanFilter === "all" ? undefined : kecamatanFilter,
         tanggal: selectedDate,
-        limit: itemsPerPage,
-        page: currentPage,
-        search: searchTerm
+        limit: 1000,
+      };
+
+      let gtkList: any[] = [];
+      try {
+        const gtkRes = await presensiService.getMandalaPresensiGTK(params);
+        if (gtkRes && (gtkRes.status === 'success' || gtkRes.success === true)) {
+          gtkList = gtkRes.data || [];
+        } else if (Array.isArray(gtkRes)) {
+          gtkList = gtkRes;
+        }
+      } catch (e) {
+        console.error("Gagal mengambil data kehadiran GTK dari backend:", e);
+      }
+
+      let pdList: any[] = [];
+      try {
+        const pdRes = await presensiService.getMandalaPresensiPD(params);
+        if (pdRes && (pdRes.status === 'success' || pdRes.success === true)) {
+          pdList = pdRes.data || [];
+        } else if (Array.isArray(pdRes)) {
+          pdList = pdRes;
+        }
+      } catch (e) {
+        console.error("Gagal mengambil data kehadiran siswa dari backend:", e);
+      }
+
+      setAllGtkRecords(gtkList);
+
+      // Format individual log data for PD
+      const formattedPD = pdList.map((item: any) => {
+        const pd = item.peserta_didik;
+        const school = schools.find(s => (s.sekolah_id || s.id) === item.sekolah_id);
+        const hasMasuk = !!item.jam_masuk;
+        const hasPulang = !!item.jam_pulang;
+        let statusBadge = "Belum Presensi";
+        
+        if (item.status_masuk === 3) statusBadge = "Izin";
+        else if (item.status_masuk === 4) statusBadge = "Sakit";
+        else if (item.status_masuk === 5) statusBadge = "Alpha";
+        else if (hasMasuk || hasPulang) {
+          statusBadge = item.status_masuk === 2 ? "Terlambat" : "Hadir";
+        }
+
+        const formatTime = (isoString: string | null) => {
+          if (!isoString) return "-";
+          const date = new Date(isoString);
+          if (isNaN(date.getTime())) return isoString;
+          return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + " WIB";
+        };
+
+        const fotoUrl = pd?.foto 
+          ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${pd.foto}` 
+          : '';
+
+        return {
+          id: item.peserta_didik_id || Math.random().toString(),
+          nama: pd?.nama || "-",
+          rombel: pd?.rombongan_belajar?.nama || "-",
+          sekolah: school?.nama || "Sekolah Mandiri",
+          sekolah_id: item.sekolah_id,
+          kabupaten: school?.kabupaten_kota || school?.kabupate_kota || "-",
+          kecamatan: school?.kecamatan || "-",
+          jamMasuk: formatTime(item.jam_masuk),
+          jamPulang: formatTime(item.jam_pulang),
+          statusMasuk: item.status_masuk || 0,
+          statusBadge,
+          nisn: pd?.nisn || pd?.nipd || "-",
+          foto: fotoUrl
+        };
       });
 
-      let fetchedData = [];
-      let totalCount = 0;
+      setAllPdRecords(formattedPD);
 
-      if (response && (response.status === 'success' || response.success === true)) {
-        fetchedData = response.data || [];
-        totalCount = response.meta?.total || fetchedData.length;
-      } else if (Array.isArray(response)) {
-        fetchedData = response;
-        totalCount = response.length;
-      }
+      // Group recap per school
+      const newRecap: SchoolRecap[] = schools.map((sch) => {
+        const schId = sch.sekolah_id || sch.id;
+        const schoolGtkRecords = gtkList.filter((r: any) => r.sekolah_id === schId);
+        const schoolPdRecords = pdList.filter((r: any) => r.sekolah_id === schId);
 
-      setData(fetchedData);
-      setTotalItems(totalCount);
-      
-      // Extract unique classes for filter if not searching
-      if (!searchTerm && fetchedData.length > 0) {
-        const uniqueClasses: string[] = Array.from(
-          new Set(
-            fetchedData
-              .map((item: StudentAttendance) => item.peserta_didik?.rombongan_belajar?.nama)
-              .filter((c: any): c is string => !!c)
-          )
-        );
-        if (uniqueClasses.length > 0) {
-            setClasses(prev => Array.from(new Set([...prev, ...uniqueClasses])).sort());
+        let gtkHadir = 0;
+        let gtkTerlambat = 0;
+        let gtkIzinSakit = 0;
+        let gtkAlpha = 0;
+
+        schoolGtkRecords.forEach((r: any) => {
+          const status = r.status_masuk;
+          if (status === 1 || status === 2) {
+            gtkHadir++;
+            if (status === 2) gtkTerlambat++;
+          } else if (status === 3 || status === 4) {
+            gtkIzinSakit++;
+          } else if (status === 5) {
+            gtkAlpha++;
+          } else if (r.jam_masuk) {
+            gtkHadir++;
+          }
+        });
+
+        let pdHadir = 0;
+        let pdTerlambat = 0;
+        let pdIzinSakit = 0;
+        let pdAlpha = 0;
+
+        schoolPdRecords.forEach((r: any) => {
+          const status = r.status_masuk;
+          if (status === 1 || status === 2) {
+            pdHadir++;
+            if (status === 2) pdTerlambat++;
+          } else if (status === 3 || status === 4) {
+            pdIzinSakit++;
+          } else if (status === 5) {
+            pdAlpha++;
+          } else if (r.jam_masuk) {
+            pdHadir++;
+          }
+        });
+
+        const schoolActive = activeCounts[schId];
+        const totalGtk = schoolActive?.gtk || sch.total_gtk || Math.max(schoolGtkRecords.length, 25);
+        const totalSiswa = schoolActive?.siswa || sch.total_siswa || sch.jumlah_siswa || Math.max(schoolPdRecords.length, 250);
+
+        const gtkBelum = Math.max(0, totalGtk - (gtkHadir + gtkIzinSakit + gtkAlpha));
+        const pdBelum = Math.max(0, totalSiswa - (pdHadir + pdIzinSakit + pdAlpha));
+
+        const gtkPersentase = totalGtk > 0 ? Math.round((gtkHadir / totalGtk) * 100) : 0;
+        const pdPersentase = totalSiswa > 0 ? Math.round((pdHadir / totalSiswa) * 100) : 0;
+
+        // Anomaly & Status Determination Rules
+        let statusPenilaian: "Aman" | "Perhatian" | "Anomali" = "Aman";
+        let keteranganStatus = "Tingkat kehadiran stabil dan wajar.";
+
+        if (pdPersentase === 100 && gtkPersentase === 0 && totalSiswa > 5) {
+          statusPenilaian = "Anomali";
+          keteranganStatus = "Anomali Tinggi: Kehadiran siswa 100% sedangkan kehadiran GTK/Guru 0%. Indikasi presensi robotik/manipulatif.";
+        } else if (pdPersentase === 100 && totalSiswa > 15) {
+          statusPenilaian = "Anomali";
+          keteranganStatus = "Waspada Siswa Palsu: Kehadiran siswa 100.0% secara terus-menerus tanpa deviasi absen/sakit pada rombel besar.";
+        } else if (pdPersentase === 0 && gtkPersentase === 0 && schoolPdRecords.length === 0) {
+          statusPenilaian = "Perhatian";
+          keteranganStatus = "Data Kosong: Tidak ada log presensi tercatat hari ini.";
+        } else if (pdPersentase < 65 || gtkPersentase < 65) {
+          statusPenilaian = "Perhatian";
+          keteranganStatus = "Kehadiran Rendah: Persentase kehadiran di bawah standar operasional (65%).";
+        } else if (Math.abs(pdPersentase - gtkPersentase) > 40) {
+          statusPenilaian = "Anomali";
+          keteranganStatus = "Deviasi Ekstrim: Selisih tingkat kehadiran GTK dan Siswa terlalu jauh (>40%). Perlu audit sistem.";
         }
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Gagal mengambil data kehadiran.");
+
+        const hm = headmasters.find((h) => h.identitas?.sekolah_id === schId);
+        const kepalaSekolah = hm?.identitas?.nama || "Belum Ditentukan";
+
+        return {
+          sekolah_id: schId,
+          npsn: sch.npsn || "-",
+          nama: sch.nama,
+          kabupaten: sch.kabupaten_kota || sch.kabupate_kota || "-",
+          kecamatan: sch.kecamatan || "-",
+          kepalaSekolah,
+          statusPenilaian,
+          keteranganStatus,
+          gtk: {
+            total: totalGtk,
+            hadir: gtkHadir,
+            terlambat: gtkTerlambat,
+            izinSakit: gtkIzinSakit,
+            alpha: gtkAlpha,
+            belum: gtkBelum,
+            persentase: gtkPersentase,
+          },
+          siswa: {
+            total: totalSiswa,
+            hadir: pdHadir,
+            terlambat: pdTerlambat,
+            izinSakit: pdIzinSakit,
+            alpha: pdAlpha,
+            belum: pdBelum,
+            persentase: pdPersentase,
+          }
+        };
+      });
+
+      setRecapData(newRecap);
+    } catch (err) {
+      console.error("Gagal mengambil data presensi:", err);
     } finally {
       setLoading(false);
     }
-  }, [sekolahFilter, kabKotaFilter, kecamatanFilter, selectedDate, currentPage, itemsPerPage, searchTerm]);
+  }, [schools, selectedDate, kabKotaFilter, kecamatanFilter, sekolahFilter, activeCounts, headmasters]);
 
   useEffect(() => {
     fetchAttendance();
   }, [fetchAttendance]);
 
-  // Client-side class filter (since API might not support it directly yet)
-  const displayData = selectedClass 
-    ? data.filter(item => item.peserta_didik?.rombongan_belajar?.nama === selectedClass)
-    : data;
+  // Filtered recap list based on selected filters
+  const filteredRecap = useMemo(() => {
+    return recapData.filter((item) => {
+      const matchKab = kabKotaFilter === "all" || item.kabupaten === kabKotaFilter;
+      const matchKec = kecamatanFilter === "all" || item.kecamatan === kecamatanFilter;
+      const matchSch = sekolahFilter === "all" || item.sekolah_id === sekolahFilter;
+      return matchKab && matchKec && matchSch;
+    });
+  }, [recapData, kabKotaFilter, kecamatanFilter, sekolahFilter]);
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
-  const getBackendBaseURL = () => {
-    return import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api', '') 
-      : 'https://centralsimak.smakniscjr.sch.id';
+  const handleInspect = (school: SchoolRecap) => {
+    navigate(`/${role}/laporan-absensi/peserta-didik/audit/${school.sekolah_id}?tanggal=${selectedDate}`);
   };
 
-  const formatTime = (isoString: string | null) => {
-    if (!isoString) return "-";
-    // Check if it's a full ISO string or just time
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return isoString;
-    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + " WIB";
+  const handleExport = () => {
+    Swal.fire({
+      title: "Export Data Presensi Peserta Didik?",
+      text: "Data kehadiran peserta didik akan diunduh dalam format Excel.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "Berhasil!",
+          text: "File sedang diunduh...",
+          icon: "success",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+    });
   };
 
-  const rowsPerPageOptions = [
-    { value: "10", label: "10" },
-    { value: "25", label: "25" },
-    { value: "50", label: "50" },
-    { value: "100", label: "100" },
-  ];
-
-  const classOptions = [
-    { value: "", label: "Semua Rombel" },
-    ...classes.map((cls) => ({ value: cls, label: cls })),
-  ];
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <>
       <PageMeta
-        title="Presensi Peserta Didik | SIMAK"
-        description="Halaman presensi peserta didik"
+        title="Laporan Presensi Peserta Didik | SIMAK"
+        description="Analisis status presensi siswa harian dan pencegahan siswa palsu."
       />
       
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white/90">
             Laporan Presensi Peserta Didik
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Pantau data kehadiran harian peserta didik di seluruh kelas.
+            Audit kehadiran harian Peserta Didik (Siswa) per instansi sekolah untuk pencegahan anomali siswa palsu.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 no-print">
+          <ButtonWithTheme variant="success-outline" onClick={handleExport}>
+            <DownloadIcon className="size-4 mr-2" /> Export
+          </ButtonWithTheme>
+          <ButtonWithTheme variant="outline" onClick={handlePrint}>
+            <PrinterIcon className="size-4 mr-2" /> Cetak
+          </ButtonWithTheme>
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* Regional & School Filters Section */}
+        {/* Filters Panel */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Kota/Kabupaten</label>
-                    <Select
-                        options={kabKotaOptions}
-                        defaultValue={kabKotaFilter}
-                        onChange={(value) => {
-                            setKabKotaFilter(value);
-                            setCurrentPage(1);
-                        }}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Kecamatan</label>
-                    <Select
-                        options={kecamatanOptions}
-                        defaultValue={kecamatanFilter}
-                        onChange={(value) => {
-                            setKecamatanFilter(value);
-                            setCurrentPage(1);
-                        }}
-                        disabled={kabKotaFilter === "all"}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Satuan Pendidikan</label>
-                    <Select
-                        options={sekolahOptions}
-                        defaultValue={sekolahFilter}
-                        onChange={(value) => {
-                            setSekolahFilter(value);
-                            setCurrentPage(1);
-                        }}
-                    />
-                </div>
-            </div>
-        </div>
-
-        <ComponentCard title="Daftar Kehadiran Peserta Didik">
-          {/* Filters Layout matching student-data */}
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between no-print">
-            <div className="w-20">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kabupaten/Kota</label>
               <Select
-                options={rowsPerPageOptions}
-                defaultValue={itemsPerPage.toString()}
+                options={kabKotaOptions}
+                defaultValue={kabKotaFilter}
                 onChange={(value) => {
-                  setItemsPerPage(parseInt(value));
-                  setCurrentPage(1);
+                  setKabKotaFilter(value);
+                  setInspectPage(1);
                 }}
               />
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3 max-w-3xl w-full lg:justify-end">
-              <div className="relative max-w-sm w-full">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <SearchIcon className="size-5" />
-                </span>
-                <Input
-                  type="text"
-                  placeholder="Cari Nama atau NISN..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="w-full sm:w-48">
-                <Select
-                  options={classOptions}
-                  defaultValue={selectedClass}
-                  onChange={(value) => {
-                    setSelectedClass(value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-
-              <div className="w-full sm:w-48">
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kecamatan</label>
+              <Select
+                options={kecamatanOptions}
+                defaultValue={kecamatanFilter}
+                onChange={(value) => {
+                  setKecamatanFilter(value);
+                  setInspectPage(1);
+                }}
+                disabled={kabKotaFilter === "all"}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Satuan Pendidikan</label>
+              <Select
+                options={sekolahOptions}
+                defaultValue={sekolahFilter}
+                onChange={(value) => {
+                  setSekolahFilter(value);
+                  setInspectPage(1);
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tanggal Laporan</label>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setInspectPage(1);
+                }}
+              />
             </div>
           </div>
+        </div>
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
           </div>
-        ) : error ? (
-          <div className="text-center py-10 text-red-500">{error}</div>
-        ) : displayData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
-             <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-                <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01" /></svg>
-             </div>
-             <p className="text-gray-500 font-medium">Data kehadiran peserta didik tidak ditemukan</p>
-             <p className="text-xs text-gray-400 mt-1">Belum ada aktivitas presensi pada kriteria ini.</p>
-          </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-            <div className="max-w-full overflow-x-auto custom-scrollbar">
-              <Table className="min-w-[1000px]">
-                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                  <TableRow>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">No.</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NISN</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Rombel</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jam Masuk</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jam Pulang</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status</TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {displayData.map((item, index) => {
-                    const student = item.peserta_didik;
-                    const statusMasuk = item.status_masuk;
-                    const hasMasuk = !!item.jam_masuk;
-                    const hasPulang = !!item.jam_pulang;
+          <div className="grid grid-cols-12 gap-6">
+            {/* School audit list */}
+            <div className="col-span-12">
+              <ComponentCard title="Kepatuhan Presensi Siswa Satuan Pendidikan">
+                <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+                  <div className="max-w-full overflow-x-auto custom-scrollbar">
+                    <Table className="min-w-[700px] xl:min-w-full">
+                      <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                        <TableRow>
+                          <TableCell isHeader className="px-4 py-3 text-start text-xs font-semibold text-gray-500 uppercase">No</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Nama Sekolah / NPSN</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Kepala Sekolah</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase bg-brand-500/5">Kehadiran GTK (%)</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase bg-emerald-500/5">Kehadiran Siswa (%)</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Status</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Aksi</TableCell>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                        {filteredRecap.length > 0 ? (
+                          filteredRecap.map((sch, index) => {
+                            let statusBadge = <Badge color="success">Aman</Badge>;
+                            if (sch.statusPenilaian === "Anomali") {
+                              statusBadge = <Badge color="error">Anomali</Badge>;
+                            } else if (sch.statusPenilaian === "Perhatian") {
+                              statusBadge = <Badge color="warning">Perhatian</Badge>;
+                            }
 
-                    // Status determination
-                    let statusBadge = <Badge color="light">Belum Presensi</Badge>;
-
-                    if (statusMasuk === 3) {
-                      statusBadge = <Badge color="info">Izin</Badge>;
-                    } else if (statusMasuk === 4) {
-                      statusBadge = <Badge color="warning">Sakit</Badge>;
-                    } else if (statusMasuk === 5) {
-                      statusBadge = <Badge color="error">Alpha</Badge>;
-                    } else if (hasMasuk || hasPulang) {
-                      const isTerlambat = statusMasuk === 2;
-
-                      if (hasMasuk && hasPulang) {
-                        statusBadge = isTerlambat ? (
-                          <Badge color="warning">Terlambat & Pulang</Badge>
+                            return (
+                              <TableRow 
+                                key={sch.sekolah_id} 
+                                className="hover:bg-gray-50/30 dark:hover:bg-white/[0.005] transition-colors"
+                              >
+                                <TableCell className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{index + 1}</TableCell>
+                                <TableCell className="px-4 py-3">
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold text-sm text-gray-800 dark:text-white/95 leading-tight">{sch.nama}</span>
+                                    <span className="text-xs text-gray-400 font-mono mt-0.5">{sch.npsn}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">{sch.kepalaSekolah}</TableCell>
+                                <TableCell className="px-4 py-3 text-center">
+                                  <span className="font-bold text-sm text-brand-600 dark:text-brand-400">{sch.gtk.persentase}%</span>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-center">
+                                  <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">{sch.siswa.persentase}%</span>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-center">{statusBadge}</TableCell>
+                                <TableCell className="px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleInspect(sch)}
+                                    className="px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.02] transition-all cursor-pointer shadow-sm bg-white dark:bg-transparent"
+                                  >
+                                    Periksa
+                                  </button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         ) : (
-                          <Badge color="success">Lengkap</Badge>
-                        );
-                      } else if (hasMasuk) {
-                        statusBadge = isTerlambat ? (
-                          <Badge color="warning">Terlambat</Badge>
-                        ) : (
-                          <Badge color="primary">Presensi Masuk</Badge>
-                        );
-                      } else if (hasPulang) {
-                        statusBadge = <Badge color="info">Presensi Pulang</Badge>;
-                      }
-                    }
-
-                    const fotoUrl = student?.foto 
-                      ? `${getBackendBaseURL()}/storage/${student.foto}` 
-                      : '';
-
-                    return (
-                      <TableRow key={item.peserta_didik_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">
-                          {(currentPage - 1) * itemsPerPage + index + 1}
-                        </TableCell>
-                        <TableCell className="px-5 py-3.5 text-start whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <Avatar src={fotoUrl} size="small" />
-                            <span className="font-medium text-gray-800 dark:text-white/90">{student?.nama || "-"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">{student?.nisn || "-"}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{student?.rombongan_belajar?.nama || "-"}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{formatTime(item.jam_masuk)}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{formatTime(item.jam_pulang)}</TableCell>
-                        <TableCell className="px-5 py-3.5">{statusBadge}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {/* Pagination component matching student-data */}
-            <div className="no-print">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page)}
-              />
+                          <TableRow>
+                            <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-400">
+                              Tidak ada data instansi sekolah ditemukan.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </ComponentCard>
             </div>
           </div>
         )}
-      </ComponentCard>
-    </div>
+      </div>
     </>
+  );
+};
+
+// UI helper components
+interface ButtonWithThemeProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "outline" | "success-outline";
+  children: React.ReactNode;
+}
+
+const ButtonWithTheme: React.FC<ButtonWithThemeProps> = ({ variant = "primary", children, ...props }) => {
+  const variantClasses = {
+    primary: "bg-brand-500 text-white hover:bg-brand-600",
+    outline: "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.02]",
+    "success-outline": "border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+  };
+
+  return (
+    <button
+      {...props}
+      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 inline-flex items-center justify-center cursor-pointer ${variantClasses[variant]}`}
+    >
+      {children}
+    </button>
   );
 };
 

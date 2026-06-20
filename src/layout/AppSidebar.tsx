@@ -69,23 +69,136 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "Satuan Pendidikan",
+    name: "Data Master",
     icon: <BoxIcon />,
     subItems: [
       {
-        name: "Data Satuan Pendidikan",
-        path: "/satuan-pendidikan/data",
+        name: "Satuan Pendidikan",
+        icon: <DotIcon />,
+        subItems: [
+          {
+            name: "Data Satuan Pendidikan",
+            path: "/satuan-pendidikan/data",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Data Spasial",
+            path: "/satuan-pendidikan/spasial",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Rekapitulasi Sekolah",
+            path: "/satuan-pendidikan/rekapitulasi",
+            icon: <DotIcon />,
+          },
+        ],
+      },
+      {
+        name: "Kepala Sekolah",
+        path: "/kepala-sekolah",
         icon: <DotIcon />,
       },
       {
-        name: "Data Spasial",
-        path: "/satuan-pendidikan/spasial",
+        name: "GTK",
+        icon: <DotIcon />,
+        subItems: [
+          {
+            name: "Guru",
+            path: "/gtk/guru?tab=guru",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Tendik",
+            path: "/gtk/tendik?tab=tendik",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Rekapitulasi GTK",
+            path: "/gtk/rekapitulasi?tab=rekap",
+            icon: <DotIcon />,
+          },
+          {
+            name: "GTK Non Aktif",
+            path: "/gtk/non-aktif?tab=nonaktif",
+            icon: <DotIcon />,
+            color: "text-red-500 dark:text-red-400",
+          },
+        ],
+      },
+      {
+        name: "Peserta Didik",
+        icon: <DotIcon />,
+        subItems: [
+          {
+            name: "Peserta Didik",
+            path: "/peserta-didik/data?tab=aktif",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Rekapitulasi Siswa",
+            path: "/peserta-didik/rekapitulasi?tab=rekap",
+            icon: <DotIcon />,
+          },
+          {
+            name: "PD Non Aktif",
+            path: "/peserta-didik/non-aktif?tab=keluar",
+            icon: <DotIcon />,
+            color: "text-red-500 dark:text-red-400",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Analitik & Evaluasi",
+    icon: <PieChartIcon />,
+    subItems: [
+      {
+        name: "Residu",
+        icon: <DotIcon />,
+        subItems: [
+          {
+            name: "Guru",
+            path: "/analisa/residu/guru",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Tendik",
+            path: "/analisa/residu/tendik",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Peserta Didik",
+            path: "/analisa/residu/peserta-didik",
+            icon: <DotIcon />,
+          },
+        ],
+      },
+      {
+        name: "Pendidikan GTK",
+        path: "/analisa/pendidikan-gtk",
         icon: <DotIcon />,
       },
       {
-        name: "Rekapitulasi Sekolah",
-        path: "/satuan-pendidikan/rekapitulasi",
+        name: "Laporan Presensi",
         icon: <DotIcon />,
+        subItems: [
+          {
+            name: "GTK",
+            path: "/laporan-absensi/gtk",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Peserta Didik",
+            path: "/laporan-absensi/peserta-didik",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Rekap Terpadu",
+            path: "/laporan-absensi/rekap-terpadu",
+            icon: <DotIcon />,
+          },
+        ],
       },
     ],
   },
@@ -111,53 +224,6 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "GTK",
-    icon: <GroupIcon />,
-    subItems: [
-      {
-        name: "Guru",
-        path: "/gtk/guru?tab=guru",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Tendik",
-        path: "/gtk/tendik?tab=tendik",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Rekapitulasi GTK",
-        path: "/gtk/rekapitulasi?tab=rekap",
-        icon: <DotIcon />,
-      },
-      {
-        name: "GTK Non-aktif",
-        path: "/gtk/non-aktif?tab=nonaktif",
-        icon: <DotIcon />,
-      },
-    ],
-  },
-  {
-    name: "Peserta Didik",
-    icon: <UserIcon />,
-    subItems: [
-      {
-        name: "Data Siswa",
-        path: "/peserta-didik/data?tab=aktif",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Rekapitulasi Siswa",
-        path: "/peserta-didik/rekapitulasi?tab=rekap",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Siswa Non-aktif",
-        path: "/peserta-didik/non-aktif?tab=keluar",
-        icon: <DotIcon />,
-      },
-    ],
-  },
-  {
     name: "Layanan",
     icon: <PlugInIcon />,
     subItems: [
@@ -169,27 +235,6 @@ const navItems: NavItem[] = [
       {
         name: "Layanan Peserta Didik",
         path: "/layanan/peserta-didik",
-        icon: <DotIcon />,
-      },
-    ],
-  },
-  {
-    name: "Laporan Presensi",
-    icon: <TableIcon />,
-    subItems: [
-      {
-        name: "GTK",
-        path: "/laporan-absensi/gtk",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Peserta Didik",
-        path: "/laporan-absensi/peserta-didik",
-        icon: <DotIcon />,
-      },
-      {
-        name: "Rekap Terpadu",
-        path: "/laporan-absensi/rekap-terpadu",
         icon: <DotIcon />,
       },
     ],
@@ -248,8 +293,6 @@ const navItems: NavItem[] = [
   },
 ];
 
-const othersItems: NavItem[] = [];
-
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { sekolah } = useSekolah();
@@ -306,8 +349,7 @@ const AppSidebar: React.FC = () => {
     };
 
     const activeMain = findActiveMenus(navItems, "main");
-    const activeOthers = findActiveMenus(othersItems, "others");
-    setOpenSubmenus([...activeMain, ...activeOthers]);
+    setOpenSubmenus(activeMain);
   }, [location, isSubItemActive]);
 
   const toggleSubmenu = (key: string) => {
@@ -478,22 +520,6 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(filteredNavItems, "main")}
-            </div>
-            <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Others"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
             </div>
           </div>
         </nav>

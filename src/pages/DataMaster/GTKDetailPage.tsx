@@ -165,7 +165,7 @@ export default function GTKDetailPage() {
               <DataRow label="Status Kepegawaian" value={kepegawaian?.status_kepegawaian} />
               <DataRow label="Jenis PTK" value={kepegawaian?.jenis_ptk} />
               <DataRow label="Jabatan" value={kepegawaian?.jabatan} />
-              <DataRow label="Pendidikan Terakhir" value={identitas?.pendidikan_terakhir} />
+              <DataRow label="Pendidikan Terakhir" value={kepegawaian?.pendidikan_terakhir || identitas?.pendidikan_terakhir} />
               <div className="pt-4 space-y-4">
                   <DataRow label="Ibu Kandung" value={identitas?.ibu_kandung} />
                   <DataRow label="Email" value={data_pendukung?.email} />

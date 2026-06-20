@@ -22,6 +22,41 @@ const STATUS_MAP: Record<number, { label: string; color: string }> = {
 
 export default function DaftarAntrian() {
   const { user } = useAuth();
+  
+  const [isBreak, setIsBreak] = useState(() => localStorage.getItem("monitor_status") === "istirahat");
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "monitor_status") {
+        setIsBreak(e.newValue === "istirahat");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const handleToggleBreak = () => {
+    const nextState = !isBreak;
+    setIsBreak(nextState);
+    localStorage.setItem("monitor_status", nextState ? "istirahat" : "buka");
+    
+    // Dispatch standard event locally so current window/tab also captures it instantly
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "monitor_status",
+      newValue: nextState ? "istirahat" : "buka"
+    }));
+
+    Swal.fire({
+      icon: "success",
+      title: nextState ? "Layanan Istirahat" : "Layanan Dibuka",
+      text: nextState 
+        ? "Status monitor antrean berhasil diubah ke Istirahat." 
+        : "Status monitor antrean berhasil dibuka kembali.",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  };
+
   const [antrian, setAntrian] = useState<Antrian[]>([]);
   const [kategori, setKategori] = useState<KategoriKeperluan[]>([]);
   const [rekap, setRekap] = useState<AntrianRekap | null>(null);
@@ -196,7 +231,36 @@ export default function DaftarAntrian() {
     }
   };
 
+  const getRecallCount = (id: string) => {
+    try {
+      const counts = JSON.parse(localStorage.getItem('queue_recall_counts') || '{}');
+      return counts[id] || 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const incrementRecallCount = (id: string) => {
+    try {
+      const counts = JSON.parse(localStorage.getItem('queue_recall_counts') || '{}');
+      counts[id] = (counts[id] || 0) + 1;
+      localStorage.setItem('queue_recall_counts', JSON.stringify(counts));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleUpdateStatus = async (id: string, status: number, isRecall: boolean = false) => {
+    if (isBreak && (status === 1 || status === 2)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Layanan Sedang Istirahat",
+        text: "Tidak dapat memanggil atau melayani antrean saat status layanan sedang istirahat. Silakan buka kembali layanan terlebih dahulu.",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
     try {
       if (isRecall) {
         // Gunakan localStorage untuk mengirim sinyal "Panggil Ulang" antar tab ke MonitorAntrian
@@ -239,6 +303,24 @@ export default function DaftarAntrian() {
             />
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant={isBreak ? "primary" : "warning"}
+              onClick={handleToggleBreak}
+              startIcon={
+                isBreak ? (
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )
+              }
+            >
+              {isBreak ? "Buka Layanan" : "Istirahat"}
+            </Button>
             <Button variant="outline" onClick={() => {
               if (filters.cadisdik_id) window.open(`/monitor-antrian?cadisdik_id=${filters.cadisdik_id}`, '_blank');
               else Swal.fire("Peringatan", "Pilih instansi terlebih dahulu", "warning");
@@ -310,9 +392,18 @@ export default function DaftarAntrian() {
                           )}
                           {item.status === 1 && (
                             <>
-                              <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 1)} className="p-2 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors" title="Panggil Ulang">
-                                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                              </button>
+                              {getRecallCount(item.id || item.antrian_id as string) < 3 && (
+                                <button 
+                                  onClick={() => {
+                                    handleUpdateStatus(item.id || item.antrian_id as string, 1, true);
+                                    incrementRecallCount(item.id || item.antrian_id as string);
+                                  }} 
+                                  className="p-2 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors" 
+                                  title={`Panggil Ulang (${getRecallCount(item.id || item.antrian_id as string)}/3)`}
+                                >
+                                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                                </button>
+                              )}
                               <button onClick={() => handleUpdateStatus(item.id || item.antrian_id as string, 2)} className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors" title="Mulai Layani">
                                 <CheckCircleIcon className="size-4" />
                               </button>
