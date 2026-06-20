@@ -183,6 +183,7 @@ export default function MonitorAntrian() {
   const [monitorStatus, setMonitorStatus] = useState(() => localStorage.getItem("monitor_status") || "buka");
   const prevStatusRef = useRef(monitorStatus);
   const ytPlayerRef = useRef<any>(null);
+  const isInitialRun = useRef<boolean>(true);
   const [playBreakMusic, setPlayBreakMusic] = useState<boolean>(true);
   const [isStatusAnnouncing, setIsStatusAnnouncing] = useState<boolean>(false);
   const [isPlayingSignVideo, setIsPlayingSignVideo] = useState<boolean>(false);
@@ -923,7 +924,10 @@ export default function MonitorAntrian() {
   };
 
   useEffect(() => {
-    if (monitorStatus !== prevStatusRef.current) {
+    if (!audioEnabled) return;
+
+    if (isInitialRun.current || monitorStatus !== prevStatusRef.current) {
+      isInitialRun.current = false;
       setStatusAnnounced(false);
       announceStatus(monitorStatus as "istirahat" | "buka");
       prevStatusRef.current = monitorStatus;
