@@ -18,6 +18,7 @@ import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Badge from "../../components/ui/badge/Badge";
 import Avatar from "../../components/ui/avatar/Avatar";
+import { getFotoUrl } from "../../utils/image";
 import { SearchIcon, BoltIcon, CheckCircleIcon, PlusIcon, PencilIcon, TrashBinIcon, ListIcon } from "../../icons";
 import Swal from "sweetalert2";
 
@@ -85,7 +86,7 @@ export default function LayananMandalaPage() {
     if (!url) return "#";
     const baseUrl = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') 
-      : 'https://centralsimak.smakniscjr.sch.id';
+      : 'http://localhost:3000';
     return `${baseUrl}${url}`;
   };
 
@@ -528,7 +529,7 @@ export default function LayananMandalaPage() {
                           </TableCell>
                           <TableCell className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
-                              <Avatar src={subject?.foto} size="small" />
+                              <Avatar src={getFotoUrl(subject?.foto)} size="small" />
                               <div>
                                 <span className="font-semibold text-gray-800 dark:text-white/90">{subject?.nama || "Umum"}</span>
                                 <p className="text-xxs text-gray-400 font-medium">

@@ -34,21 +34,67 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const payloadBase64 = token.split('.')[1];
+    const decodedJson = atob(payloadBase64);
+    const decoded = JSON.parse(decodedJson);
+    return decoded.exp * 1000 < Date.now();
+  } catch (e) {
+    return true;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Memeriksa localStorage untuk sesi yang tersimpan
-    const savedUser = localStorage.getItem('user_data');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Gagal membaca data user dari storage:", error);
+    const checkAuth = async () => {
+      const savedUser = localStorage.getItem('user_data');
+      const token = localStorage.getItem('auth_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+      
+      if (savedUser && token) {
+        try {
+          if (isTokenExpired(token)) {
+            if (refreshToken) {
+              try {
+                // Call the new refresh token endpoint for Mandala
+                const response = await api.post('/mandala/auth/refresh', { refreshToken });
+                const { accessToken, refreshToken: newRefreshToken, pegawai } = response.data;
+                localStorage.setItem("auth_token", accessToken);
+                localStorage.setItem("refresh_token", newRefreshToken);
+                localStorage.setItem("user_data", JSON.stringify(pegawai));
+                setUser(pegawai);
+              } catch (refreshErr) {
+                // Refresh failed
+                localStorage.removeItem("auth_token");
+                localStorage.removeItem("refresh_token");
+                localStorage.removeItem("user_data");
+                setUser(null);
+              }
+            } else {
+              // No refresh token available, log out
+              localStorage.removeItem("auth_token");
+              localStorage.removeItem("user_data");
+              setUser(null);
+            }
+          } else {
+            setUser(JSON.parse(savedUser));
+          }
+        } catch (err) {
+          console.error("Gagal membaca data user dari storage:", err);
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("user_data");
+          setUser(null);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   const setAuthData = (userData: User) => {
