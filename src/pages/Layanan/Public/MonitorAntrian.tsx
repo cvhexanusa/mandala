@@ -862,8 +862,8 @@ export default function MonitorAntrian() {
     if (!audioEnabled || !("speechSynthesis" in window)) return;
     setIsStatusAnnouncing(true);
     try {
-      // 1. Play train station chime alert (1x)
-      await playStationChime(type, false);
+      // 1. Play queue chime alert (1x)
+      await playChime(1);
 
       // 2. TTS voice announcement - Bahasa Indonesia
       await new Promise<void>((resolve) => {
@@ -911,8 +911,8 @@ export default function MonitorAntrian() {
       // Pause for a brief moment before the ending chime
       await new Promise<void>((resolve) => setTimeout(resolve, 500));
 
-      // 4. Play train station chime alert twice (2x) at the end
-      await playStationChime(type, true);
+      // 4. Play queue chime alert (1x) at the end
+      await playChime(1);
 
     } catch (e) {
       console.error("Gagal memutar pengumuman status:", e);
