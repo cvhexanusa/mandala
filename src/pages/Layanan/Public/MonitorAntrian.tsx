@@ -186,6 +186,7 @@ export default function MonitorAntrian() {
   const [playBreakMusic, setPlayBreakMusic] = useState<boolean>(true);
   const [isStatusAnnouncing, setIsStatusAnnouncing] = useState<boolean>(false);
   const [isPlayingSignVideo, setIsPlayingSignVideo] = useState<boolean>(false);
+  const [statusAnnounced, setStatusAnnounced] = useState<boolean>(false);
 
   // Educational Comic Public Service Announcements (Iklan Layanan Masyarakat)
   const [activeComicIdx, setActiveComicIdx] = useState(0);
@@ -917,11 +918,13 @@ export default function MonitorAntrian() {
       console.error("Gagal memutar pengumuman status:", e);
     } finally {
       setIsStatusAnnouncing(false);
+      setStatusAnnounced(true);
     }
   };
 
   useEffect(() => {
     if (monitorStatus !== prevStatusRef.current) {
+      setStatusAnnounced(false);
       announceStatus(monitorStatus as "istirahat" | "buka");
       prevStatusRef.current = monitorStatus;
     }
@@ -949,8 +952,8 @@ export default function MonitorAntrian() {
   }, [monitorStatus]);
 
   useEffect(() => {
-    // Memutar instrumen Kicir Kicir saat istirahat, suara aktif, musik diaktifkan, dan tidak sedang mengumumkan status
-    if (monitorStatus === "istirahat" && audioEnabled && playBreakMusic && !isStatusAnnouncing) {
+    // Memutar instrumen Kicir Kicir saat istirahat, suara aktif, musik diaktifkan, pengumuman status telah selesai, dan tidak sedang mengumumkan
+    if (monitorStatus === "istirahat" && audioEnabled && playBreakMusic && !isStatusAnnouncing && statusAnnounced) {
       let tag = document.getElementById("yt-api-script");
       if (!tag) {
         tag = document.createElement("script");
@@ -1009,7 +1012,7 @@ export default function MonitorAntrian() {
         }
       };
     }
-  }, [monitorStatus, audioEnabled, playBreakMusic, isStatusAnnouncing]);
+  }, [monitorStatus, audioEnabled, playBreakMusic, isStatusAnnouncing, statusAnnounced]);
 
   const playAnnouncement = async (item: Antrian) => {
     if (!audioEnabled || !('speechSynthesis' in window)) return;
