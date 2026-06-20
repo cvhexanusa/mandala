@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import Avatar from "../../components/ui/avatar/Avatar";
+import { getFotoUrl } from "../../utils/image";
 
 interface StudentDetailModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export default function StudentDetailModal({
           {/* Top Section: Photo & Basic Info */}
           <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
             <div className="flex-shrink-0">
-                <Avatar src={identitas?.foto} size="xlarge" className="h-32 w-32 rounded-2xl shadow-md border-4 border-white dark:border-gray-800" />
+                <Avatar src={getFotoUrl(identitas?.foto, "")} size="xlarge" className="h-32 w-32 rounded-2xl shadow-md border-4 border-white dark:border-gray-800" />
             </div>
             <div className="flex-grow text-center sm:text-left space-y-2">
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{identitas?.nama}</h2>

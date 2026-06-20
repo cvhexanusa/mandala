@@ -13,6 +13,7 @@ import { Modal } from "../ui/modal";
 import { useModal } from "../../hooks/useModal";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { getFotoUrl } from "../../utils/image";
 
 interface Rombel {
   rombongan_belajar_id: string;
@@ -264,7 +265,7 @@ export default function RombelTable({ type, onSelectionChange, searchTerm, grade
                     <TableRow key={student.peserta_didik_id}>
                     <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                            <Avatar src={student.foto || "/images/user/user-01.jpg"} size="small" />
+                            <Avatar src={getFotoUrl(student.foto, "/images/user/user-01.jpg")} size="small" />
                             <span className="font-medium text-gray-800 dark:text-white/90">{student.nama}</span>
                         </div>
                     </TableCell>

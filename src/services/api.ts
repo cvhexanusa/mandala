@@ -61,10 +61,54 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Untuk sementara, kita bypass redirect login jika unauthorized
-    // agar tidak mengganggu integrasi Mandala
-    if (error.response?.status === 401) {
-       console.error('Unauthorized request:', originalRequest.url);
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/mandala/auth/login')
+    ) {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        window.location.href = '/signin';
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const response = await axios.post(`${api.defaults.baseURL}/mandala/auth/refresh`, { refreshToken });
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+        localStorage.setItem('auth_token', accessToken);
+        localStorage.setItem('refresh_token', newRefreshToken);
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
+        originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
+
+        processQueue(null, accessToken);
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_data');
+        window.location.href = '/signin';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
     return Promise.reject(error);

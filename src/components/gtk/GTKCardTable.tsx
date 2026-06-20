@@ -13,6 +13,7 @@ import { PrinterIcon } from "../../icons";
 import { useModal } from "../../hooks/useModal";
 import PrintGTKCardPreview from "./PrintGTKCardPreview";
 import { dapodikService } from "../../services/dapodikService";
+import { getFotoUrl } from "../../utils/image";
 
 interface GTKCard {
   ptk_id: string;
@@ -60,7 +61,7 @@ export default function GTKCardTable({ type, searchTerm }: GTKCardTableProps) {
   const handlePrintClick = (person: GTKCard) => {
     setSelectedPerson({
       ...person,
-      avatar: person.foto ? `/storage/${person.foto}` : "",
+      avatar: getFotoUrl(person.foto, ""),
       jabatan: person.jabatan_ptk_id_str || person.jenis_ptk_id_str,
       jenis: type === "guru" ? "Guru" : "Tendik",
     });
@@ -90,7 +91,7 @@ export default function GTKCardTable({ type, searchTerm }: GTKCardTableProps) {
                 <TableRow key={item.ptk_id}>
                   <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                          <Avatar src={item.foto ? `/storage/${item.foto}` : ""} size="small" />
+                           <Avatar src={getFotoUrl(item.foto, "")} size="small" />
                           <span className="font-medium text-gray-800 dark:text-white/90">{item.nama}</span>
                       </div>
                   </TableCell>

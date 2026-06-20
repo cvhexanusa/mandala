@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { dapodikService } from '../services/dapodikService';
+import { getLogoUrl } from '../utils/image';
 
 interface Sekolah {
   sekolah_id: string;
@@ -41,14 +42,14 @@ export const SekolahProvider: React.FC<{ children: React.ReactNode }> = ({ child
             sekolah_id: first.sekolah_id || first.id,
             nama: first.nama,
             npsn: first.npsn,
-            logo: first.logo || null
+            logo: first.logo ? getLogoUrl(first.logo) : null
         });
       } else if (schoolData && typeof schoolData === 'object' && !Array.isArray(schoolData)) {
         setSekolah({
             sekolah_id: schoolData.sekolah_id || schoolData.id,
             nama: schoolData.nama,
             npsn: schoolData.npsn,
-            logo: schoolData.logo || null
+            logo: schoolData.logo ? getLogoUrl(schoolData.logo) : null
         });
       }
     } catch (error) {

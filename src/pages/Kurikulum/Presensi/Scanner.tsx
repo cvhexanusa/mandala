@@ -4,6 +4,7 @@ import { presensiService } from "../../../services/presensiService";
 import ComponentCard from "../../../components/common/ComponentCard";
 import QrScanner from "./components/QrScanner";
 import Swal from "sweetalert2";
+import { getFotoUrl } from "../../../utils/image";
 
 const Scanner: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -27,14 +28,7 @@ const Scanner: React.FC = () => {
       const timeString = new Date(timeLog).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       const statusText = isCheckOut ? 'Pulang' : 'Masuk';
       
-      // Determine photo URL
-      const backendBaseURL = import.meta.env.VITE_API_URL 
-        ? import.meta.env.VITE_API_URL.replace('/api', '') 
-        : 'https://centralsimak.smakniscjr.sch.id';
-      
-      const fotoUrl = profile.foto 
-        ? `${backendBaseURL}/storage/${profile.foto}` 
-        : '/images/user/user-01.jpg';
+      const fotoUrl = getFotoUrl(profile.foto, '/images/user/user-01.jpg');
 
       // Show beautiful SweetAlert2 modal
       Swal.fire({
