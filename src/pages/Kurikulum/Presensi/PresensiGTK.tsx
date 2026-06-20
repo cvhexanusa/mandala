@@ -17,13 +17,8 @@ import Select from "../../../components/form/Select";
 import Input from "../../../components/form/input/InputField";
 import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
-<<<<<<< HEAD
 import { SearchIcon, SchoolIcon, GroupIcon, PrinterIcon, DownloadIcon } from "../../../icons";
 import Swal from "sweetalert2";
-=======
-import { SearchIcon } from "../../../icons";
-import { getFotoUrl } from "../../../utils/image";
->>>>>>> 01331f17c38d15074b87e9d566c0ff38a0a9506d
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -436,12 +431,9 @@ const PresensiGTK: React.FC = () => {
     });
   }, [recapData, kabKotaFilter, kecamatanFilter, sekolahFilter]);
 
-<<<<<<< HEAD
   const handleInspect = (school: SchoolRecap) => {
     navigate(`/${role}/laporan-absensi/gtk/audit/${school.sekolah_id}?tanggal=${selectedDate}`);
   };
-=======
->>>>>>> 01331f17c38d15074b87e9d566c0ff38a0a9506d
 
   const handleExport = () => {
     Swal.fire({
@@ -613,7 +605,6 @@ const PresensiGTK: React.FC = () => {
                             );
                           })
                         ) : (
-<<<<<<< HEAD
                           <TableRow>
                             <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-400">
                               Tidak ada data instansi sekolah ditemukan.
@@ -625,53 +616,6 @@ const PresensiGTK: React.FC = () => {
                   </div>
                 </div>
               </ComponentCard>
-=======
-                          <Badge color="success">Lengkap</Badge>
-                        );
-                      } else if (hasMasuk) {
-                        statusBadge = isTerlambat ? (
-                          <Badge color="warning">Terlambat</Badge>
-                        ) : (
-                          <Badge color="primary">Presensi Masuk</Badge>
-                        );
-                      } else if (hasPulang) {
-                        statusBadge = <Badge color="info">Presensi Pulang</Badge>;
-                      }
-                    }
-
-                    const fotoUrl = getFotoUrl(gtk?.foto, '');
-
-                    return (
-                      <TableRow key={item.ptk_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">
-                          {(currentPage - 1) * itemsPerPage + index + 1}
-                        </TableCell>
-                        <TableCell className="px-5 py-3.5 text-start whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <Avatar src={fotoUrl} size="small" />
-                            <span className="font-medium text-gray-800 dark:text-white/90">{gtk?.nama || "-"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">{gtk?.nuptk || "-"}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{gtk?.jenis_ptk_id_str || "-"}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{formatTime(item.jam_masuk)}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{formatTime(item.jam_pulang)}</TableCell>
-                        <TableCell className="px-5 py-3.5">{statusBadge}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Pagination component matching student-data */}
-            <div className="no-print">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page)}
-              />
->>>>>>> 01331f17c38d15074b87e9d566c0ff38a0a9506d
             </div>
           </div>
         )}

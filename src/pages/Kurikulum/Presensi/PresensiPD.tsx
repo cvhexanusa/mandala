@@ -17,13 +17,8 @@ import Select from "../../../components/form/Select";
 import Input from "../../../components/form/input/InputField";
 import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
-<<<<<<< HEAD
 import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../../../icons";
 import Swal from "sweetalert2";
-=======
-import { SearchIcon } from "../../../icons";
-import { getFotoUrl } from "../../../utils/image";
->>>>>>> 01331f17c38d15074b87e9d566c0ff38a0a9506d
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -437,14 +432,9 @@ const PresensiPD: React.FC = () => {
     });
   }, [recapData, kabKotaFilter, kecamatanFilter, sekolahFilter]);
 
-<<<<<<< HEAD
   const handleInspect = (school: SchoolRecap) => {
     navigate(`/${role}/laporan-absensi/peserta-didik/audit/${school.sekolah_id}?tanggal=${selectedDate}`);
   };
-=======
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
->>>>>>> 01331f17c38d15074b87e9d566c0ff38a0a9506d
 
   const handleExport = () => {
     Swal.fire({
@@ -616,7 +606,6 @@ const PresensiPD: React.FC = () => {
                             );
                           })
                         ) : (
-<<<<<<< HEAD
                           <TableRow>
                             <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-400">
                               Tidak ada data instansi sekolah ditemukan.
@@ -628,53 +617,6 @@ const PresensiPD: React.FC = () => {
                   </div>
                 </div>
               </ComponentCard>
-=======
-                          <Badge color="success">Lengkap</Badge>
-                        );
-                      } else if (hasMasuk) {
-                        statusBadge = isTerlambat ? (
-                          <Badge color="warning">Terlambat</Badge>
-                        ) : (
-                          <Badge color="primary">Presensi Masuk</Badge>
-                        );
-                      } else if (hasPulang) {
-                        statusBadge = <Badge color="info">Presensi Pulang</Badge>;
-                      }
-                    }
-
-                    const fotoUrl = getFotoUrl(student?.foto, '');
-
-                    return (
-                      <TableRow key={item.peserta_didik_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">
-                          {(currentPage - 1) * itemsPerPage + index + 1}
-                        </TableCell>
-                        <TableCell className="px-5 py-3.5 text-start whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <Avatar src={fotoUrl} size="small" />
-                            <span className="font-medium text-gray-800 dark:text-white/90">{student?.nama || "-"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-500 dark:text-gray-400">{student?.nisn || "-"}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{student?.rombongan_belajar?.nama || "-"}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{formatTime(item.jam_masuk)}</TableCell>
-                        <TableCell className="px-5 py-3.5 text-sm text-gray-800 dark:text-white/80">{formatTime(item.jam_pulang)}</TableCell>
-                        <TableCell className="px-5 py-3.5">{statusBadge}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {/* Pagination component matching student-data */}
-            <div className="no-print">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page)}
-              />
->>>>>>> 01331f17c38d15074b87e9d566c0ff38a0a9506d
             </div>
           </div>
         )}
