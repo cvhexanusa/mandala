@@ -13,8 +13,8 @@ export const presensiService = {
   },
 
   // Scanning
-  scanAttendance: async (token: string) => {
-    const response = await api.post('/kurikulum/presensi/scan', { token });
+  scanAttendance: async (token: string, latitude?: number, longitude?: number) => {
+    const response = await api.post('/kurikulum/presensi/scan', { token, latitude, longitude });
     return response.data;
   },
 

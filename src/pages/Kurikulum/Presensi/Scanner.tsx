@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageMeta from "../../../components/common/PageMeta";
 import { presensiService } from "../../../services/presensiService";
 import ComponentCard from "../../../components/common/ComponentCard";
@@ -9,6 +9,41 @@ import { getFotoUrl } from "../../../utils/image";
 const Scanner: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string, data?: any } | null>(null);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGeoError("Browser tidak mendukung GPS/Geolocation");
+      return;
+    }
+
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    };
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setGeoError(null);
+      },
+      (err) => {
+        let msg = "Gagal mengambil lokasi.";
+        if (err.code === 1) msg = "Izin lokasi dilarang. Aktifkan GPS.";
+        else if (err.code === 2) msg = "Lokasi tidak tersedia.";
+        else if (err.code === 3) msg = "Waktu GPS habis.";
+        setGeoError(msg);
+      },
+      geoOptions
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   const handleScan = async (scannedToken: string) => {
     if (!scannedToken || loading) return;
@@ -17,7 +52,11 @@ const Scanner: React.FC = () => {
     setMessage(null);
 
     try {
-      const response = await presensiService.scanAttendance(scannedToken);
+      const response = await presensiService.scanAttendance(
+        scannedToken,
+        coords?.latitude,
+        coords?.longitude
+      );
       
       const isPD = !!response.peserta_didik;
       const profile = isPD ? response.peserta_didik : response.gtk;
@@ -100,6 +139,26 @@ const Scanner: React.FC = () => {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Gunakan kamera untuk melakukan presensi massal Peserta Didik dan GTK secara otomatis.
           </p>
+          
+          {/* GPS Status Indicator */}
+          <div className="mt-2.5 flex items-center gap-2 text-xs">
+            {!coords && !geoError ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                Mendeteksi Lokasi GPS...
+              </span>
+            ) : coords ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 border border-green-100 dark:border-green-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                GPS Aktif: {coords.latitude.toFixed(6)}, {coords.longitude.toFixed(6)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border border-red-100 dark:border-red-500/20" title={geoError || ""}>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                GPS Error: {geoError}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       
