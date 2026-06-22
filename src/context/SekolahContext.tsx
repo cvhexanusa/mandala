@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { dapodikService } from '../services/dapodikService';
 import { getLogoUrl } from '../utils/image';
+import { useAuth } from './AuthContext';
 
 interface Sekolah {
   sekolah_id: string;
@@ -20,6 +21,7 @@ const SekolahContext = createContext<SekolahContextType | undefined>(undefined);
 export const SekolahProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sekolah, setSekolah] = useState<Sekolah | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const refreshSekolah = async () => {
     setLoading(true);
@@ -60,8 +62,13 @@ export const SekolahProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   React.useEffect(() => {
-    refreshSekolah();
-  }, []);
+    if (user) {
+      refreshSekolah();
+    } else {
+      setSekolah(null);
+      setLoading(false);
+    }
+  }, [user]);
 
   return (
     <SekolahContext.Provider value={{ sekolah, loading, refreshSekolah }}>
