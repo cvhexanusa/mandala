@@ -43,11 +43,6 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Profil Saya",
-    path: "/profile",
-  },
-  {
     icon: <SchoolIcon />,
     name: "Profil Instansi",
     path: "/profil-instansi",
@@ -65,6 +60,17 @@ const navItems: NavItem[] = [
         name: "Tugas Pegawai",
         path: "/kepegawaian/tugas-pegawai",
         icon: <DotIcon />,
+      },
+      {
+        name: "Mapping Pengawas Pembina",
+        path: "/kepegawaian/mapping-pengawas",
+        icon: <DotIcon />,
+      },
+      {
+        name: "Pegawai Non Aktif",
+        path: "/kepegawaian/pegawai-non-aktif",
+        icon: <DotIcon />,
+        color: "text-red-500 dark:text-red-400",
       },
     ],
   },
@@ -176,8 +182,19 @@ const navItems: NavItem[] = [
       },
       {
         name: "Pendidikan GTK",
-        path: "/analisa/pendidikan-gtk",
         icon: <DotIcon />,
+        subItems: [
+          {
+            name: "Guru",
+            path: "/analisa/pendidikan-gtk/guru",
+            icon: <DotIcon />,
+          },
+          {
+            name: "Tendik",
+            path: "/analisa/pendidikan-gtk/tendik",
+            icon: <DotIcon />,
+          },
+        ],
       },
       {
         name: "Laporan Presensi",
@@ -206,11 +223,6 @@ const navItems: NavItem[] = [
     name: "PKKS",
     icon: <TaskIcon />,
     subItems: [
-      {
-        name: "Mapping Pengawas Pembina",
-        path: "/pkks/mapping-pengawas",
-        icon: <DotIcon />,
-      },
       {
         name: "Instrumen Penilaian",
         path: "/pkks/instrumen",

@@ -43,7 +43,11 @@ const JK_MAP: Record<number, string> = {
   1: "Perempuan",
 };
 
-export default function DataPegawai() {
+interface DataPegawaiProps {
+  showOnlyInactive?: boolean;
+}
+
+export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiProps) {
   const [data, setData] = useState<Pegawai[]>([]);
   const [instansiList, setInstansiList] = useState<Cadisdik[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +91,11 @@ export default function DataPegawai() {
         return a.pegawai_id.localeCompare(b.pegawai_id);
       });
       
-      setData(sortedPegawai);
+      const filteredPegawai = sortedPegawai.filter(item => 
+        showOnlyInactive ? !item.aktif : item.aktif
+      );
+      
+      setData(filteredPegawai);
       setInstansiList(instansiRes.data || []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -99,7 +107,7 @@ export default function DataPegawai() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [showOnlyInactive]);
 
   const handleOpenModal = (item?: Pegawai) => {
     if (item) {
@@ -126,7 +134,7 @@ export default function DataPegawai() {
         jabatan: "5",
         jenis_kelamin: "0",
         nomor_telepon: "",
-        aktif: true,
+        aktif: showOnlyInactive ? false : true,
       });
     }
     setIsModalOpen(true);
@@ -287,20 +295,27 @@ export default function DataPegawai() {
 
   return (
     <div>
-      <PageMeta title="Data Pegawai | SIMAK" description="Manajemen Data Pegawai" />
-      <PageBreadcrumb pageTitle="Data Pegawai" />
+      <PageMeta 
+        title={showOnlyInactive ? "Pegawai Non-Aktif | SIMAK" : "Data Pegawai | SIMAK"} 
+        description={showOnlyInactive ? "Manajemen Data Pegawai Non-Aktif" : "Manajemen Data Pegawai"} 
+      />
+      <PageBreadcrumb pageTitle={showOnlyInactive ? "Pegawai Non-Aktif" : "Data Pegawai"} />
       
       <div className="space-y-6">
         <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Manajemen Data Pegawai
+              {showOnlyInactive ? "Pegawai Non-Aktif" : "Manajemen Data Pegawai"}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Kelola data pegawai Cadisdik.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {showOnlyInactive ? "Kelola data pegawai Cadisdik yang non-aktif." : "Kelola data pegawai Cadisdik."}
+            </p>
           </div>
-          <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
-            Tambah Pegawai
-          </Button>
+          {!showOnlyInactive && (
+            <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
+              Tambah Pegawai
+            </Button>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800 overflow-hidden relative">
@@ -377,7 +392,9 @@ export default function DataPegawai() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
-                      Belum ada data pegawai yang terdaftar.
+                      {showOnlyInactive 
+                        ? "Belum ada data pegawai non-aktif." 
+                        : "Belum ada data pegawai yang terdaftar."}
                     </TableCell>
                   </TableRow>
                 )}

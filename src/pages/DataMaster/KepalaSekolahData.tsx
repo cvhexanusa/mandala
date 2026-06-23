@@ -202,10 +202,11 @@ export default function KepalaSekolahData() {
                   <TableRow>
                     <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 text-theme-xs dark:text-gray-400 whitespace-nowrap w-16">No</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Kepala Sekolah</TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Instansi / Sekolah</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Instansi / Sekolah</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NUPTK</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status Kepegawaian</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nomor Telepon</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap w-24">Aksi</TableCell>
                   </TableRow>
                 </TableHeader>
@@ -220,15 +221,18 @@ export default function KepalaSekolahData() {
                             <span className="font-medium text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400">{item.identitas?.jenis_kelamin}</TableCell>
                         <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 font-medium">
                           {getSchoolName(item.identitas?.sekolah_id)}
                         </TableCell>
-                        <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400">{item.identitas?.jenis_kelamin}</TableCell>
                         <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.nuptk || "-"}</TableCell>
                         <TableCell className="px-5 py-4 text-start">
                           <Badge size="sm" color={item.kepegawaian?.status_kepegawaian === "PNS" ? "success" : item.kepegawaian?.status_kepegawaian === "PPPK" ? "warning" : "light"}>
                             {item.kepegawaian?.status_kepegawaian || "-"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                          {item.data_pendukung?.no_hp || item.no_hp || item.identitas?.no_hp || item.data_pendukung?.no_telepon_rumah || item.no_telepon_rumah || "-"}
                         </TableCell>
                         <TableCell className="px-5 py-4 text-right">
                           <button
@@ -243,7 +247,7 @@ export default function KepalaSekolahData() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                      <TableCell colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         {loading ? "Sedang memuat..." : "Tidak ada data kepala sekolah ditemukan."}
                       </TableCell>
                     </TableRow>

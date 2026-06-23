@@ -95,6 +95,8 @@ export default function App() {
             {/* Kepegawaian */}
             <Route path="kepegawaian/data-pegawai" element={<DataPegawai />} />
             <Route path="kepegawaian/tugas-pegawai" element={<TablePlaceholder title="Tugas Pegawai" columns={["Nama", "Tugas Utama", "Tugas Tambahan"]} />} />
+            <Route path="kepegawaian/mapping-pengawas" element={<MappingPengawasPage />} />
+            <Route path="kepegawaian/pegawai-non-aktif" element={<DataPegawai showOnlyInactive={true} />} />
 
             {/* Satuan Pendidikan */}
             <Route path="satuan-pendidikan/data" element={<SchoolData />} />
@@ -107,11 +109,11 @@ export default function App() {
 
             {/* Analisa Residu */}
             <Route path="analisa/residu/:type" element={<ResiduData />} />
-            <Route path="analisa/pendidikan-gtk" element={<PendidikanGTKData />} />
+            <Route path="analisa/pendidikan-gtk/guru" element={<PendidikanGTKData type="guru" />} />
+            <Route path="analisa/pendidikan-gtk/tendik" element={<PendidikanGTKData type="tendik" />} />
             <Route path="analisa/pendidikan-gtk/audit/:sekolahId" element={<AuditPendidikanGTK />} />
 
             {/* PKKS */}
-            <Route path="pkks/mapping-pengawas" element={<MappingPengawasPage />} />
             <Route path="pkks/instrumen" element={<TablePlaceholder title="Instrumen Penilaian" columns={["Nama Instrumen", "Kategori", "Tahun"]} />} />
             <Route path="pkks/bank-soal" element={<TablePlaceholder title="Bank Soal PKKS" columns={["Kode Soal", "Pertanyaan", "Kompetensi"]} />} />
 

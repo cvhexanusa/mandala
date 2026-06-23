@@ -18,15 +18,42 @@ interface TendikTableProps {
   onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
   onDetail?: (item: any) => void;
   searchTerm: string;
+  completenessFilter?: string;
   itemsPerPage: number;
   sekolahId?: string;
 }
 
-export default function TendikTable({ onSelectionChange, onDetail, searchTerm, itemsPerPage, sekolahId }: TendikTableProps) {
+export default function TendikTable({ onSelectionChange, onDetail, searchTerm, completenessFilter, itemsPerPage, sekolahId }: TendikTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [schools, setSchools] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const response = await dapodikService.getSekolah();
+        let schoolList = [];
+        if (response.status === 'success' || response.success === true) {
+          schoolList = response.data || [];
+        } else if (Array.isArray(response)) {
+          schoolList = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          schoolList = response.data;
+        }
+        setSchools(schoolList);
+      } catch (error) {
+        console.error("Gagal mengambil daftar sekolah:", error);
+      }
+    };
+    fetchSchools();
+  }, []);
+
+  const getSchoolName = (sekolahId: string) => {
+    const school = schools.find((s) => s.sekolah_id === sekolahId);
+    return school ? school.nama : sekolahId || "-";
+  };
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
 
@@ -143,6 +170,7 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, i
                 />
               </TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Tendik</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Sekolah</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NUPTK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status Kepegawaian</TableCell>
@@ -165,6 +193,7 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, i
                         <span className="font-medium text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                     </div>
                 </TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{getSchoolName(item.identitas?.sekolah_id)}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400">{item.identitas?.jenis_kelamin}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{item.identitas?.nuptk || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-start">
@@ -185,7 +214,7 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, i
               </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         Tidak ada data ditemukan untuk "{searchTerm}"
                     </TableCell>
                 </TableRow>

@@ -115,7 +115,6 @@ export default function LayananMandalaPage() {
         title: 'Catatan Revisi',
         input: 'textarea',
         inputPlaceholder: 'Tuliskan catatan perbaikan untuk sekolah...',
-        required: true,
         showCancelButton: true,
         confirmButtonText: 'Simpan Catatan',
         cancelButtonText: 'Batal',

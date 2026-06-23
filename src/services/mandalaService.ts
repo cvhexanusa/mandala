@@ -38,6 +38,8 @@ export interface MandalaSchool {
   bujur?: string | number;
   total_siswa?: number;
   total_gtk?: number;
+  jumlah_siswa?: number;
+  jumlah_guru?: number;
 }
 
 export const mandalaService = {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import ComponentCard from "../../components/common/ComponentCard";
 import { dapodikService } from "../../services/dapodikService";
@@ -26,6 +26,8 @@ const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const AuditPendidikanGTK: React.FC = () => {
   const { role, sekolahId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get("type");
 
   // States
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,9 @@ const AuditPendidikanGTK: React.FC = () => {
   // Filters & Search
   const [activeTab, setActiveTab] = useState<"all" | "higher_ed" | "bachelor" | "diploma" | "slta">("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [ptkFilter, setPtkFilter] = useState("all");
+  const [ptkFilter, setPtkFilter] = useState(
+    typeParam === "guru" ? "Guru" : typeParam === "tendik" ? "Tendik" : "all"
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -140,7 +144,13 @@ const AuditPendidikanGTK: React.FC = () => {
     let diploma = 0;
     let slta = 0;
 
-    gtkRecords.forEach((r) => {
+    const filteredForStats = gtkRecords.filter((item) => {
+      return ptkFilter === "all" || 
+        (ptkFilter === "Guru" && item.role.toLowerCase().includes("guru")) ||
+        (ptkFilter === "Tendik" && !item.role.toLowerCase().includes("guru"));
+    });
+
+    filteredForStats.forEach((r) => {
       const e = r.pendidikan.toUpperCase();
       if (e.includes("S3") || e.includes("S2") || e.includes("MAGISTER") || e.includes("DOKTOR")) {
         higherEd++;
@@ -154,13 +164,13 @@ const AuditPendidikanGTK: React.FC = () => {
     });
 
     return {
-      total: gtkRecords.length,
+      total: filteredForStats.length,
       higherEd,
       bachelor,
       diploma,
       slta
     };
-  }, [gtkRecords]);
+  }, [gtkRecords, ptkFilter]);
 
   // Filter list
   const filteredRecords = useMemo(() => {
@@ -240,7 +250,7 @@ const AuditPendidikanGTK: React.FC = () => {
       {/* Action Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
         <button
-          onClick={() => navigate(`/${role}/analisa/pendidikan-gtk`)}
+          onClick={() => navigate(`/${role}/analisa/pendidikan-gtk${typeParam ? `/${typeParam}` : ""}`)}
           className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-all cursor-pointer shadow-sm"
         >
           <ArrowLeftIcon className="size-4" />
@@ -286,7 +296,9 @@ const AuditPendidikanGTK: React.FC = () => {
       {/* Educational Breakdown Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-brand-50/50 dark:bg-brand-500/5 p-4 rounded-2xl border border-brand-100/50 dark:border-brand-500/10 flex flex-col justify-between">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Total GTK</span>
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+            {ptkFilter === "Guru" ? "Total Guru" : ptkFilter === "Tendik" ? "Total Tendik" : "Total GTK"}
+          </span>
           <span className="font-extrabold text-brand-600 text-2xl">{stats.total}</span>
         </div>
         <div className="bg-purple-50/50 dark:bg-purple-500/5 p-4 rounded-2xl border border-purple-100/50 dark:border-purple-500/10 flex flex-col justify-between">
@@ -432,10 +444,33 @@ const AuditPendidikanGTK: React.FC = () => {
                         <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
                           {log.role}
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-center">
-                          <Badge color={getEducationColor(log.pendidikan)} size="sm">
-                            {log.pendidikan}
-                          </Badge>
+                        <TableCell className="px-4 py-3 text-center font-semibold">
+                          <div className="flex flex-col items-center gap-1.5">
+                            {log.role.toLowerCase().includes("guru") ? (
+                              (() => {
+                                const edu = log.pendidikan.toUpperCase();
+                                const isBelowS1 = !(edu.includes("S1") || edu.includes("D4") || edu.includes("SARJANA") || edu.includes("S2") || edu.includes("S3") || edu.includes("MAGISTER") || edu.includes("DOKTOR"));
+                                return (
+                                  <>
+                                    <Badge color={isBelowS1 ? "error" : "success"} size="sm">
+                                      {log.pendidikan}
+                                    </Badge>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                      isBelowS1 
+                                        ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400" 
+                                        : "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                    }`}>
+                                      {isBelowS1 ? "Anomali (Di bawah S1)" : "Sesuai (≥ S1)"}
+                                    </span>
+                                  </>
+                                );
+                              })()
+                            ) : (
+                              <Badge color={getEducationColor(log.pendidikan)} size="sm">
+                                {log.pendidikan}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
                           {log.bidangStudi}

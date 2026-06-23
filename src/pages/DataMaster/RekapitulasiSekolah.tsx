@@ -149,7 +149,7 @@ export default function RekapitulasiSekolah() {
                     ))}
                     {/* Sum Row */}
                     <TableRow className="bg-gray-50/50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-gray-800">
-                      <TableCell className="px-6 py-4 text-center"></TableCell>
+                      <TableCell className="px-6 py-4 text-center">{""}</TableCell>
                       <TableCell className="px-6 py-4 text-start">
                         <span className="font-medium text-gray-900 dark:text-white uppercase text-sm">Total Kumulatif</span>
                       </TableCell>

@@ -32,6 +32,32 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
+  const [schools, setSchools] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const response = await dapodikService.getSekolah();
+        let schoolList = [];
+        if (response.status === 'success' || response.success === true) {
+          schoolList = response.data || [];
+        } else if (Array.isArray(response)) {
+          schoolList = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          schoolList = response.data;
+        }
+        setSchools(schoolList);
+      } catch (error) {
+        console.error("Gagal mengambil daftar sekolah:", error);
+      }
+    };
+    fetchSchools();
+  }, []);
+
+  const getSchoolName = (sekolahId: string) => {
+    const school = schools.find((s) => s.sekolah_id === sekolahId);
+    return school ? school.nama : sekolahId || "-";
+  };
   
   useEffect(() => {
     // Reset selection when filters change to avoid stale data
@@ -148,6 +174,7 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
                 />
               </TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Siswa</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Sekolah</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NISN</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Rombel/Kelas</TableCell>
@@ -174,6 +201,7 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
                         </span>
                     </div>
                 </TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{getSchoolName(item.identitas?.sekolah_id)}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 text-center">{item.identitas?.jenis_kelamin}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 font-mono text-xs">{item.identitas?.nisn || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
@@ -193,7 +221,7 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
               </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         Tidak ada data ditemukan untuk "{searchTerm}"
                     </TableCell>
                 </TableRow>

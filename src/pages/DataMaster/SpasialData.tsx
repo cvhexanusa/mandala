@@ -542,7 +542,7 @@ export default function SpasialData() {
             {activePopupSchool && (
               <Popup 
                 position={[parseFloat(activePopupSchool.lintang as string), parseFloat(activePopupSchool.bujur as string)]}
-                onClose={() => setActivePopupSchool(null)}
+                eventHandlers={{ remove: () => setActivePopupSchool(null) }}
               >
                 <div className="p-1 text-gray-800">
                   <h4 className="font-bold text-sm mb-1 text-brand-600">{activePopupSchool.nama}</h4>

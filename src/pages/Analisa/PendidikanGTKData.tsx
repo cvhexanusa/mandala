@@ -17,7 +17,11 @@ import Pagination from "../../components/common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 
-export default function PendidikanGTKData() {
+interface PendidikanGTKDataProps {
+  type?: "guru" | "tendik";
+}
+
+export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
   const navigate = useNavigate();
   const { role } = useParams();
 
@@ -35,7 +39,7 @@ export default function PendidikanGTKData() {
       try {
         const [schoolRes, gtkRes] = await Promise.all([
           dapodikService.getSekolah(),
-          dapodikService.getGTK(3000, "", 1, undefined, "aktif")
+          dapodikService.getGTK(3000, "", 1, type, "aktif")
         ]);
 
         let schoolList = [];
@@ -65,7 +69,7 @@ export default function PendidikanGTKData() {
     };
 
     loadData();
-  }, []);
+  }, [type]);
 
   // Reset to page 1 on filter change
   useEffect(() => {
@@ -170,18 +174,22 @@ export default function PendidikanGTKData() {
   return (
     <>
       <PageMeta
-        title="Latar Belakang Pendidikan GTK | SIMAK"
-        description="Analisa Kualifikasi dan Latar Belakang Pendidikan GTK"
+        title={type === "guru" ? "Pendidikan Guru | SIMAK" : type === "tendik" ? "Pendidikan Tendik | SIMAK" : "Pendidikan GTK | SIMAK"}
+        description={type === "guru" ? "Analisa Kualifikasi Pendidikan Guru" : type === "tendik" ? "Analisa Kualifikasi Pendidikan Tendik" : "Analisa Kualifikasi Pendidikan GTK"}
       />
       <div className="space-y-6 font-outfit">
         {/* Header Section */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Latar Belakang Pendidikan GTK
+              {type === "guru" ? "Latar Belakang Pendidikan Guru" : type === "tendik" ? "Latar Belakang Pendidikan Tendik" : "Latar Belakang Pendidikan GTK"}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Analisa kualifikasi pendidikan formal dan kualifikasi Guru dan Tenaga Kependidikan per sekolah.
+              {type === "guru" 
+                ? "Analisa kualifikasi pendidikan formal dan kualifikasi Guru per sekolah." 
+                : type === "tendik" 
+                ? "Analisa kualifikasi pendidikan formal dan kualifikasi Tenaga Kependidikan per sekolah." 
+                : "Analisa kualifikasi pendidikan formal dan kualifikasi Guru dan Tenaga Kependidikan per sekolah."}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -244,18 +252,16 @@ export default function PendidikanGTKData() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
                 </div>
               )}
-              <Table className="min-w-[1100px]">
+              <Table className="min-w-[900px]">
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                   <TableRow>
                     <TableCell isHeader className="px-5 py-3.5 text-start font-semibold text-gray-500 text-theme-xs dark:text-gray-400 whitespace-nowrap w-16">No</TableCell>
                     <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap w-32">NPSN</TableCell>
                     <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap w-60">Nama Sekolah</TableCell>
                     <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap w-48">Wilayah</TableCell>
-                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">Total GTK</TableCell>
-                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">S2/S3</TableCell>
-                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">S1/D4</TableCell>
-                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">Diploma</TableCell>
-                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">SMA/SMK</TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28 font-bold">
+                      {type === "guru" ? "Total Guru" : type === "tendik" ? "Total Tendik" : "Total GTK"}
+                    </TableCell>
                     <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">Aksi</TableCell>
                   </TableRow>
                 </TableHeader>
@@ -271,13 +277,9 @@ export default function PendidikanGTKData() {
                           <TableCell className="px-5 py-4 text-start text-theme-sm font-bold text-gray-800 dark:text-white/90">{school.nama}</TableCell>
                           <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-600 dark:text-gray-400 font-medium">{school.wilayah}</TableCell>
                           <TableCell className="px-5 py-4 text-center text-theme-sm font-bold text-brand-600 dark:text-brand-400">{school.totalGtk}</TableCell>
-                          <TableCell className="px-5 py-4 text-center text-theme-sm font-semibold text-purple-600 dark:text-purple-400">{school.higherEd}</TableCell>
-                          <TableCell className="px-5 py-4 text-center text-theme-sm font-semibold text-blue-600 dark:text-blue-400">{school.bachelor}</TableCell>
-                          <TableCell className="px-5 py-4 text-center text-theme-sm font-semibold text-amber-600 dark:text-amber-400">{school.diploma}</TableCell>
-                          <TableCell className="px-5 py-4 text-center text-theme-sm font-semibold text-emerald-600 dark:text-emerald-400">{school.slta}</TableCell>
                           <TableCell className="px-5 py-4 text-right">
                             <button
-                              onClick={() => navigate(`/${role}/analisa/pendidikan-gtk/audit/${school.sekolah_id}`)}
+                              onClick={() => navigate(`/${role}/analisa/pendidikan-gtk/audit/${school.sekolah_id}${type ? `?type=${type}` : ""}`)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/10 dark:border-brand-400/20 rounded-xl transition-all cursor-pointer shadow-sm"
                               title="Periksa Kualifikasi Pendidikan"
                             >
@@ -290,7 +292,7 @@ export default function PendidikanGTKData() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={10} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                      <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         {loading ? "Sedang memuat..." : "Tidak ada data kualifikasi pendidikan sekolah ditemukan."}
                       </TableCell>
                     </TableRow>

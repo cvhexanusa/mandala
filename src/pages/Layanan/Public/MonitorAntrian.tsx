@@ -183,7 +183,9 @@ export default function MonitorAntrian() {
   const [monitorStatus, setMonitorStatus] = useState(() => localStorage.getItem("monitor_status") || "buka");
   const prevStatusRef = useRef(monitorStatus);
   const ytPlayerRef = useRef<any>(null);
-  const isInitialRun = useRef<boolean>(true);
+  const currentSpeechId = useRef<number>(0);
+  const isFirstStatusRun = useRef(true);
+  const isStatusAnnouncingRef = useRef(false);
   const [playBreakMusic, setPlayBreakMusic] = useState<boolean>(true);
   const [isStatusAnnouncing, setIsStatusAnnouncing] = useState<boolean>(false);
   const [isPlayingSignVideo, setIsPlayingSignVideo] = useState<boolean>(false);
@@ -860,11 +862,19 @@ export default function MonitorAntrian() {
   };
 
   const announceStatus = async (type: "istirahat" | "buka") => {
-    if (!audioEnabled || !("speechSynthesis" in window)) return;
+    if (!audioEnabled || !("speechSynthesis" in window) || isSpeakingRef.current) return;
+
+    const speechId = ++currentSpeechId.current;
     setIsStatusAnnouncing(true);
+    isStatusAnnouncingRef.current = true;
+    
     try {
-      // 1. Play queue chime alert (1x)
+      window.speechSynthesis.cancel();
+      // Delay 100ms after cancel to let the browser process the cancellation
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      if (speechId !== currentSpeechId.current) return;
       await playChime(1);
+      if (speechId !== currentSpeechId.current) return;
 
       // 2. TTS voice announcement - Bahasa Indonesia
       await new Promise<void>((resolve) => {
@@ -880,14 +890,23 @@ export default function MonitorAntrian() {
           if (voice) utterance.voice = voice;
         }
         utterance.rate = speechRate;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+        utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
         
         window.speechSynthesis.speak(utterance);
       });
 
+      if (speechId !== currentSpeechId.current) return;
+
       // Pause for a brief moment between ID and EN announcements
-      await new Promise<void>((resolve) => setTimeout(resolve, 800));
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(() => {
+          if (speechId === currentSpeechId.current) resolve();
+        }, 800);
+        return () => clearTimeout(timer);
+      });
+
+      if (speechId !== currentSpeechId.current) return;
 
       // 3. TTS voice announcement - English (Bilingual)
       await new Promise<void>((resolve) => {
@@ -903,14 +922,23 @@ export default function MonitorAntrian() {
           if (voiceEn) utteranceEn.voice = voiceEn;
         }
         utteranceEn.rate = speechRate;
-        utteranceEn.onend = () => resolve();
-        utteranceEn.onerror = () => resolve();
+        utteranceEn.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+        utteranceEn.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
         
         window.speechSynthesis.speak(utteranceEn);
       });
 
+      if (speechId !== currentSpeechId.current) return;
+
       // Pause for a brief moment before the ending chime
-      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(() => {
+          if (speechId === currentSpeechId.current) resolve();
+        }, 500);
+        return () => clearTimeout(timer);
+      });
+
+      if (speechId !== currentSpeechId.current) return;
 
       // 4. Play queue chime alert (1x) at the end
       await playChime(1);
@@ -918,16 +946,27 @@ export default function MonitorAntrian() {
     } catch (e) {
       console.error("Gagal memutar pengumuman status:", e);
     } finally {
-      setIsStatusAnnouncing(false);
-      setStatusAnnounced(true);
+      if (speechId === currentSpeechId.current) {
+        setIsStatusAnnouncing(false);
+        isStatusAnnouncingRef.current = false;
+        setStatusAnnounced(true);
+      }
     }
   };
 
   useEffect(() => {
-    if (!audioEnabled) return;
+    if (!audioEnabled) {
+      prevStatusRef.current = monitorStatus;
+      return;
+    }
 
-    if (isInitialRun.current || monitorStatus !== prevStatusRef.current) {
-      isInitialRun.current = false;
+    if (isFirstStatusRun.current) {
+      isFirstStatusRun.current = false;
+      prevStatusRef.current = monitorStatus;
+      return;
+    }
+
+    if (monitorStatus !== prevStatusRef.current) {
       setStatusAnnounced(false);
       announceStatus(monitorStatus as "istirahat" | "buka");
       prevStatusRef.current = monitorStatus;
@@ -1022,19 +1061,30 @@ export default function MonitorAntrian() {
     if (!audioEnabled || !('speechSynthesis' in window)) return;
     if (isSpeakingRef.current) return;
 
+    const speechId = ++currentSpeechId.current;
     setIsSpeaking(true);
     isSpeakingRef.current = true;
 
+    // Abort active status announcement if speaking
+    if (isStatusAnnouncingRef.current) {
+      isStatusAnnouncingRef.current = false;
+      setIsStatusAnnouncing(false);
+    }
+
     try {
       window.speechSynthesis.cancel();
+      // Delay 100ms after cancel to let the browser process the cancellation
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
 
-      // 1. Mainkan Suara Bel Awal (Ding-Dong)
+      if (speechId !== currentSpeechId.current) return;
       await playChime(1);
 
       // 2. Mainkan Suara Robot (Text-to-Speech) - Bahasa Indonesia
       const nomor = item.nomor_antrian;
       const nama = item.nama_lengkap || item.nama_tamu || "Tamu";
       const layanan = item.kategori?.nama || item.kategori_keperluan?.nama || "Pelayanan Umum";
+
+      if (speechId !== currentSpeechId.current) return;
 
       // 2a. Pre-number text ID
       await new Promise<void>((resolve) => {
@@ -1045,13 +1095,16 @@ export default function MonitorAntrian() {
           if (voice) utterance.voice = voice;
         }
         utterance.rate = speechRate;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+        utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
         window.speechSynthesis.speak(utterance);
       });
 
+      if (speechId !== currentSpeechId.current) return;
       // Start SIBI sign video loops exactly when the queue number is pronounced
       setIsPlayingSignVideo(true);
+
+      if (speechId !== currentSpeechId.current) return;
 
       // 2b. Speak the queue number ID
       await new Promise<void>((resolve) => {
@@ -1062,10 +1115,12 @@ export default function MonitorAntrian() {
           if (voice) utterance.voice = voice;
         }
         utterance.rate = speechRate;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+        utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
         window.speechSynthesis.speak(utterance);
       });
+
+      if (speechId !== currentSpeechId.current) return;
 
       // 2c. Post-number text ID
       await new Promise<void>((resolve) => {
@@ -1076,14 +1131,20 @@ export default function MonitorAntrian() {
           if (voice) utterance.voice = voice;
         }
         utterance.rate = speechRate;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+        utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
         window.speechSynthesis.speak(utterance);
       });
 
       // 2.5 Mainkan Suara Robot (Text-to-Speech) - English (Bilingual)
       if (isBilingual) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 800));
+        if (speechId !== currentSpeechId.current) return;
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(() => {
+            if (speechId === currentSpeechId.current) resolve();
+          }, 800);
+          return () => clearTimeout(timer);
+        });
 
         const nomorEn = item.nomor_antrian;
         const namaEn = item.nama_lengkap || item.nama_tamu || "Guest";
@@ -1099,6 +1160,8 @@ export default function MonitorAntrian() {
           return name;
         };
 
+        if (speechId !== currentSpeechId.current) return;
+
         // 2.5a. Pre-number text EN
         await new Promise<void>((resolve) => {
           const utterance = new SpeechSynthesisUtterance("Queue number,, ");
@@ -1108,10 +1171,12 @@ export default function MonitorAntrian() {
             if (voice) utterance.voice = voice;
           }
           utterance.rate = speechRate;
-          utterance.onend = () => resolve();
-          utterance.onerror = () => resolve();
+          utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+          utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
           window.speechSynthesis.speak(utterance);
         });
+
+        if (speechId !== currentSpeechId.current) return;
 
         // 2.5b. Speak the queue number EN
         await new Promise<void>((resolve) => {
@@ -1122,10 +1187,12 @@ export default function MonitorAntrian() {
             if (voice) utterance.voice = voice;
           }
           utterance.rate = speechRate;
-          utterance.onend = () => resolve();
-          utterance.onerror = () => resolve();
+          utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+          utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
           window.speechSynthesis.speak(utterance);
         });
+
+        if (speechId !== currentSpeechId.current) return;
 
         // 2.5c. Post-number text EN
         await new Promise<void>((resolve) => {
@@ -1136,20 +1203,23 @@ export default function MonitorAntrian() {
             if (voice) utterance.voice = voice;
           }
           utterance.rate = speechRate;
-          utterance.onend = () => resolve();
-          utterance.onerror = () => resolve();
+          utterance.onend = () => { if (speechId === currentSpeechId.current) resolve(); };
+          utterance.onerror = () => { if (speechId === currentSpeechId.current) resolve(); };
           window.speechSynthesis.speak(utterance);
         });
       }
 
+      if (speechId !== currentSpeechId.current) return;
       // 3. Mainkan Suara Bel Akhir (Ding-Dong 1x)
       await playChime(1);
     } catch (e) {
       console.error("Gagal memutar pengumuman:", e);
     } finally {
-      setIsSpeaking(false);
-      isSpeakingRef.current = false;
-      setIsPlayingSignVideo(false);
+      if (speechId === currentSpeechId.current) {
+        setIsSpeaking(false);
+        isSpeakingRef.current = false;
+        setIsPlayingSignVideo(false);
+      }
     }
   };
 

@@ -12,6 +12,7 @@ import RekapPDUsiaTable from "../../components/student/RekapPDUsiaTable";
 import { useModal } from "../../hooks/useModal";
 import EditStudentModal from "../../components/student/EditStudentModal";
 import { dapodikService } from "../../services/dapodikService";
+import Swal from "sweetalert2";
 
 export default function StudentData() {
   const [searchParams] = useSearchParams();

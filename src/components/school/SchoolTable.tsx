@@ -15,11 +15,18 @@ import { useNavigate, useParams } from "react-router";
 interface SchoolTableProps {
   searchTerm: string;
   kabKotaFilter: string;
+  kecamatanFilter: string;
   statusFilter: string;
   jenjangFilter: string;
 }
 
-export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, jenjangFilter }: SchoolTableProps) {
+export default function SchoolTable({ 
+  searchTerm, 
+  kabKotaFilter, 
+  kecamatanFilter, 
+  statusFilter, 
+  jenjangFilter 
+}: SchoolTableProps) {
   const navigate = useNavigate();
   const { role } = useParams();
   const [data, setData] = useState<any[]>([]);
@@ -48,8 +55,11 @@ export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, j
         if (kabKotaFilter !== "all") {
           filtered = filtered.filter((s: any) => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
         }
+        if (kecamatanFilter !== "all") {
+          filtered = filtered.filter((s: any) => s.kecamatan === kecamatanFilter);
+        }
         if (statusFilter !== "all") {
-          filtered = filtered.filter((s: any) => s.status_sekolah === statusFilter);
+          filtered = filtered.filter((s: any) => String(s.status_sekolah) === statusFilter);
         }
         if (jenjangFilter !== "all") {
           filtered = filtered.filter((s: any) => (s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str) === jenjangFilter);
@@ -71,10 +81,21 @@ export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, j
     };
 
     fetchSchools();
-  }, [searchTerm, kabKotaFilter, statusFilter, jenjangFilter]);
+  }, [searchTerm, kabKotaFilter, kecamatanFilter, statusFilter, jenjangFilter]);
 
   const totalPages = Math.ceil(data.length / itemsPerPage) || 1;
   const currentData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getStatusLabel = (status: any) => {
+    if (status === "1" || status === 1 || status === "Negeri") return "Negeri";
+    if (status === "2" || status === 2 || status === "Swasta") return "Swasta";
+    return status || "-";
+  };
+
+  const getStatusColor = (status: any) => {
+    const label = getStatusLabel(status);
+    return label === "Negeri" ? "success" : "warning";
+  };
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] relative">
@@ -84,7 +105,7 @@ export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, j
         </div>
       )}
       <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <Table className="min-w-[1200px]">
+        <Table className="min-w-[1000px]">
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Sekolah</TableCell>
@@ -93,8 +114,6 @@ export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, j
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jenjang</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Kab/Kota</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Kecamatan</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap text-center">Total Siswa</TableCell>
-              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap text-center">Total GTK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
             </TableRow>
           </TableHeader>
@@ -106,15 +125,13 @@ export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, j
                 </TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 font-mono">{school.npsn}</TableCell>
                 <TableCell className="px-5 py-4 text-start">
-                  <Badge size="sm" color={school.status_sekolah === "Negeri" ? "success" : "warning"}>
-                    {school.status_sekolah}
+                  <Badge size="sm" color={getStatusColor(school.status_sekolah)}>
+                    {getStatusLabel(school.status_sekolah)}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.bentuk_pendidikan_id_str || school.bentuk_pendidikan_is_str}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kabupaten_kota || school.kabupate_kota}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kecamatan}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-bold">{school.total_siswa?.toLocaleString() || 0}</TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-center text-theme-sm dark:text-white/90 font-bold">{school.total_gtk?.toLocaleString() || 0}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.bentuk_pendidikan_id_str || school.bentuk_pendidikan_is_str || "-"}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kabupaten_kota || school.kabupate_kota || "-"}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kecamatan || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-right">
                   <button 
                     onClick={() => navigate(`/${role}/satuan-pendidikan/detail/${school.sekolah_id}`)}
@@ -127,7 +144,7 @@ export default function SchoolTable({ searchTerm, kabKotaFilter, statusFilter, j
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={9} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                   Tidak ada data sekolah ditemukan
                 </TableCell>
               </TableRow>
