@@ -5,7 +5,8 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { DownloadIcon, PrinterIcon, PlusIcon, SearchIcon } from "../../icons";
 import Swal from "sweetalert2";
-import AcademicCalendarTable from "../../components/academic/AcademicCalendarTable";
+import AcademicCalendarTable, { calendarData } from "../../components/academic/AcademicCalendarTable";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function AcademicCalendar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,13 +32,38 @@ export default function AcademicCalendar() {
   };
 
   const handleExport = () => {
+    const filtered = calendarData.filter(item => {
+      const matchesSearch = item.kegiatan.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || item.kategori === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+
     Swal.fire({
-      title: "Export Kalender?",
-      text: "Data kalender akademik akan diunduh dalam format Excel.",
+      title: "Export Kalender Akademik?",
+      text: `Sebanyak ${filtered.length} kegiatan akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
       confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const headers = ["Tanggal", "Kegiatan", "Kategori", "Keterangan"];
+        const rows = filtered.map((item) => [
+          item.tanggal,
+          item.kegiatan,
+          item.kategori,
+          item.keterangan
+        ]);
+        exportToExcel(
+          `Kalender_Akademik_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          "Kalender Akademik",
+          "Kalender Akademik Sekolah",
+          headers,
+          rows
+        );
+      }
     });
   };
 

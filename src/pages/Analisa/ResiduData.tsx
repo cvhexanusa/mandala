@@ -17,6 +17,7 @@ import Badge from "../../components/ui/badge/Badge";
 import Pagination from "../../components/common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
+import { exportToCSV } from "../../utils/exportUtils";
 
 export default function ResiduData() {
   const { type } = useParams<{ type: string }>();
@@ -118,8 +119,14 @@ export default function ResiduData() {
     if (type === "peserta-didik") {
       const nisnEmpty = isFieldEmpty(identitas.nisn);
       const rombelEmpty = isFieldEmpty(akademik.nama_rombel || akademik.rombel);
+      const nipdEmpty = isFieldEmpty(identitas.nipd || item.nipd || akademik.nipd || identitas.nis || item.nis || akademik.nis);
 
-      return npsnEmpty || namaEmpty || nisnEmpty || rombelEmpty || nikEmpty || tempatLahirEmpty || tanggalLahirEmpty || ibuKandungEmpty || jkEmpty || desaEmpty;
+      return npsnEmpty || namaEmpty || nisnEmpty || rombelEmpty || nikEmpty || tempatLahirEmpty || tanggalLahirEmpty || ibuKandungEmpty || jkEmpty || desaEmpty || nipdEmpty;
+    }
+
+    if (type === "guru") {
+      const nuptkEmpty = isFieldEmpty(identitas.nuptk || item.nuptk);
+      return npsnEmpty || namaEmpty || nikEmpty || tempatLahirEmpty || tanggalLahirEmpty || ibuKandungEmpty || jkEmpty || desaEmpty || nuptkEmpty;
     }
 
     return npsnEmpty || namaEmpty || nikEmpty || tempatLahirEmpty || tanggalLahirEmpty || ibuKandungEmpty || jkEmpty || desaEmpty;
@@ -206,7 +213,7 @@ export default function ResiduData() {
 
     Swal.fire({
       title: title,
-      text: "Data residu akan diunduh dalam format Excel.",
+      text: "Data residu akan diunduh dalam format CSV (Kompatibel dengan Excel).",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -215,13 +222,66 @@ export default function ResiduData() {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        if (isDetailView) {
+          // Export detailed school residu records
+          let headers: string[] = [];
+          if (type === "peserta-didik") {
+            headers = ["No", "Nama", "JK", "NIPD / NIS", "NISN", "Rombel", "NIK", "Tempat Lahir", "Tanggal Lahir", "Ibu Kandung", "Desa"];
+          } else if (type === "guru") {
+            headers = ["No", "Nama", "JK", "NUPTK", "NIK", "Tempat Lahir", "Tanggal Lahir", "Ibu Kandung", "Desa"];
+          } else {
+            headers = ["No", "Nama", "JK", "NIK", "Tempat Lahir", "Tanggal Lahir", "Ibu Kandung", "Desa"];
+          }
+
+          const rows = selectedSchoolResiduItems.map((item, index) => {
+            const no = index + 1;
+            const nama = item.identitas?.nama || "-";
+            const jk = item.identitas?.jenis_kelamin || "-";
+            const nik = item.identitas?.nik ? `="${item.identitas.nik}"` : "-";
+            const tempatLahir = item.identitas?.tempat_lahir || "-";
+            const tanggalLahir = item.identitas?.tanggal_lahir ? new Date(item.identitas.tanggal_lahir).toLocaleDateString('id-ID') : "-";
+            
+            const ibuKandung = item.identitas?.nama_ibu_kandung || 
+                               item.identitas?.ibu_kandung || 
+                               item.data_pendukung?.nama_ibu || 
+                               item.data_pendukung?.nama_ibu_kandung ||
+                               item.nama_ibu_kandung || "-";
+
+            const desa = item.desa_kelurahan || 
+                         item.data_pendukung?.desa_kelurahan || 
+                         item.desa || 
+                         item.data_pendukung?.desa ||
+                         item.data_pendukung?.alamat_jalan ||
+                         item.alamat_jalan || "-";
+
+            if (type === "peserta-didik") {
+              const nipd = item.identitas?.nipd || item.nipd || item.akademik?.nipd || item.identitas?.nis || item.nis || item.akademik?.nis || "-";
+              const nisn = item.identitas?.nisn ? `="${item.identitas.nisn}"` : "-";
+              const rombel = item.akademik?.nama_rombel || item.akademik?.rombel || "-";
+              return [no, nama, jk, nipd, nisn, rombel, nik, tempatLahir, tanggalLahir, ibuKandung, desa];
+            } else if (type === "guru") {
+              const nuptk = item.identitas?.nuptk || item.nuptk || "-";
+              return [no, nama, jk, nuptk, nik, tempatLahir, tanggalLahir, ibuKandung, desa];
+            } else {
+              return [no, nama, jk, nik, tempatLahir, tanggalLahir, ibuKandung, desa];
+            }
+          });
+
+          const filename = `Residu_${getTypeName()}_${selectedSchool?.nama.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
+          exportToCSV(filename, headers, rows);
+        } else {
+          // Export schools list summary
+          const headers = ["No", "NPSN", "Nama Sekolah", "Jumlah Residu"];
+          const rows = filteredSchools.map((school, index) => [
+            index + 1,
+            school.npsn || "-",
+            school.nama || "-",
+            school.residuCount || 0
+          ]);
+
+          const filename = `Rangkuman_Residu_${getTypeName()}_${new Date().toISOString().slice(0, 10)}.csv`;
+          exportToCSV(filename, headers, rows);
+        }
       }
     });
   };
@@ -430,17 +490,21 @@ export default function ResiduData() {
                     <TableRow>
                       <TableCell isHeader className="px-5 py-4 text-start font-semibold text-gray-500 text-theme-xs dark:text-gray-400 whitespace-nowrap w-16">No</TableCell>
                       <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama</TableCell>
+                      <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
                       {type === "peserta-didik" && (
                         <>
+                          <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NIPD / NIS</TableCell>
                           <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NISN</TableCell>
                           <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Rombel</TableCell>
                         </>
+                      )}
+                      {type === "guru" && (
+                        <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NUPTK</TableCell>
                       )}
                       <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">NIK</TableCell>
                       <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tempat Lahir</TableCell>
                       <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tanggal Lahir</TableCell>
                       <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Ibu Kandung</TableCell>
-                      <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
                       <TableCell isHeader className="px-5 py-4 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Desa</TableCell>
                     </TableRow>
                   ) : (
@@ -468,8 +532,19 @@ export default function ResiduData() {
                                 <span className="font-semibold text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                               </div>
                             </TableCell>
+                            <TableCell className="px-5 py-4 text-center text-theme-sm">{renderValue(item.identitas?.jenis_kelamin)}</TableCell>
                             {type === "peserta-didik" && (
                               <>
+                                <TableCell className="px-5 py-4 text-start text-theme-sm font-mono">
+                                  {renderValue(
+                                    item.identitas?.nipd || 
+                                    item.nipd || 
+                                    item.akademik?.nipd || 
+                                    item.identitas?.nis || 
+                                    item.nis || 
+                                    item.akademik?.nis
+                                  )}
+                                </TableCell>
                                 <TableCell className="px-5 py-4 text-start text-theme-sm font-mono">{renderValue(item.identitas?.nisn)}</TableCell>
                                 <TableCell className="px-5 py-4 text-start text-theme-sm">
                                   {isFieldEmpty(item.akademik?.nama_rombel || item.akademik?.rombel) ? (
@@ -481,6 +556,9 @@ export default function ResiduData() {
                                   )}
                                 </TableCell>
                               </>
+                            )}
+                            {type === "guru" && (
+                              <TableCell className="px-5 py-4 text-start text-theme-sm font-mono">{renderValue(item.identitas?.nuptk || item.nuptk)}</TableCell>
                             )}
                             <TableCell className="px-5 py-4 text-start text-theme-sm font-mono">{renderValue(item.identitas?.nik)}</TableCell>
                             <TableCell className="px-5 py-4 text-start text-theme-sm">{renderValue(item.identitas?.tempat_lahir)}</TableCell>
@@ -496,7 +574,6 @@ export default function ResiduData() {
                                 item.nama_ibu_kandung
                               )}
                             </TableCell>
-                            <TableCell className="px-5 py-4 text-center text-theme-sm">{renderValue(item.identitas?.jenis_kelamin)}</TableCell>
                             <TableCell className="px-5 py-4 text-start text-theme-sm">
                               {renderValue(
                                 item.desa_kelurahan || 
@@ -512,9 +589,19 @@ export default function ResiduData() {
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={type === "peserta-didik" ? 10 : 8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
-                          {loading ? "Sedang memuat..." : "Tidak ada data residu ditemukan untuk sekolah ini."}
-                        </TableCell>
+                        <TableCell 
+                        colSpan={
+                          (() => {
+                            let span = 8;
+                            if (type === "peserta-didik") span = 11;
+                            else if (type === "guru") span = 9;
+                            return span;
+                          })()
+                        } 
+                        className="px-5 py-10 text-center text-gray-500 dark:text-gray-400"
+                      >
+                        {loading ? "Sedang memuat..." : "Tidak ada data residu ditemukan untuk sekolah ini."}
+                      </TableCell>
                       </TableRow>
                     )
                   ) : (

@@ -17,7 +17,7 @@ interface CalendarEvent {
   keterangan: string;
 }
 
-const calendarData: CalendarEvent[] = [
+export const calendarData: CalendarEvent[] = [
   { id: 1, tanggal: "10 Juli 2026", kegiatan: "Hari Pertama Masuk Sekolah", kategori: "Akademik", keterangan: "Masa Pengenalan Lingkungan Sekolah (MPLS)" },
   { id: 2, tanggal: "17 Agustus 2026", kegiatan: "HUT RI ke-81", kategori: "Libur", keterangan: "Upacara Bendera & Libur Nasional" },
   { id: 3, tanggal: "21 September 2026", kegiatan: "Penilaian Tengah Semester (PTS)", kategori: "Ujian", keterangan: "Semester Ganjil" },

@@ -11,8 +11,8 @@ import RekapPDTable from "../../components/student/RekapPDTable";
 import RekapPDUsiaTable from "../../components/student/RekapPDUsiaTable";
 import { useModal } from "../../hooks/useModal";
 import EditStudentModal from "../../components/student/EditStudentModal";
-import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function StudentData() {
   const [searchParams] = useSearchParams();
@@ -143,10 +143,71 @@ export default function StudentData() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    let exportData = [];
+
+    if (selectedStudents.length > 0) {
+      exportData = selectedStudents;
+    } else {
+      Swal.fire({
+        title: "Mempersiapkan Data",
+        text: "Mohon tunggu, sedang mengambil data untuk diekspor...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        const targetSekolahId = (sekolahFilter === 'all' || !sekolahFilter) ? undefined : sekolahFilter;
+        const status = activeTab === 'keluar' ? 'non-aktif' : 'aktif';
+        
+        const result = await dapodikService.getPesertaDidik(
+          2000,
+          searchQuery,
+          1,
+          undefined,
+          status,
+          gradeFilter === 'all' ? undefined : gradeFilter,
+          targetSekolahId
+        );
+
+        if (result && (result.status === 'success' || result.success === true)) {
+          exportData = result.data || [];
+        } else if (Array.isArray(result)) {
+          exportData = result;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          exportData = result.data;
+        }
+        Swal.close();
+      } catch (error) {
+        console.error("Gagal mengambil data untuk export:", error);
+        Swal.close();
+        Swal.fire({
+          title: "Error",
+          text: "Gagal mengambil data dari server.",
+          icon: "error",
+          confirmButtonColor: "#ef4444"
+        });
+        return;
+      }
+    }
+
+    if (exportData.length === 0) {
+      Swal.fire({
+        title: "Tidak Ada Data",
+        text: "Tidak ada data peserta didik yang dapat diekspor.",
+        icon: "warning",
+        confirmButtonColor: "#3b82f6"
+      });
+      return;
+    }
+
+    const labelTab = activeTab === 'aktif' ? 'Peserta Didik Aktif' : activeTab === 'keluar' ? 'PD Keluar' : 'Peserta Didik';
+
     Swal.fire({
-      title: "Export Data?",
-      text: `Data ${activeTab === 'aktif' ? 'Peserta Didik' : activeTab === 'rekap' ? 'Rekap PD' : 'PD Keluar'} akan diunduh dalam format Excel.`,
+      title: `Export Data ${labelTab}?`,
+      text: `Sebanyak ${exportData.length} data akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -155,13 +216,65 @@ export default function StudentData() {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        let headers: string[] = [];
+        let rows: any[] = [];
+
+        if (activeTab === 'keluar') {
+          headers = [
+            "No",
+            "Nama Siswa",
+            "JK",
+            "NISN",
+            "Tempat Lahir",
+            "Tanggal Lahir",
+            "Tingkat",
+            "Rombel/Kelas",
+            "Status",
+            "Tanggal Keluar"
+          ];
+
+          rows = exportData.map((item, index) => {
+            const no = (index + 1).toString();
+            const nama = item.identitas?.nama || "-";
+            const jk = item.identitas?.jenis_kelamin || "-";
+            const nisn = item.identitas?.nisn || "-";
+            const tempatLahir = item.identitas?.tempat_lahir || "-";
+            const tglLahir = item.identitas?.tanggal_lahir ? new Date(item.identitas.tanggal_lahir).toLocaleDateString('id-ID') : "-";
+            const tingkat = item.akademik?.tingkat || "-";
+            const rombel = item.akademik?.nama_rombel || "-";
+            const status = "Non-Aktif";
+            const tglKeluar = item.updated_at ? new Date(item.updated_at).toLocaleDateString('id-ID') : "-";
+
+            return [no, nama, jk, nisn, tempatLahir, tglLahir, tingkat, rombel, status, tglKeluar];
+          });
+        } else {
+          headers = [
+            "No",
+            "Nama Siswa",
+            "JK",
+            "NISN",
+            "Nama Instansi / Sekolah",
+            "Rombel/Kelas"
+          ];
+
+          rows = exportData.map((item, index) => {
+            const no = (index + 1).toString();
+            const nama = item.identitas?.nama || "-";
+            const jk = item.identitas?.jenis_kelamin || "-";
+            const nisn = item.identitas?.nisn || "-";
+            
+            const schoolId = item.identitas?.sekolah_id;
+            const schoolObj = allSchools.find(s => s.sekolah_id === schoolId);
+            const sekolah = schoolObj ? schoolObj.nama : schoolId || "-";
+
+            const rombel = item.akademik?.nama_rombel || "-";
+
+            return [no, nama, jk, nisn, sekolah, rombel];
+          });
+        }
+
+        const filename = `Data_${labelTab.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportToExcel(filename, labelTab, `Data Peserta Didik (${labelTab})`, headers, rows);
       }
     });
   };

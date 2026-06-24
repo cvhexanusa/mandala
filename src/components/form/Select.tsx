@@ -79,9 +79,11 @@ const Select: React.FC<SelectProps> = ({
         ))}
       </select>
 
-      <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
-        <ChevronDownIcon className="size-5" />
-      </span>
+      {!disabled && (
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
+          <ChevronDownIcon className="size-5" />
+        </span>
+      )}
     </div>
   );
 };

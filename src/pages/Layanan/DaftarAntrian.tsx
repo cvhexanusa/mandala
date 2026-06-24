@@ -6,9 +6,10 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
-import { TrashBinIcon, PlusIcon, TimeIcon, CheckCircleIcon, CloseIcon } from "../../icons";
+import { TrashBinIcon, PlusIcon, TimeIcon, CheckCircleIcon, CloseIcon, DownloadIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { mandalaService, Antrian, KategoriKeperluan, AntrianRekap } from "../../services/mandalaService";
+import { exportToExcel } from "../../utils/exportUtils";
 import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
 
@@ -22,6 +23,8 @@ const STATUS_MAP: Record<number, { label: string; color: string }> = {
 
 export default function DaftarAntrian() {
   const { user } = useAuth();
+  const isSuperAdmin = user?.role?.toLowerCase() === "super admin" || user?.role?.toLowerCase() === "super-admin" || (user as any)?.jabatan === 0;
+  const isLocked = !isSuperAdmin;
   
   const [isBreak, setIsBreak] = useState(() => localStorage.getItem("monitor_status") === "istirahat");
 
@@ -273,6 +276,56 @@ export default function DaftarAntrian() {
     }
   };
 
+  const handleExport = () => {
+    if (antrian.length === 0) {
+      Swal.fire({
+        title: "Tidak Ada Data",
+        text: "Tidak ada data antrian untuk diekspor.",
+        icon: "warning",
+        confirmButtonColor: "#3b82f6"
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: "Export Data Antrian?",
+      text: `Sebanyak ${antrian.length} data antrian akan diunduh dalam format Excel.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const headers = [
+          "No. Antrian",
+          "Nama Lengkap",
+          "Asal Instansi",
+          "Kategori Keperluan",
+          "Detail Keperluan",
+          "No HP (WhatsApp)",
+          "Status",
+          "Tanggal"
+        ];
+
+        const rows = antrian.map(item => [
+          `#${item.nomor_antrian}`,
+          item.nama_lengkap || "-",
+          item.unit_instansi || "Pribadi / Umum",
+          item.kategori_keperluan?.nama || "-",
+          item.keperluan || "-",
+          item.nomor_hp || "-",
+          STATUS_MAP[item.status]?.label || "-",
+          filters.start_date
+        ]);
+
+        const filename = `Daftar_Antrian_${filters.start_date}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportToExcel(filename, "Antrian", `Daftar Antrian Tamu (${filters.start_date})`, headers, rows);
+      }
+    });
+  };
+
   return (
     <div>
       <PageMeta title="Daftar Antrian | SIMAK" description="Manajemen Antrian Tamu" />
@@ -291,8 +344,10 @@ export default function DaftarAntrian() {
             <div className="w-64">
               <Select 
                 options={instansiList} 
+                value={filters.cadisdik_id}
                 defaultValue={filters.cadisdik_id}
                 onChange={(val) => setFilters(f => ({ ...f, cadisdik_id: val }))}
+                disabled={isLocked}
               />
             </div>
             <input 
@@ -335,6 +390,9 @@ export default function DaftarAntrian() {
             </Button>
             <Button variant="outline" onClick={() => setIsKategoriModalOpen(true)}>
               Kelola Kategori
+            </Button>
+            <Button variant="outline" startIcon={<DownloadIcon />} onClick={handleExport}>
+              Export
             </Button>
             <Button startIcon={<PlusIcon />} onClick={() => setIsModalOpen(true)}>
               Tambah Antrian

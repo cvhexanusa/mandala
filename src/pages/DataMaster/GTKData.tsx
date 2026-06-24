@@ -15,6 +15,7 @@ import { useModal } from "../../hooks/useModal";
 import EditGTKModal from "../../components/gtk/EditGTKModal";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function GTKData() {
   const [searchParams] = useSearchParams();
@@ -146,10 +147,71 @@ export default function GTKData() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    let exportData = [];
+    
+    if (selectedGTKObjects.length > 0) {
+      exportData = selectedGTKObjects;
+    } else {
+      Swal.fire({
+        title: "Mempersiapkan Data",
+        text: "Mohon tunggu, sedang mengambil data untuk diekspor...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        const targetSekolahId = (sekolahFilter === 'all' || !sekolahFilter) ? undefined : sekolahFilter;
+        const type = activeTab === 'guru' ? 'guru' : activeTab === 'tendik' ? 'tendik' : undefined;
+        const status = activeTab === 'nonaktif' ? 'non-aktif' : 'aktif';
+        
+        const result = await dapodikService.getGTK(
+          2000, 
+          searchQuery, 
+          1, 
+          type, 
+          status, 
+          targetSekolahId
+        );
+        
+        if (result && (result.status === 'success' || result.success === true)) {
+          exportData = result.data || [];
+        } else if (Array.isArray(result)) {
+          exportData = result;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          exportData = result.data;
+        }
+        Swal.close();
+      } catch (error) {
+        console.error("Gagal mengambil data untuk export:", error);
+        Swal.close();
+        Swal.fire({
+          title: "Error",
+          text: "Gagal mengambil data dari server.",
+          icon: "error",
+          confirmButtonColor: "#ef4444"
+        });
+        return;
+      }
+    }
+
+    if (exportData.length === 0) {
+      Swal.fire({
+        title: "Tidak Ada Data",
+        text: "Tidak ada data GTK yang dapat diekspor.",
+        icon: "warning",
+        confirmButtonColor: "#3b82f6"
+      });
+      return;
+    }
+
+    const labelTab = activeTab === 'guru' ? 'Guru' : activeTab === 'tendik' ? 'Tendik' : activeTab === 'nonaktif' ? 'GTK Non Aktif' : 'GTK';
+
     Swal.fire({
-      title: "Export Data GTK?",
-      text: `Data ${activeTab === 'nonaktif' ? 'GTK Non Aktif' : activeTab} akan diunduh dalam format Excel.`,
+      title: `Export Data ${labelTab}?`,
+      text: `Sebanyak ${exportData.length} data akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -158,13 +220,37 @@ export default function GTKData() {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
+        const headers = [
+          "No",
+          "Nama Lengkap",
+          "JK",
+          "NUPTK",
+          "Status Kepegawaian",
+          "Jenis GTK",
+          "Nama Instansi / Sekolah",
+          "No HP / Telepon"
+        ];
+
+        const rows = exportData.map((item, index) => {
+          const no = (index + 1).toString();
+          const nama = item.identitas?.nama || "-";
+          const jk = item.identitas?.jenis_kelamin || "-";
+          const nuptk = item.identitas?.nuptk || "-";
+          const status = item.kepegawaian?.status_kepegawaian || "-";
+          const jenisGtk = item.kepegawaian?.jenis_ptk || "-";
+          
+          const schoolId = item.identitas?.sekolah_id;
+          const schoolObj = allSchools.find(s => s.sekolah_id === schoolId);
+          const sekolah = schoolObj ? schoolObj.nama : schoolId || "-";
+          
+          const telpRaw = item.data_pendukung?.no_hp || item.no_hp || item.identitas?.no_hp || item.data_pendukung?.no_telepon_rumah || item.no_telepon_rumah || "-";
+          const telp = telpRaw || "-";
+
+          return [no, nama, jk, nuptk, status, jenisGtk, sekolah, telp];
         });
+
+        const filename = `Data_${labelTab.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportToExcel(filename, labelTab, `Data Guru dan Tenaga Kependidikan (${labelTab})`, headers, rows);
       }
     });
   };

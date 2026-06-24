@@ -20,7 +20,7 @@ interface ScheduleItem {
   kelas: string;
 }
 
-const scheduleData: ScheduleItem[] = [
+export const scheduleData: ScheduleItem[] = [
   { id: 1, hari: "Senin", jam: "07:00 - 08:30", mataPelajaran: "Pemrograman Web", guru: "Hendra Wijaya, S.Kom.", guruAvatar: "/images/user/user-01.jpg", ruang: "Lab Komp 1", kelas: "X RPL 1" },
   { id: 2, hari: "Senin", jam: "08:30 - 10:00", mataPelajaran: "Basis Data", guru: "Siti Aminah, S.Pd.", guruAvatar: "/images/user/user-02.jpg", ruang: "Lab Komp 2", kelas: "X RPL 1" },
   { id: 3, hari: "Senin", jam: "10:30 - 12:00", mataPelajaran: "Pendidikan Agama", guru: "Abdul Gani, S.Ag.", guruAvatar: "/images/user/user-03.jpg", ruang: "R. Teori 1", kelas: "X RPL 1" },

@@ -16,6 +16,7 @@ import Badge from "../../components/ui/badge/Badge";
 import Pagination from "../../components/common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
+import { exportToExcel } from "../../utils/exportUtils";
 
 interface PendidikanGTKDataProps {
   type?: "guru" | "tendik";
@@ -145,8 +146,10 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
   }, [filteredSchools, currentPage, itemsPerPage]);
 
   const handleExport = () => {
+    const labelTab = type === "guru" ? "Guru" : type === "tendik" ? "Tendik" : "GTK";
+    
     Swal.fire({
-      title: "Export Data Rekapitulasi Pendidikan GTK?",
+      title: `Export Data Rekapitulasi Pendidikan ${labelTab}?`,
       text: "Data akan diunduh dalam format Excel.",
       icon: "question",
       showCancelButton: true,
@@ -156,13 +159,37 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        const headers = [
+          "No",
+          "NPSN",
+          "Nama Sekolah",
+          "Wilayah",
+          `Total ${labelTab}`,
+          "Pascasarjana (S2/S3)",
+          "Sarjana (S1/D4)",
+          "Diploma (D1-D3)",
+          "Pendidikan Menengah (SLTA)"
+        ];
+
+        const rows = filteredSchools.map((school, index) => [
+          index + 1,
+          school.npsn,
+          school.nama,
+          school.wilayah,
+          school.totalGtk,
+          school.higherEd,
+          school.bachelor,
+          school.diploma,
+          school.slta
+        ]);
+
+        exportToExcel(
+          `Rekap_Pendidikan_${labelTab}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          `Pendidikan ${labelTab}`,
+          `Rekapitulasi Kualifikasi Pendidikan ${labelTab} per Sekolah`,
+          headers,
+          rows
+        );
       }
     });
   };

@@ -16,6 +16,7 @@ import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
 import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../../../icons";
 import Swal from "sweetalert2";
+import { exportToCSV } from "../../../utils/exportUtils";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -398,7 +399,7 @@ const AuditPresensiGTK: React.FC = () => {
   const handleExport = () => {
     Swal.fire({
       title: "Export Audit Presensi GTK?",
-      text: "Data audit GTK yang tidak hadir akan diexport ke Excel.",
+      text: "Data audit GTK yang tidak hadir akan diexport ke format CSV (Kompatibel dengan Excel).",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -407,7 +408,38 @@ const AuditPresensiGTK: React.FC = () => {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire("Berhasil!", "File sedang diunduh...", "success");
+        const headers = ["No", "Nama Pegawai", "NUPTK / NIP", "Jabatan / Jenis PTK", "Jam Masuk", "Jam Pulang", "Status", "Keterangan Audit Log"];
+        
+        const rows = filteredLogs.map((log, index) => {
+          let auditText = "Terdeteksi tidak hadir pada hari belajar/kerja.";
+          if (log.statusBadge === "Hadir") {
+            auditText = "Hadir tepat waktu.";
+          } else if (log.statusBadge === "Terlambat") {
+            auditText = "Hadir terlambat.";
+          } else if (log.statusBadge === "Belum Presensi") {
+            auditText = "Tidak ada rekaman log presensi masuk maupun pulang.";
+          } else if (log.statusBadge === "Izin") {
+            auditText = "Izin secara tertulis/sistem terkonfirmasi.";
+          } else if (log.statusBadge === "Sakit") {
+            auditText = "Sakit dengan surat keterangan terkonfirmasi.";
+          } else if (log.statusBadge === "Alpha") {
+            auditText = "Ketidakhadiran tanpa keterangan terkonfirmasi.";
+          }
+
+          return [
+            index + 1,
+            log.nama || "-",
+            log.nuptk ? `="${log.nuptk}"` : "-",
+            log.role || "-",
+            log.jamMasuk || "-",
+            log.jamPulang || "-",
+            log.statusBadge || "-",
+            auditText
+          ];
+        });
+
+        const filename = `Audit_Presensi_GTK_${school?.nama.replace(/\s+/g, "_") || "Sekolah"}_${selectedDate}.csv`;
+        exportToCSV(filename, headers, rows);
       }
     });
   };

@@ -21,7 +21,7 @@ interface GradeRecord {
   predikat: "A" | "B" | "C" | "D";
 }
 
-const gradesData: GradeRecord[] = [
+export const gradesData: GradeRecord[] = [
   { id: 1, nama: "Aditya Pratama", avatar: "/images/user/user-01.jpg", nipd: "1001", tugas: 85, uts: 80, uas: 90, akhir: 85, predikat: "A" },
   { id: 2, nama: "Bella Safira", avatar: "/images/user/user-02.jpg", nipd: "1002", tugas: 90, uts: 85, uas: 88, akhir: 88, predikat: "A" },
   { id: 3, nama: "Candra Wijaya", avatar: "/images/user/user-03.jpg", nipd: "1003", tugas: 75, uts: 70, uas: 78, akhir: 74, predikat: "B" },

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../compon
 import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, CopyIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { dapodikService } from "../../services/dapodikService";
+import { useAuth } from "../../context/AuthContext";
 
 interface Cadisdik {
   cadisdik_id: string;
@@ -48,6 +49,10 @@ interface DataPegawaiProps {
 }
 
 export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiProps) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role?.toLowerCase() === "super admin" || user?.role?.toLowerCase() === "super-admin" || (user as any)?.jabatan === 0;
+  const isLocked = !isSuperAdmin;
+
   const [data, setData] = useState<Pegawai[]>([]);
   const [instansiList, setInstansiList] = useState<Cadisdik[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +131,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     } else {
       setEditingData(null);
       setFormData({
-        cadisdik_id: instansiList.length > 0 ? instansiList[0].cadisdik_id : "",
+        cadisdik_id: isLocked && user?.cadisdik_id ? user.cadisdik_id : (instansiList.length > 0 ? instansiList[0].cadisdik_id : ""),
         nama_lengkap: "",
         nip: "",
         email: "",
@@ -420,8 +425,10 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Instansi (Cadisdik) <span className="text-error-500">*</span></label>
                   <Select 
                       options={instansiOptions}
+                      value={formData.cadisdik_id}
                       defaultValue={formData.cadisdik_id}
                       onChange={(val) => handleSelectChange('cadisdik_id', val)}
+                      disabled={isLocked}
                   />
               </div>
 

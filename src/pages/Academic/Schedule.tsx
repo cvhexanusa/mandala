@@ -5,7 +5,8 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { DownloadIcon, PrinterIcon, PlusIcon, SearchIcon } from "../../icons";
 import Swal from "sweetalert2";
-import ScheduleTable from "../../components/academic/ScheduleTable";
+import ScheduleTable, { scheduleData } from "../../components/academic/ScheduleTable";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function Schedule() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,13 +41,42 @@ export default function Schedule() {
   };
 
   const handleExport = () => {
+    const filtered = scheduleData.filter(item => {
+      const matchesSearch = item.mataPelajaran.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            item.guru.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDay = dayFilter === "all" || item.hari === dayFilter;
+      const matchesClass = classFilter === "all" || item.kelas === classFilter;
+      return matchesSearch && matchesDay && matchesClass;
+    });
+
     Swal.fire({
-      title: "Export Jadwal?",
-      text: "Data jadwal akan diunduh dalam format Excel.",
+      title: "Export Jadwal Pelajaran?",
+      text: `Sebanyak ${filtered.length} data jadwal akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
       confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const headers = ["Hari", "Jam", "Mata Pelajaran", "Guru Pengampu", "Ruang", "Kelas"];
+        const rows = filtered.map((item) => [
+          item.hari,
+          item.jam,
+          item.mataPelajaran,
+          item.guru,
+          item.ruang,
+          item.kelas
+        ]);
+        exportToExcel(
+          `Jadwal_Pelajaran_${classFilter.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          "Jadwal Pelajaran",
+          `Jadwal Pelajaran Kelas ${classFilter === 'all' ? 'Semua' : classFilter}`,
+          headers,
+          rows
+        );
+      }
     });
   };
 

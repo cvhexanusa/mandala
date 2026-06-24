@@ -5,7 +5,8 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { DownloadIcon, PrinterIcon, PlusIcon, SearchIcon } from "../../icons";
 import Swal from "sweetalert2";
-import AttendanceTable from "../../components/academic/AttendanceTable";
+import AttendanceTable, { attendanceData } from "../../components/academic/AttendanceTable";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function Attendance() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,13 +40,39 @@ export default function Attendance() {
   };
 
   const handleExport = () => {
+    const filtered = attendanceData.filter(item => {
+      const matchesSearch = item.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            item.nipd.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
     Swal.fire({
-      title: "Export Presensi?",
-      text: "Data presensi akan diunduh dalam format Excel.",
+      title: "Export Presensi Siswa?",
+      text: `Sebanyak ${filtered.length} data presensi akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
       confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const headers = ["Nama Siswa", "NIPD", "Status Kehadiran", "Keterangan"];
+        const rows = filtered.map((item) => [
+          item.nama,
+          item.nipd,
+          item.status,
+          item.keterangan
+        ]);
+        exportToExcel(
+          `Presensi_Siswa_${classFilter.replace(/\s+/g, '_')}_${dateFilter}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          "Presensi Siswa",
+          `Presensi Siswa Kelas ${classFilter} Tanggal ${dateFilter}`,
+          headers,
+          rows
+        );
+      }
     });
   };
 

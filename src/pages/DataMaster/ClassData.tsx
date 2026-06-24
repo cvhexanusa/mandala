@@ -11,6 +11,8 @@ import WaliTable from "../../components/school/WaliTable";
 import EkskulTable from "../../components/school/EkskulTable";
 import RekapRombelKategoriTable from "../../components/school/RekapRombelKategoriTable";
 import RekapRombelKompetensiTable from "../../components/school/RekapRombelKompetensiTable";
+import { exportToCSV } from "../../utils/exportUtils";
+import { dapodikService } from "../../services/dapodikService";
 
 export default function ClassData() {
   const [searchParams] = useSearchParams();
@@ -80,25 +82,130 @@ export default function ClassData() {
     });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const labelMap: Record<string, string> = {
+      reguler: "Rombel Reguler",
+      praktik: "Rombel Praktik",
+      ekskul: "Rombel Ekskul",
+      pilihan: "Rombel Pilihan",
+      wali: "Wali Kelas",
+      rekap: "Rekap Rombel",
+    };
+
+    const labelTab = labelMap[activeTab] || "Rombongan Belajar";
+
     Swal.fire({
-      title: "Export Data?",
-      text: `Data Rombongan Belajar (${activeTab}) akan diunduh dalam format Excel.`,
+      title: `Export Data ${labelTab}?`,
+      text: `Data ${labelTab} akan diunduh dalam format CSV (Kompatibel dengan Excel).`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
       cancelButtonColor: "#d33",
       confirmButtonText: "Ya, Export!",
       cancelButtonText: "Batal"
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
         Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
+          title: "Mempersiapkan Data",
+          text: "Mohon tunggu, sedang mengambil data...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
         });
+
+        try {
+          let headers: string[] = [];
+          let rows: any[][] = [];
+
+          if (activeTab === "reguler" || activeTab === "praktik" || activeTab === "pilihan") {
+            const apiType = activeTab === "pilihan" ? "pilihan" : "reguler";
+            const response = await dapodikService.getRombonganBelajar(apiType, 1000, 1, searchQuery, gradeFilter === "all" ? "" : gradeFilter);
+            const dataArray = (response && Array.isArray(response.data)) ? response.data : [];
+
+            headers = ["No", "Nama Rombel", "Wali Kelas", "Tingkat", "Kurikulum", "Ruang", "Jumlah PD", "Moving Kelas", "Kebutuhan Khusus"];
+            rows = dataArray.map((item: any, index: number) => [
+              index + 1,
+              item.nama || "-",
+              item.ptk_id_str || "-",
+              item.tingkat_pendidikan_id_str || "-",
+              item.kurikulum_id_str || "-",
+              item.id_ruang_str || "-",
+              item.jumlah_siswa || 0,
+              item.movingKelas || "Tidak",
+              item.kebutuhanKhusus || "Tidak"
+            ]);
+          } else if (activeTab === "ekskul") {
+            const response = await dapodikService.getEkstrakurikuler(searchQuery);
+            const dataArray = (response && Array.isArray(response.data)) ? response.data : [];
+
+            headers = ["No", "Nama Ekskul", "Pembina", "Prasarana"];
+            rows = dataArray.map((item: any, index: number) => [
+              index + 1,
+              item.nama || "-",
+              item.ptk_id_str || "-",
+              item.id_ruang_str || "-"
+            ]);
+          } else if (activeTab === "wali") {
+            // Local waliData representation
+            const localWali = [
+              { namaRombel: "X RPL 1", namaWali: "H. Ahmad Subardjo, M.Pd.", ruang: "Lab Komp 1", anggotaRombel: 36 },
+              { namaRombel: "X RPL 2", namaWali: "Siti Aminah, S.Pd.", ruang: "Lab Komp 2", anggotaRombel: 34 },
+              { namaRombel: "X TKJ 1", namaWali: "Abdul Gani, S.Ag.", ruang: "Lab Cisco 1", anggotaRombel: 32 },
+              { namaRombel: "X TKJ 2", namaWali: "Rina Widia, S.Si.", ruang: "Lab Cisco 2", anggotaRombel: 30 },
+              { namaRombel: "X AK 1", namaWali: "Meli Rosdiana, S.Pd.", ruang: "R. Teori 1", anggotaRombel: 35 },
+              { namaRombel: "XI RPL 1", namaWali: "Bambang Herlambang, S.T.", ruang: "Lab Komp 3", anggotaRombel: 32 },
+              { namaRombel: "XI RPL 2", namaWali: "Toto Raharjo, S.Or.", ruang: "Lab Komp 4", anggotaRombel: 33 },
+              { namaRombel: "XI TKJ 1", namaWali: "Yuni Kartika, S.Pd.", ruang: "Lab Jaringan", anggotaRombel: 31 },
+              { namaRombel: "XI MM 1", namaWali: "Dadan Ramdan, M.T.", ruang: "Studio TV", anggotaRombel: 34 },
+              { namaRombel: "XI AK 1", namaWali: "Endang Suherman", ruang: "R. Peraga", anggotaRombel: 36 },
+              { namaRombel: "XII RPL 1", namaWali: "Dewi Sartika, S.Pd.", ruang: "Lab RPL Baru", anggotaRombel: 35 },
+              { namaRombel: "XII RPL 2", namaWali: "Farida Utami, S.Pd.", ruang: "R. Proyek", anggotaRombel: 34 },
+              { namaRombel: "XII TKJ 1", namaWali: "Ginanjar Saputra", ruang: "Lab Server", anggotaRombel: 32 },
+              { namaRombel: "XII MM 1", namaWali: "Hendra Wijaya, S.Kom.", ruang: "Studio Foto", anggotaRombel: 35 },
+              { namaRombel: "XII MM 2", namaWali: "Iis Dahlia, S.Pd.", ruang: "Lab Animasi", anggotaRombel: 33 },
+              { namaRombel: "XII AK 1", namaWali: "Jaka Tarub, M.Si.", ruang: "Bank Mini", anggotaRombel: 36 },
+              { namaRombel: "X MM 1", namaWali: "Kiki Amalia, S.Pd.", ruang: "R. Multimedia", anggotaRombel: 34 },
+              { namaRombel: "XI TKJ 2", namaWali: "Lukman Hakim", ruang: "R. Network", anggotaRombel: 30 },
+              { namaRombel: "XII TKJ 2", namaWali: "Mira Setiawati", ruang: "Lab Fiber Optic", anggotaRombel: 31 },
+              { namaRombel: "X RPL 3", namaWali: "Nadia Utami", ruang: "Lab Mobile", anggotaRombel: 35 }
+            ];
+
+            const filteredWali = localWali.filter(item => 
+              item.namaRombel.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.namaWali.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+
+            headers = ["No", "Nama Rombel", "Nama Wali", "Ruang", "Anggota Rombel"];
+            rows = filteredWali.map((item, index) => [
+              index + 1,
+              item.namaRombel,
+              item.namaWali,
+              item.ruang,
+              item.anggotaRombel
+            ]);
+          } else if (activeTab === "rekap") {
+            // Summary export
+            headers = ["No", "Kategori Rekapitulasi", "Keterangan"];
+            rows = [
+              [1, "Rekap Rombel berdasarkan Kategori", "Tersedia di tabel dashboard"],
+              [2, "Rekap Rombel berdasarkan Kompetensi", "Tersedia di tabel dashboard"]
+            ];
+          }
+
+          Swal.close();
+          const filename = `Data_${labelTab.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
+          exportToCSV(filename, headers, rows);
+        } catch (error) {
+          console.error("Gagal mengambil data untuk export:", error);
+          Swal.close();
+          Swal.fire({
+            title: "Error",
+            text: "Gagal mengambil data dari server.",
+            icon: "error",
+            confirmButtonColor: "#ef4444"
+          });
+        }
       }
     });
   };

@@ -19,7 +19,7 @@ interface AttendanceRecord {
   keterangan: string;
 }
 
-const attendanceData: AttendanceRecord[] = [
+export const attendanceData: AttendanceRecord[] = [
   { id: 1, nama: "Aditya Pratama", avatar: "/images/user/user-01.jpg", nipd: "1001", status: "Hadir", keterangan: "-" },
   { id: 2, nama: "Bella Safira", avatar: "/images/user/user-02.jpg", nipd: "1002", status: "Hadir", keterangan: "-" },
   { id: 3, nama: "Candra Wijaya", avatar: "/images/user/user-03.jpg", nipd: "1003", status: "Sakit", keterangan: "Demam" },

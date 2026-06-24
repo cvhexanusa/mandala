@@ -5,7 +5,8 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { DownloadIcon, PrinterIcon, SearchIcon, PencilIcon } from "../../icons";
 import Swal from "sweetalert2";
-import GradesTable from "../../components/academic/GradesTable";
+import GradesTable, { gradesData } from "../../components/academic/GradesTable";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function Grades() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,13 +37,40 @@ export default function Grades() {
   };
 
   const handleExport = () => {
+    const filtered = gradesData.filter(item => 
+      item.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.nipd.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     Swal.fire({
-      title: "Export Nilai?",
-      text: "Data nilai akan diunduh dalam format Excel.",
+      title: "Export Nilai & Raport?",
+      text: `Sebanyak ${filtered.length} data nilai akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
       confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const headers = ["Nama Siswa", "NIPD", "Tugas", "UTS", "UAS", "Nilai Akhir", "Predikat"];
+        const rows = filtered.map((item) => [
+          item.nama,
+          item.nipd,
+          item.tugas,
+          item.uts,
+          item.uas,
+          item.akhir,
+          item.predikat
+        ]);
+        exportToExcel(
+          `Nilai_Siswa_${classFilter.replace(/\s+/g, '_')}_${subjectFilter.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+          "Nilai Siswa",
+          `Nilai Siswa Kelas ${classFilter} - ${subjectFilter}`,
+          headers,
+          rows
+        );
+      }
     });
   };
 

@@ -18,6 +18,7 @@ import { SearchIcon, DownloadIcon, PrinterIcon, PieChartIcon, GroupIcon, UserIco
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import Swal from "sweetalert2";
+import { exportToCSV } from "../../../utils/exportUtils";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -491,7 +492,7 @@ const RekapTerpadu: React.FC = () => {
   const handleExport = () => {
     Swal.fire({
       title: "Export Rekapitulasi Presensi Terpadu?",
-      text: "Data seluruh satuan pendidikan akan diunduh dalam format Excel.",
+      text: "Data seluruh satuan pendidikan akan diunduh dalam format CSV (Kompatibel dengan Excel).",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -500,13 +501,36 @@ const RekapTerpadu: React.FC = () => {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        const headers = [
+          "No", "NPSN", "Satuan Pendidikan", "Kabupaten", "Kecamatan", 
+          "GTK Total", "GTK Hadir", "GTK Terlambat", "GTK Izin/Sakit", "GTK Tanpa Keterangan", "GTK Belum Presensi", "GTK Persentase (%)", 
+          "Siswa Total", "Siswa Hadir", "Siswa Terlambat", "Siswa Izin/Sakit", "Siswa Tanpa Keterangan", "Siswa Belum Presensi", "Siswa Persentase (%)"
+        ];
+        
+        const rows = filteredRecap.map((sch, index) => [
+          index + 1,
+          sch.npsn ? `="${sch.npsn}"` : "-",
+          sch.nama || "-",
+          sch.kabupaten || "-",
+          sch.kecamatan || "-",
+          sch.gtk.total,
+          sch.gtk.hadir,
+          sch.gtk.terlambat,
+          sch.gtk.izinSakit,
+          sch.gtk.alpha,
+          sch.gtk.belum,
+          sch.gtk.persentase,
+          sch.siswa.total,
+          sch.siswa.hadir,
+          sch.siswa.terlambat,
+          sch.siswa.izinSakit,
+          sch.siswa.alpha,
+          sch.siswa.belum,
+          sch.siswa.persentase
+        ]);
+
+        const filename = `Rekap_Presensi_Terpadu_${selectedDate}_${new Date().toISOString().slice(0, 10)}.csv`;
+        exportToCSV(filename, headers, rows);
       }
     });
   };

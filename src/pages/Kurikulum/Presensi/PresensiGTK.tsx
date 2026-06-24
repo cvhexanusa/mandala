@@ -19,6 +19,7 @@ import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
 import { SearchIcon, SchoolIcon, GroupIcon, PrinterIcon, DownloadIcon } from "../../../icons";
 import Swal from "sweetalert2";
+import { exportToCSV } from "../../../utils/exportUtils";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -438,7 +439,7 @@ const PresensiGTK: React.FC = () => {
   const handleExport = () => {
     Swal.fire({
       title: "Export Data Presensi GTK?",
-      text: "Data kehadiran GTK akan diunduh dalam format Excel.",
+      text: "Data kehadiran GTK akan diunduh dalam format CSV (Kompatibel dengan Excel).",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -447,13 +448,34 @@ const PresensiGTK: React.FC = () => {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        const headers = [
+          "No", "NPSN", "Satuan Pendidikan", "Kabupaten", "Kecamatan", "Kepala Sekolah", 
+          "Kehadiran GTK (%)", "Kehadiran Siswa (%)", 
+          "GTK Total", "GTK Hadir", "GTK Terlambat", "GTK Izin/Sakit", "GTK Tanpa Keterangan", "GTK Belum Presensi",
+          "Status Penilaian", "Keterangan Status"
+        ];
+        
+        const rows = filteredRecap.map((sch, index) => [
+          index + 1,
+          sch.npsn ? `="${sch.npsn}"` : "-",
+          sch.nama || "-",
+          sch.kabupaten || "-",
+          sch.kecamatan || "-",
+          sch.kepalaSekolah || "-",
+          sch.gtk.persentase,
+          sch.siswa.persentase,
+          sch.gtk.total,
+          sch.gtk.hadir,
+          sch.gtk.terlambat,
+          sch.gtk.izinSakit,
+          sch.gtk.alpha,
+          sch.gtk.belum,
+          sch.statusPenilaian,
+          sch.keteranganStatus
+        ]);
+
+        const filename = `Presensi_GTK_${selectedDate}_${new Date().toISOString().slice(0, 10)}.csv`;
+        exportToCSV(filename, headers, rows);
       }
     });
   };

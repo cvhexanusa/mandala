@@ -14,8 +14,8 @@ import Avatar from "../../components/ui/avatar/Avatar";
 import Select from "../../components/form/Select";
 import Pagination from "../../components/common/Pagination";
 import Badge from "../../components/ui/badge/Badge";
-import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../../icons";
 import Swal from "sweetalert2";
+import { exportToCSV } from "../../utils/exportUtils";
 
 const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
@@ -214,7 +214,7 @@ const AuditPendidikanGTK: React.FC = () => {
   const handleExport = () => {
     Swal.fire({
       title: "Export Data Kualifikasi GTK?",
-      text: "Data latar belakang pendidikan GTK sekolah ini akan diexport ke Excel.",
+      text: "Data latar belakang pendidikan GTK sekolah ini akan diexport ke format CSV (Kompatibel dengan Excel).",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -223,7 +223,19 @@ const AuditPendidikanGTK: React.FC = () => {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire("Berhasil!", "File sedang diunduh...", "success");
+        const headers = ["No", "Nama Pegawai", "NUPTK / NIP", "Jabatan / Jenis PTK", "Pendidikan Terakhir", "Bidang Studi / Jurusan"];
+        
+        const rows = filteredRecords.map((log, index) => [
+          index + 1,
+          log.nama || "-",
+          log.nuptk ? `="${log.nuptk}"` : "-",
+          log.role || "-",
+          log.pendidikan || "-",
+          log.bidangStudi || "-"
+        ]);
+
+        const filename = `Kualifikasi_GTK_${school?.nama.replace(/\s+/g, "_") || "Sekolah"}_${new Date().toISOString().slice(0, 10)}.csv`;
+        exportToCSV(filename, headers, rows);
       }
     });
   };

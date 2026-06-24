@@ -8,6 +8,7 @@ import FileInput from "../../components/form/input/FileInput";
 import Swal from "sweetalert2";
 import { DownloadIcon, PrinterIcon, PlusIcon, TrashBinIcon } from "../../icons";
 import { dapodikService } from "../../services/dapodikService";
+import { exportToCSV } from "../../utils/exportUtils";
 
 export default function SchoolProfile() {
   const [activeTab, setActiveTab] = useState<
@@ -268,7 +269,7 @@ export default function SchoolProfile() {
   const handleExport = () => {
     Swal.fire({
       title: "Export Data?",
-      text: "Data profil sekolah akan diunduh dalam format Excel.",
+      text: "Data profil sekolah akan diunduh dalam format CSV (Kompatibel dengan Excel).",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -277,13 +278,40 @@ export default function SchoolProfile() {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        const headers = ["Atribut", "Nilai"];
+        const rows = [
+          ["Nama Sekolah", profileData.namaSekolah],
+          ["NPSN", profileData.npsn ? `="${profileData.npsn}"` : "-"],
+          ["NSS", profileData.nss ? `="${profileData.nss}"` : "-"],
+          ["Bentuk Pendidikan", profileData.bentukPendidikan],
+          ["Status Sekolah", profileData.statusSekolah],
+          ["Nama Kepala Sekolah", profileData.namaKepalaSekolah],
+          ["SK Pendirian", profileData.skPendirian],
+          ["Tanggal SK", profileData.tanggalSK],
+          ["Lintang", profileData.lintang],
+          ["Bujur", profileData.bujur],
+          ["Nama Operator", profileData.namaOperator],
+          ["Kebutuhan Dilayani", administrasiData.kebutuhanDilayani],
+          ["Status Kepemilikan", administrasiData.statusKepemilikan],
+          ["MBS", administrasiData.mbs],
+          ["Nama Wajib Pajak", administrasiData.namaWajibPajak],
+          ["NPWP", administrasiData.npwp ? `="${administrasiData.npwp}"` : "-"],
+          ["Jalan", alamatData.jalan],
+          ["RT", alamatData.rt],
+          ["RW", alamatData.rw],
+          ["Desa/Kelurahan", alamatData.desa],
+          ["Kecamatan", alamatData.kecamatan],
+          ["Kabupaten/Kota", alamatData.kabupaten],
+          ["Provinsi", alamatData.propinsi],
+          ["Kode Pos", alamatData.kodePos ? `="${alamatData.kodePos}"` : "-"],
+          ["Email", kontakData.email],
+          ["Telepon", kontakData.telepon ? `="${kontakData.telepon}"` : "-"],
+          ["Website", kontakData.website],
+          ["Fax", kontakData.nomorFax ? `="${kontakData.nomorFax}"` : "-"]
+        ];
+
+        const filename = `Profil_Sekolah_${profileData.namaSekolah.replace(/\s+/g, "_") || "SIMAK"}_${new Date().toISOString().slice(0, 10)}.csv`;
+        exportToCSV(filename, headers, rows);
       }
     });
   };

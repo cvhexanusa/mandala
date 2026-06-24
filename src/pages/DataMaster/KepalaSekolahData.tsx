@@ -16,6 +16,7 @@ import Avatar from "../../components/ui/avatar/Avatar";
 import Badge from "../../components/ui/badge/Badge";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
+import { exportToExcel } from "../../utils/exportUtils";
 
 export default function KepalaSekolahData() {
   const navigate = useNavigate();
@@ -98,6 +99,16 @@ export default function KepalaSekolahData() {
   };
 
   const handleExport = () => {
+    if (filteredHeadmasters.length === 0) {
+      Swal.fire({
+        title: "Tidak Ada Data",
+        text: "Tidak ada data kepala sekolah yang dapat diekspor.",
+        icon: "warning",
+        confirmButtonColor: "#3b82f6",
+      });
+      return;
+    }
+
     Swal.fire({
       title: "Export Data Kepala Sekolah?",
       text: "Data Kepala Sekolah akan diunduh dalam format Excel.",
@@ -109,13 +120,31 @@ export default function KepalaSekolahData() {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: "Berhasil!",
-          text: "File sedang diunduh...",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
+        const headers = [
+          "No",
+          "Nama Kepala Sekolah",
+          "JK",
+          "Nama Instansi / Sekolah",
+          "NUPTK",
+          "Status Kepegawaian",
+          "Nomor Telepon"
+        ];
+
+        const rows = filteredHeadmasters.map((item, index) => {
+          const no = (index + 1).toString();
+          const nama = item.identitas?.nama || "-";
+          const jk = item.identitas?.jenis_kelamin || "-";
+          const sekolah = getSchoolName(item.identitas?.sekolah_id);
+          const nuptk = item.identitas?.nuptk || "-";
+          const status = item.kepegawaian?.status_kepegawaian || "-";
+          const telpRaw = item.data_pendukung?.no_hp || item.no_hp || item.identitas?.no_hp || item.data_pendukung?.no_telepon_rumah || item.no_telepon_rumah || "-";
+          const telp = telpRaw || "-";
+
+          return [no, nama, jk, sekolah, nuptk, status, telp];
         });
+
+        const filename = `Data_Kepala_Sekolah_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportToExcel(filename, "Kepala Sekolah", "Data Kepala Sekolah", headers, rows);
       }
     });
   };
