@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      stream: path.resolve(__dirname, "./src/stubs/stream.ts"),
     },
   },
 });

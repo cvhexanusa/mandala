@@ -82,7 +82,6 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
     { value: "50", label: "50" },
     { value: "100", label: "100" },
   ];
-
   // Group GTK profiles by school to calculate stats for the summary table
   const schoolSummaryData = useMemo(() => {
     return schools.map((school) => {
@@ -97,9 +96,21 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
       let bachelor = 0;
       let diploma = 0;
       let slta = 0;
+      let anomaliCount = 0;
 
       schoolGtk.forEach((item) => {
         const edu = (item.kepegawaian?.pendidikan_terakhir || item.identitas?.pendidikan_terakhir || "").toUpperCase();
+        
+        const isBelowS1 = !(
+          edu.includes("S1") || 
+          edu.includes("D4") || 
+          edu.includes("SARJANA") || 
+          edu.includes("S2") || 
+          edu.includes("S3") || 
+          edu.includes("MAGISTER") || 
+          edu.includes("DOKTOR")
+        );
+
         if (edu.includes("S3") || edu.includes("S2") || edu.includes("MAGISTER") || edu.includes("DOKTOR")) {
           higherEd++;
         } else if (edu.includes("S1") || edu.includes("D4") || edu.includes("SARJANA")) {
@@ -108,6 +119,10 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
           diploma++;
         } else if (edu.includes("SMA") || edu.includes("SMK") || edu.includes("SLTA") || edu.includes("MA")) {
           slta++;
+        }
+
+        if (type === "guru" && isBelowS1) {
+          anomaliCount++;
         }
       });
 
@@ -120,10 +135,11 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
         higherEd,
         bachelor,
         diploma,
-        slta
+        slta,
+        anomaliCount
       };
     });
-  }, [schools, gtkData]);
+  }, [schools, gtkData, type]);
 
   // Filter schools list
   const filteredSchools = useMemo(() => {
@@ -168,20 +184,30 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
           "Pascasarjana (S2/S3)",
           "Sarjana (S1/D4)",
           "Diploma (D1-D3)",
-          "Pendidikan Menengah (SLTA)"
+          "Pendidikan Menengah (SLTA)",
+          "Status Kualifikasi"
         ];
 
-        const rows = filteredSchools.map((school, index) => [
-          index + 1,
-          school.npsn,
-          school.nama,
-          school.wilayah,
-          school.totalGtk,
-          school.higherEd,
-          school.bachelor,
-          school.diploma,
-          school.slta
-        ]);
+        const rows = filteredSchools.map((school, index) => {
+          let statusStr = "-";
+          if (type === "guru") {
+            statusStr = school.anomaliCount > 0 
+              ? `${school.anomaliCount} Guru Anomali (Di bawah S1)` 
+              : "Sesuai (Semua ≥ S1)";
+          }
+          return [
+            index + 1,
+            school.npsn,
+            school.nama,
+            school.wilayah,
+            school.totalGtk,
+            school.higherEd,
+            school.bachelor,
+            school.diploma,
+            school.slta,
+            statusStr
+          ];
+        });
 
         exportToExcel(
           `Rekap_Pendidikan_${labelTab}_${new Date().toISOString().slice(0, 10)}.xlsx`,
@@ -289,6 +315,7 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
                     <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-28 font-bold">
                       {type === "guru" ? "Total Guru" : type === "tendik" ? "Total Tendik" : "Total GTK"}
                     </TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap w-40 font-bold">Status Kualifikasi</TableCell>
                     <TableCell isHeader className="px-5 py-3.5 font-semibold text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap w-28">Aksi</TableCell>
                   </TableRow>
                 </TableHeader>
@@ -304,6 +331,24 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
                           <TableCell className="px-5 py-4 text-start text-theme-sm font-bold text-gray-800 dark:text-white/90">{school.nama}</TableCell>
                           <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-600 dark:text-gray-400 font-medium">{school.wilayah}</TableCell>
                           <TableCell className="px-5 py-4 text-center text-theme-sm font-bold text-brand-600 dark:text-brand-400">{school.totalGtk}</TableCell>
+                          <TableCell className="px-5 py-4 text-center text-theme-sm">
+                            {type === "guru" ? (
+                              school.anomaliCount > 0 ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <Badge color="error" size="sm">
+                                    {school.anomaliCount} Guru Anomali
+                                  </Badge>
+                                  <span className="text-[10px] text-red-500 dark:text-red-400 font-semibold">Di bawah S1</span>
+                                </div>
+                              ) : (
+                                <Badge color="success" size="sm">
+                                  Sesuai (≥ S1)
+                                </Badge>
+                              )
+                            ) : (
+                              <span className="text-gray-400 font-medium text-xs">Sesuai</span>
+                            )}
+                          </TableCell>
                           <TableCell className="px-5 py-4 text-right">
                             <button
                               onClick={() => navigate(`/${role}/analisa/pendidikan-gtk/audit/${school.sekolah_id}${type ? `?type=${type}` : ""}`)}
@@ -319,7 +364,7 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                      <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         {loading ? "Sedang memuat..." : "Tidak ada data kualifikasi pendidikan sekolah ditemukan."}
                       </TableCell>
                     </TableRow>
