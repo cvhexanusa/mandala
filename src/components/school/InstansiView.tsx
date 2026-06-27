@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table"
 import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, CopyIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { dapodikService } from "../../services/dapodikService";
+import { useAuth } from "../../context/AuthContext";
 
 interface Cadisdik {
   cadisdik_id: string;
@@ -20,6 +21,7 @@ interface Cadisdik {
 }
 
 export default function InstansiView() {
+  const { user } = useAuth();
   const [data, setData] = useState<Cadisdik[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,6 +126,16 @@ export default function InstansiView() {
   };
 
   const handleDelete = (id: string) => {
+    if (user && id === (user as any).cadisdik_id) {
+      Swal.fire({
+        icon: "error",
+        title: "Tindakan Ditolak",
+        text: "Anda tidak dapat menghapus instansi tempat Anda sedang bertugas saat ini.",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
     Swal.fire({
       title: "Hapus Instansi?",
       text: "Data yang dihapus tidak dapat dikembalikan!",
@@ -141,7 +153,13 @@ export default function InstansiView() {
           fetchData();
         } catch (error: any) {
           console.error("Delete error:", error);
-          Swal.fire("Error", error.response?.data?.message || "Gagal menghapus data", "error");
+          let errorMsg = "Gagal menghapus data instansi.";
+          if (error.response?.status === 500) {
+            errorMsg = "Instansi tidak dapat dihapus karena masih terhubung dengan data lain (seperti akun Pegawai, Antrean, atau Surat). Harap hapus atau pindahkan data terkait terlebih dahulu.";
+          } else if (error.response?.data?.message) {
+            errorMsg = error.response.data.message;
+          }
+          Swal.fire("Error", errorMsg, "error");
         }
       }
     });

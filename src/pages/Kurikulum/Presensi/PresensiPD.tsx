@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import PageMeta from "../../../components/common/PageMeta";
+import Button from "../../../components/ui/button/Button";
 import ComponentCard from "../../../components/common/ComponentCard";
 import { presensiService } from "../../../services/presensiService";
 import { dapodikService } from "../../../services/dapodikService";
@@ -17,7 +18,7 @@ import Select from "../../../components/form/Select";
 import Input from "../../../components/form/input/InputField";
 import Pagination from "../../../components/common/Pagination";
 import Badge from "../../../components/ui/badge/Badge";
-import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../../../icons";
+import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon, EyeIcon } from "../../../icons";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
 
@@ -502,12 +503,24 @@ const PresensiPD: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 no-print">
-          <ButtonWithTheme variant="success-outline" onClick={handleExport}>
-            <DownloadIcon className="size-4 mr-2" /> Export
-          </ButtonWithTheme>
-          <ButtonWithTheme variant="outline" onClick={handlePrint}>
-            <PrinterIcon className="size-4 mr-2" /> Cetak
-          </ButtonWithTheme>
+          <Button
+            variant="success-outline"
+            size="sm"
+            className="min-w-[110px]"
+            startIcon={<DownloadIcon className="size-4" />}
+            onClick={handleExport}
+          >
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-w-[110px]"
+            startIcon={<PrinterIcon className="size-4" />}
+            onClick={handlePrint}
+          >
+            Cetak
+          </Button>
         </div>
       </div>
 
@@ -619,9 +632,10 @@ const PresensiPD: React.FC = () => {
                                 <TableCell className="px-4 py-3 text-right">
                                   <button
                                     onClick={() => handleInspect(sch)}
-                                    className="px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.02] transition-all cursor-pointer shadow-sm bg-white dark:bg-transparent"
+                                    className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
+                                    title="Lihat Detail"
                                   >
-                                    Periksa
+                                    <EyeIcon className="size-5" />
                                   </button>
                                 </TableCell>
                               </TableRow>
@@ -644,29 +658,6 @@ const PresensiPD: React.FC = () => {
         )}
       </div>
     </>
-  );
-};
-
-// UI helper components
-interface ButtonWithThemeProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "outline" | "success-outline";
-  children: React.ReactNode;
-}
-
-const ButtonWithTheme: React.FC<ButtonWithThemeProps> = ({ variant = "primary", children, ...props }) => {
-  const variantClasses = {
-    primary: "bg-brand-500 text-white hover:bg-brand-600",
-    outline: "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.02]",
-    "success-outline": "border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-  };
-
-  return (
-    <button
-      {...props}
-      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 inline-flex items-center justify-center cursor-pointer ${variantClasses[variant]}`}
-    >
-      {children}
-    </button>
   );
 };
 

@@ -16,6 +16,7 @@ import KepalaSekolahData from "./pages/DataMaster/KepalaSekolahData";
 import ResiduData from "./pages/Analisa/ResiduData";
 import PendidikanGTKData from "./pages/Analisa/PendidikanGTKData";
 import AuditPendidikanGTK from "./pages/Analisa/AuditPendidikanGTK";
+import PensiunPage from "./pages/Analisa/PensiunPage";
 import GTKDetailPage from "./pages/DataMaster/GTKDetailPage";
 import ClassData from "./pages/DataMaster/ClassData";
 import SubjectData from "./pages/DataMaster/SubjectData";
@@ -112,6 +113,7 @@ export default function App() {
             <Route path="analisa/pendidikan-gtk/guru" element={<PendidikanGTKData type="guru" />} />
             <Route path="analisa/pendidikan-gtk/tendik" element={<PendidikanGTKData type="tendik" />} />
             <Route path="analisa/pendidikan-gtk/audit/:sekolahId" element={<AuditPendidikanGTK />} />
+            <Route path="analisa/pensiun" element={<PensiunPage />} />
 
             {/* PKKS */}
             <Route path="pkks/instrumen" element={<TablePlaceholder title="Instrumen Penilaian" columns={["Nama Instrumen", "Kategori", "Tahun"]} />} />

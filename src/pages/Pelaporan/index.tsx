@@ -135,64 +135,68 @@ export default function PelaporanPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableCell isHeader>Judul Pelaporan</TableCell>
-                  <TableCell isHeader>Periode</TableCell>
-                  <TableCell isHeader className="text-center">Sekolah</TableCell>
-                  <TableCell isHeader className="text-center">Dokumen</TableCell>
-                  <TableCell isHeader className="text-center">Status</TableCell>
-                  <TableCell isHeader className="text-center">Aksi</TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+            <div className="max-w-full overflow-x-auto custom-scrollbar relative">
+              <Table className="min-w-[1000px]">
+                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
-                      Memuat data...
-                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Judul Pelaporan</TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Periode</TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Sekolah</TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Dokumen</TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Status</TableCell>
+                    <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Aksi</TableCell>
                   </TableRow>
-                ) : filteredData.length > 0 ? (
-                  filteredData.map((item) => (
-                    <TableRow key={item.pelaporan_id}>
-                      <TableCell className="font-medium text-gray-800 dark:text-white/90">
-                        {item.judul}
-                      </TableCell>
-                      <TableCell className="text-xs text-gray-500">
-                        {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString("id-ID") : "-"} s/d{" "}
-                        {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString("id-ID") : "-"}
-                      </TableCell>
-                      <TableCell className="text-center">{item.jumlah_sekolah}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge color="primary" size="sm">{item.jumlah_dokumen}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {item.aktif ? (
-                          <Badge color="success" size="sm">Aktif</Badge>
-                        ) : (
-                          <Badge color="error" size="sm">Non-aktif</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}>
-                          <button className="text-brand-500 hover:text-brand-600 font-medium text-sm">
-                            Detail
-                          </button>
-                        </Link>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                        Memuat data...
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
-                      Tidak ada data pelaporan ditemukan.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ) : filteredData.length > 0 ? (
+                    filteredData.map((item) => (
+                      <TableRow key={item.pelaporan_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                        <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">
+                          {item.judul}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">
+                          {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString("id-ID") : "-"} s/d{" "}
+                          {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString("id-ID") : "-"}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-center text-theme-sm text-gray-600 dark:text-gray-400 font-medium">
+                          {item.jumlah_sekolah}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-center">
+                          <Badge color="primary" size="sm">{item.jumlah_dokumen}</Badge>
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-center">
+                          {item.aktif ? (
+                            <Badge color="success" size="sm">Aktif</Badge>
+                          ) : (
+                            <Badge color="error" size="sm">Non-aktif</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-center">
+                          <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}>
+                            <button className="text-brand-500 hover:text-brand-600 font-semibold text-theme-sm transition-colors cursor-pointer">
+                              Detail
+                            </button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                        Tidak ada data pelaporan ditemukan.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           <div className="mt-6 flex justify-between items-center">

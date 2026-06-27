@@ -217,6 +217,11 @@ const navItems: NavItem[] = [
           },
         ],
       },
+      {
+        name: "Pensiun",
+        path: "/analisa/pensiun",
+        icon: <DotIcon />,
+      },
     ],
   },
   {

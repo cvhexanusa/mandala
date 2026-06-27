@@ -54,17 +54,12 @@ export const SekolahProvider: React.FC<{ children: React.ReactNode }> = ({ child
             logo: schoolData.logo ? getLogoUrl(schoolData.logo) : null
         });
       } else {
-        // Fallback jika data kosong/tidak ada dari backend
-        setSekolah({
-            sekolah_id: "dummy-sekolah-id",
-            nama: "Sekolah Simulasi (Demo)",
-            npsn: "12345678",
-            logo: null
-        });
+        // Backend exist tapi datanya kosong (tidak ada sekolah)
+        setSekolah(null);
       }
     } catch (error) {
       console.error('Gagal mengambil data sekolah di context:', error);
-      // Fallback jika API error/belum siap
+      // Fallback jika API error/belum siap (backend offline atau 404)
       setSekolah({
           sekolah_id: "dummy-sekolah-id",
           nama: "Sekolah Simulasi (Demo)",

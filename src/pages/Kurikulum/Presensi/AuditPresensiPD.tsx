@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import PageMeta from "../../../components/common/PageMeta";
+import Button from "../../../components/ui/button/Button";
 import ComponentCard from "../../../components/common/ComponentCard";
 import { presensiService } from "../../../services/presensiService";
 import { dapodikService } from "../../../services/dapodikService";
@@ -489,12 +490,24 @@ const AuditPresensiPD: React.FC = () => {
         </button>
         
         <div className="flex flex-wrap items-center gap-3">
-          <ButtonWithTheme variant="success-outline" onClick={handleExport}>
-            <DownloadIcon className="size-4 mr-2" /> Export
-          </ButtonWithTheme>
-          <ButtonWithTheme variant="outline" onClick={handlePrint}>
-            <PrinterIcon className="size-4 mr-2" /> Cetak
-          </ButtonWithTheme>
+          <Button
+            variant="success-outline"
+            size="sm"
+            className="min-w-[110px]"
+            startIcon={<DownloadIcon className="size-4" />}
+            onClick={handleExport}
+          >
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-w-[110px]"
+            startIcon={<PrinterIcon className="size-4" />}
+            onClick={handlePrint}
+          >
+            Cetak
+          </Button>
         </div>
       </div>
 
@@ -807,29 +820,6 @@ const AuditPresensiPD: React.FC = () => {
         )}
       </ComponentCard>
     </>
-  );
-};
-
-// UI helper components
-interface ButtonWithThemeProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "outline" | "success-outline";
-  children: React.ReactNode;
-}
-
-const ButtonWithTheme: React.FC<ButtonWithThemeProps> = ({ variant = "primary", children, ...props }) => {
-  const variantClasses = {
-    primary: "bg-brand-500 text-white hover:bg-brand-600",
-    outline: "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.02]",
-    "success-outline": "border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-  };
-
-  return (
-    <button
-      {...props}
-      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 inline-flex items-center justify-center cursor-pointer ${variantClasses[variant]}`}
-    >
-      {children}
-    </button>
   );
 };
 
