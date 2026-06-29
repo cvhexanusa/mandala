@@ -18,6 +18,7 @@ import Badge from "../../../components/ui/badge/Badge";
 import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../../../icons";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -446,7 +447,22 @@ const AuditPresensiGTK: React.FC = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   if (loading) {
@@ -467,8 +483,18 @@ const AuditPresensiGTK: React.FC = () => {
         description="Detail audit kepatuhan absensi guru dan tenaga kependidikan."
       />
 
-      {/* Action Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
+      <PrintReportLayout
+        title="LAPORAN AUDIT PRESENSI HARIAN GURU & TENAGA KEPENDIDIKAN"
+        sekolahFilter={sekolahId}
+        schools={school ? [school] : []}
+        extraFilters={[
+          { label: "Tanggal Laporan", value: selectedDate ? new Date(selectedDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-" }
+        ]}
+      />
+
+      <div className="no-print">
+        {/* Action Header */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
         <button
           onClick={() => navigate(`/${role}/laporan-absensi/gtk`)}
           className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-all cursor-pointer shadow-sm"
@@ -795,6 +821,66 @@ const AuditPresensiGTK: React.FC = () => {
           </div>
         )}
       </ComponentCard>
+      </div>
+
+      {/* Print Table (Only Visible in Print - renders all items without pagination) */}
+      <div className="print-only">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama Pegawai</th>
+              <th>NUPTK/NIP</th>
+              <th>Jabatan / Jenis PTK</th>
+              <th>Jam Masuk</th>
+              <th>Jam Pulang</th>
+              <th>Status</th>
+              <th>Keterangan Audit Log</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredLogs.length > 0 ? (
+              filteredLogs.map((log, index) => {
+                let auditText = "Terdeteksi tidak hadir pada hari kerja.";
+                if (log.statusBadge === "Hadir") {
+                  auditText = "Hadir tepat waktu.";
+                } else if (log.statusBadge === "Terlambat") {
+                  auditText = "Hadir terlambat.";
+                } else if (log.statusBadge === "Belum Presensi") {
+                  auditText = "Tidak ada rekaman log presensi masuk maupun pulang.";
+                } else if (log.statusBadge === "Izin") {
+                  auditText = "Izin secara tertulis/sistem terkonfirmasi.";
+                } else if (log.statusBadge === "Sakit") {
+                  auditText = "Sakit dengan surat keterangan terkonfirmasi.";
+                } else if (log.statusBadge === "Alpha") {
+                  auditText = "Ketidakhadiran tanpa keterangan (Mangkir/Alfa). Waspada data anomali.";
+                }
+
+                return (
+                  <tr key={log.id || index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontWeight: "bold" }}>{log.nama}</td>
+                    <td>{log.nuptk || "-"}</td>
+                    <td>{log.role || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{log.jamMasuk || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{log.jamPulang || "-"}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold" }}>{log.statusBadge}</td>
+                    <td>{auditText}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} style={{ textAlign: "center" }}>
+                  Tidak ada data GTK tidak hadir yang cocok dengan filter.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <PrintSignature />
     </>
   );
 };

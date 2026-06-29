@@ -13,6 +13,7 @@ import RekapRombelKategoriTable from "../../components/school/RekapRombelKategor
 import RekapRombelKompetensiTable from "../../components/school/RekapRombelKompetensiTable";
 import { exportToCSV } from "../../utils/exportUtils";
 import { dapodikService } from "../../services/dapodikService";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 export default function ClassData() {
   const [searchParams] = useSearchParams();
@@ -31,6 +32,7 @@ export default function ClassData() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [printData, setPrintData] = useState<any[] | null>(null);
   const [gradeFilter, setGradeFilter] = useState("all");
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -210,8 +212,77 @@ export default function ClassData() {
     });
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (activeTab === "rekap") {
+      window.print();
+      return;
+    }
+
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Sedang memuat seluruh data laporan...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      let fetchedData: any[] = [];
+
+      if (activeTab === "reguler" || activeTab === "praktik" || activeTab === "pilihan") {
+        const apiType = activeTab === "pilihan" ? "pilihan" : "reguler";
+        const response = await dapodikService.getRombonganBelajar(apiType, 1000, 1, searchQuery, gradeFilter === "all" ? "" : gradeFilter);
+        fetchedData = (response && Array.isArray(response.data)) ? response.data : [];
+      } else if (activeTab === "ekskul") {
+        const response = await dapodikService.getEkstrakurikuler(searchQuery);
+        fetchedData = (response && Array.isArray(response.data)) ? response.data : [];
+      } else if (activeTab === "wali") {
+        const localWali = [
+          { namaRombel: "X RPL 1", namaWali: "H. Ahmad Subardjo, M.Pd.", ruang: "Lab Komp 1", anggotaRombel: 36 },
+          { namaRombel: "X RPL 2", namaWali: "Siti Aminah, S.Pd.", ruang: "Lab Komp 2", anggotaRombel: 34 },
+          { namaRombel: "X TKJ 1", namaWali: "Abdul Gani, S.Ag.", ruang: "Lab Cisco 1", anggotaRombel: 32 },
+          { namaRombel: "X TKJ 2", namaWali: "Rina Widia, S.Si.", ruang: "Lab Cisco 2", anggotaRombel: 30 },
+          { namaRombel: "X AK 1", namaWali: "Meli Rosdiana, S.Pd.", ruang: "R. Teori 1", anggotaRombel: 35 },
+          { namaRombel: "XI RPL 1", namaWali: "Bambang Herlambang, S.T.", ruang: "Lab Komp 3", anggotaRombel: 32 },
+          { namaRombel: "XI RPL 2", namaWali: "Toto Raharjo, S.Or.", ruang: "Lab Komp 4", anggotaRombel: 33 },
+          { namaRombel: "XI TKJ 1", namaWali: "Yuni Kartika, S.Pd.", ruang: "Lab Jaringan", anggotaRombel: 31 },
+          { namaRombel: "XI MM 1", namaWali: "Dadan Ramdan, M.T.", ruang: "Studio TV", anggotaRombel: 34 },
+          { namaRombel: "XI AK 1", namaWali: "Endang Suherman", ruang: "R. Peraga", anggotaRombel: 36 },
+          { namaRombel: "XII RPL 1", namaWali: "Dewi Sartika, S.Pd.", ruang: "Lab RPL Baru", anggotaRombel: 35 },
+          { namaRombel: "XII RPL 2", namaWali: "Farida Utami, S.Pd.", ruang: "R. Proyek", anggotaRombel: 34 },
+          { namaRombel: "XII TKJ 1", namaWali: "Ginanjar Saputra", ruang: "Lab Server", anggotaRombel: 32 },
+          { namaRombel: "XII MM 1", namaWali: "Hendra Wijaya, S.Kom.", ruang: "Studio Foto", anggotaRombel: 35 },
+          { namaRombel: "XII MM 2", namaWali: "Iis Dahlia, S.Pd.", ruang: "Lab Animasi", anggotaRombel: 33 },
+          { namaRombel: "XII AK 1", namaWali: "Jaka Tarub, M.Si.", ruang: "Bank Mini", anggotaRombel: 36 },
+          { namaRombel: "X MM 1", namaWali: "Kiki Amalia, S.Pd.", ruang: "R. Multimedia", anggotaRombel: 34 },
+          { namaRombel: "XI TKJ 2", namaWali: "Lukman Hakim", ruang: "R. Network", anggotaRombel: 30 },
+          { namaRombel: "XII TKJ 2", namaWali: "Mira Setiawati", ruang: "Lab Fiber Optic", anggotaRombel: 31 },
+          { namaRombel: "X RPL 3", namaWali: "Nadia Utami", ruang: "Lab Mobile", anggotaRombel: 35 }
+        ];
+
+        fetchedData = localWali.filter(item => 
+          item.namaRombel.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.namaWali.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
+      setPrintData(fetchedData);
+      Swal.close();
+
+      setTimeout(() => {
+        const handleAfterPrint = () => {
+          setPrintData(null);
+          window.removeEventListener("afterprint", handleAfterPrint);
+        };
+        window.addEventListener("afterprint", handleAfterPrint);
+        window.print();
+      }, 500);
+    } catch (error) {
+      console.error("Gagal mengambil data cetak:", error);
+      Swal.close();
+      Swal.fire("Error", "Gagal memuat data cetak dari server.", "error");
+    }
   };
 
   return (
@@ -220,7 +291,19 @@ export default function ClassData() {
         title="Rombongan Belajar | SIMAK Admin Panel"
         description="Rombongan Belajar management page"
       />
-      <div className="space-y-6">
+
+      <PrintReportLayout
+        title={
+          activeTab === "reguler" ? "LAPORAN DATA ROMBONGAN BELAJAR REGULER" :
+          activeTab === "praktik" ? "LAPORAN DATA ROMBONGAN BELAJAR PRAKTIK" :
+          activeTab === "ekskul" ? "LAPORAN DATA ROMBONGAN BELAJAR EKSTRAKURIKULER" :
+          activeTab === "pilihan" ? "LAPORAN DATA ROMBONGAN BELAJAR PILIHAN" :
+          activeTab === "wali" ? "LAPORAN DATA WALI KELAS" : "LAPORAN REKAPITULASI ROMBONGAN BELAJAR"
+        }
+        sekolahFilter="all"
+      />
+
+      <div className="space-y-6 no-print">
         {/* Header Section */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
           <div>
@@ -365,6 +448,90 @@ export default function ClassData() {
           )}
         </div>
       </div>
+
+      {/* Print Table (Only Visible in Print) */}
+      {printData && (
+        <div className="print-only">
+          {activeTab === "ekskul" ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Ekskul</th>
+                  <th>Pembina Ekskul</th>
+                  <th>Prasarana / Ruangan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.map((item, index) => (
+                  <tr key={item.id || index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontWeight: "bold" }}>{item.nama || "-"}</td>
+                    <td>{item.ptk_id_str || "-"}</td>
+                    <td>{item.id_ruang_str || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : activeTab === "wali" ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Rombel</th>
+                  <th>Nama Wali Kelas</th>
+                  <th>Ruangan</th>
+                  <th>Jumlah Anggota Rombel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.map((item, index) => (
+                  <tr key={index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontWeight: "bold" }}>{item.namaRombel}</td>
+                    <td>{item.namaWali}</td>
+                    <td>{item.ruang}</td>
+                    <td style={{ textAlign: "center" }}>{item.anggotaRombel} Siswa</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Rombel</th>
+                  <th>Wali Kelas</th>
+                  <th>Tingkat</th>
+                  <th>Kurikulum</th>
+                  <th>Ruang Kelas</th>
+                  <th>Jumlah Siswa</th>
+                  <th>Moving Kelas</th>
+                  <th>Kebutuhan Khusus</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.map((item, index) => (
+                  <tr key={item.rombel_id || index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontWeight: "bold" }}>{item.nama || "-"}</td>
+                    <td>{item.ptk_id_str || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{item.tingkat_pendidikan_id_str || "-"}</td>
+                    <td>{item.kurikulum_id_str || "-"}</td>
+                    <td>{item.id_ruang_str || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{item.jumlah_siswa || 0}</td>
+                    <td style={{ textAlign: "center" }}>{item.movingKelas || "Tidak"}</td>
+                    <td style={{ textAlign: "center" }}>{item.kebutuhanKhusus || "Tidak"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {activeTab !== "rekap" && <PrintSignature />}
     </>
   );
 }

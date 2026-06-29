@@ -20,6 +20,7 @@ import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -537,7 +538,22 @@ const RekapTerpadu: React.FC = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   // ApexChart Options for GTK Donut
@@ -715,8 +731,19 @@ const RekapTerpadu: React.FC = () => {
         description="Grafik dan rekapitulasi absensi terintegrasi seluruh sekolah."
       />
 
-      {/* Header Panel */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 mb-6">
+      <PrintReportLayout
+        title={activeTab === "ringkasan" ? "LAPORAN REKAPITULASI PRESENSI TERPADU SATUAN PENDIDIKAN" : "LAPORAN DETAIL LOG AKTIVITAS PRESENSI"}
+        sekolahFilter={sekolahFilter}
+        schools={schools}
+        extraFilters={[
+          { label: "Tanggal Pemantauan", value: selectedDate ? new Date(selectedDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-" },
+          ...(activeTab === "log" ? [{ label: "Tipe Aktivitas", value: selectedSubTab === "gtk" ? "Guru & Tenaga Kependidikan (GTK)" : "Peserta Didik (Siswa)" }] : [])
+        ]}
+      />
+
+      <div className="no-print">
+        {/* Header Panel */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 mb-6">
         <div>
           <h3 className="text-xl font-bold text-gray-800 dark:text-white/90">
             Rekap Terpadu Presensi
@@ -1088,6 +1115,138 @@ const RekapTerpadu: React.FC = () => {
           </>
         )}
       </div>
+      </div>
+
+      {/* Print Table (Only Visible in Print) */}
+      <div className="print-only">
+        {activeTab === "ringkasan" ? (
+          <table>
+            <thead>
+              <tr>
+                <th rowSpan={2}>No</th>
+                <th rowSpan={2}>NPSN</th>
+                <th rowSpan={2}>Satuan Pendidikan</th>
+                <th rowSpan={2}>Kabupaten</th>
+                <th rowSpan={2}>Kecamatan</th>
+                <th colSpan={3}>GTK (Pegawai)</th>
+                <th colSpan={3}>Peserta Didik (Siswa)</th>
+              </tr>
+              <tr>
+                <th>Total</th>
+                <th>Hadir</th>
+                <th>Persen</th>
+                <th>Total</th>
+                <th>Hadir</th>
+                <th>Persen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRecap.length > 0 ? (
+                filteredRecap.map((sch, idx) => (
+                  <tr key={sch.sekolah_id}>
+                    <td style={{ textAlign: "center" }}>{idx + 1}</td>
+                    <td>{sch.npsn || "-"}</td>
+                    <td style={{ fontWeight: "bold" }}>{sch.nama}</td>
+                    <td>{sch.kabupaten}</td>
+                    <td>{sch.kecamatan}</td>
+                    <td style={{ textAlign: "center" }}>{sch.gtk.total}</td>
+                    <td style={{ textAlign: "center" }}>{sch.gtk.hadir}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold" }}>{sch.gtk.persentase}%</td>
+                    <td style={{ textAlign: "center" }}>{sch.siswa.total}</td>
+                    <td style={{ textAlign: "center" }}>{sch.siswa.hadir}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold" }}>{sch.siswa.persentase}%</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={11} style={{ textAlign: "center" }}>
+                    Tidak ada data rekapitulasi sekolah.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        ) : (
+          /* Logs print view */
+          selectedSubTab === "gtk" ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Pegawai</th>
+                  <th>NUPTK/NIP</th>
+                  <th>Jabatan / Jenis PTK</th>
+                  <th>Satuan Pendidikan</th>
+                  <th>Jam Masuk</th>
+                  <th>Jam Pulang</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLogs.length > 0 ? (
+                  filteredLogs.map((item, idx) => (
+                    <tr key={item.id || idx}>
+                      <td style={{ textAlign: "center" }}>{idx + 1}</td>
+                      <td style={{ fontWeight: "bold" }}>{item.nama}</td>
+                      <td>{item.nuptk}</td>
+                      <td>{item.role}</td>
+                      <td>{item.sekolah}</td>
+                      <td style={{ textAlign: "center" }}>{item.jamMasuk}</td>
+                      <td style={{ textAlign: "center" }}>{item.jamPulang}</td>
+                      <td style={{ textAlign: "center", fontWeight: "bold" }}>{item.statusBadge}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center" }}>
+                      Tidak ada log presensi GTK.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Siswa</th>
+                  <th>NISN</th>
+                  <th>Rombel</th>
+                  <th>Satuan Pendidikan</th>
+                  <th>Jam Masuk</th>
+                  <th>Jam Pulang</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLogs.length > 0 ? (
+                  filteredLogs.map((item, idx) => (
+                    <tr key={item.id || idx}>
+                      <td style={{ textAlign: "center" }}>{idx + 1}</td>
+                      <td style={{ fontWeight: "bold" }}>{item.nama}</td>
+                      <td>{item.nisn}</td>
+                      <td>{item.rombel}</td>
+                      <td>{item.sekolah}</td>
+                      <td style={{ textAlign: "center" }}>{item.jamMasuk}</td>
+                      <td style={{ textAlign: "center" }}>{item.jamPulang}</td>
+                      <td style={{ textAlign: "center", fontWeight: "bold" }}>{item.statusBadge}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center" }}>
+                      Tidak ada log presensi siswa.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )
+        )}
+      </div>
+
+      <PrintSignature />
     </>
   );
 };

@@ -18,6 +18,7 @@ import Pagination from "../../components/common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 export default function ResiduData() {
   const { type } = useParams<{ type: string }>();
@@ -287,7 +288,22 @@ export default function ResiduData() {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   // Helper to render value or "Kosong" badge
@@ -311,7 +327,14 @@ export default function ResiduData() {
         title={`Residu ${getTypeName()} | SIMAK`}
         description={`Halaman Analisa Residu Data ${getTypeName()}`}
       />
-      <div className="space-y-6 font-outfit">
+
+      <PrintReportLayout
+        title={isDetailView ? `LAPORAN DETAIL RESIDU DATA ${getTypeName().toUpperCase()} - ${selectedSchool?.nama}` : `LAPORAN REKAPITULASI RESIDU DATA - ${getTypeName()}`}
+        sekolahFilter={isDetailView ? selectedSchoolId || "all" : "all"}
+        schools={schools}
+      />
+
+      <div className="space-y-6 font-outfit no-print">
         {/* Header Section */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print shadow-sm">
           <div>
@@ -675,6 +698,123 @@ export default function ResiduData() {
           )}
         </div>
       </div>
+
+      {/* Print Table (Only Visible in Print) */}
+      <div className="print-only">
+        {isDetailView ? (
+          /* Detail School Residu Print View */
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th>JK</th>
+                {type === "peserta-didik" && (
+                  <>
+                    <th>NIPD / NIS</th>
+                    <th>NISN</th>
+                    <th>Rombel</th>
+                  </>
+                )}
+                {type === "guru" && (
+                  <th>NUPTK</th>
+                )}
+                <th>NIK</th>
+                <th>Tempat Lahir</th>
+                <th>Tanggal Lahir</th>
+                <th>Ibu Kandung</th>
+                <th>Desa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedSchoolResiduItems.length > 0 ? (
+                selectedSchoolResiduItems.map((item, index) => {
+                  const birthDateStr = item.identitas?.tanggal_lahir
+                    ? new Date(item.identitas.tanggal_lahir).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : null;
+                  const getVal = (val: any) => {
+                    if (val === null || val === undefined || String(val).trim() === "") {
+                      return "[KOSONG]";
+                    }
+                    return val;
+                  };
+
+                  return (
+                    <tr key={item.identitas?.id || index}>
+                      <td style={{ textAlign: "center" }}>{index + 1}</td>
+                      <td style={{ fontWeight: "bold" }}>{item.identitas?.nama}</td>
+                      <td style={{ textAlign: "center" }}>{getVal(item.identitas?.jenis_kelamin)}</td>
+                      {type === "peserta-didik" && (
+                        <>
+                          <td>{getVal(item.identitas?.nipd || item.nipd || item.akademik?.nipd || item.identitas?.nis || item.nis || item.akademik?.nis)}</td>
+                          <td>{getVal(item.identitas?.nisn)}</td>
+                          <td>{getVal(item.akademik?.nama_rombel || item.akademik?.rombel)}</td>
+                        </>
+                      )}
+                      {type === "guru" && (
+                        <td>{getVal(item.identitas?.nuptk)}</td>
+                      )}
+                      <td>{getVal(item.identitas?.nik)}</td>
+                      <td>{getVal(item.identitas?.tempat_lahir)}</td>
+                      <td style={{ textAlign: "center" }}>{birthDateStr ? birthDateStr : "[KOSONG]"}</td>
+                      <td>{getVal(item.identitas?.ibu_kandung || item.ibu_kandung || item.data_pendukung?.ibu_kandung)}</td>
+                      <td>{getVal(item.identitas?.desa || item.desa || item.data_pendukung?.desa)}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={type === "peserta-didik" ? 11 : 9} style={{ textAlign: "center" }}>
+                    Tidak ada data residu ditemukan.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        ) : (
+          /* Summary of Schools Print View */
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>NPSN</th>
+                <th>Nama Sekolah</th>
+                <th>Jumlah Residu</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSchools.length > 0 ? (
+                filteredSchools.map((school, index) => {
+                  return (
+                    <tr key={school.sekolah_id || index}>
+                      <td style={{ textAlign: "center" }}>{index + 1}</td>
+                      <td style={{ fontFamily: "monospace" }}>{school.npsn}</td>
+                      <td style={{ fontWeight: "bold" }}>{school.nama}</td>
+                      <td style={{ textAlign: "center", fontWeight: "bold" }}>{school.residuCount} Data</td>
+                      <td style={{ textAlign: "center" }}>
+                        {school.residuCount > 0 ? "Butuh Perbaikan" : "Lengkap"}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center" }}>
+                    Tidak ada data sekolah ditemukan.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <PrintSignature />
     </>
   );
 }

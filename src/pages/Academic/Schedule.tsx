@@ -7,11 +7,39 @@ import { DownloadIcon, PrinterIcon, PlusIcon, SearchIcon } from "../../icons";
 import Swal from "sweetalert2";
 import ScheduleTable, { scheduleData } from "../../components/academic/ScheduleTable";
 import { exportToExcel } from "../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 export default function Schedule() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dayFilter, setDayFilter] = useState("all");
   const [classFilter, setClassFilter] = useState("all");
+
+  const filteredSchedules = scheduleData.filter(item => {
+    const matchesSearch = item.mataPelajaran.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          item.guru.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDay = dayFilter === "all" || item.hari === dayFilter;
+    const matchesClass = classFilter === "all" || item.kelas === classFilter;
+    return matchesSearch && matchesDay && matchesClass;
+  });
+
+  const handlePrint = () => {
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
+  };
 
   const dayOptions = [
     { value: "all", label: "Semua Hari" },
@@ -86,7 +114,17 @@ export default function Schedule() {
         title="SIMAK | Jadwal Pelajaran"
         description="Halaman pengelolaan jadwal pelajaran sekolah"
       />
-      <div className="space-y-6">
+
+      <PrintReportLayout
+        title="LAPORAN JADWAL PELAJARAN SEKOLAH"
+        sekolahFilter="all"
+        extraFilters={[
+          { label: "Hari", value: dayFilter === "all" ? "Semua Hari" : dayFilter },
+          { label: "Kelas", value: classFilter === "all" ? "Semua Kelas" : classFilter }
+        ]}
+      />
+
+      <div className="space-y-6 no-print">
         {/* Header Actions */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -111,6 +149,7 @@ export default function Schedule() {
                 variant="outline" 
                 size="sm" 
                 className="text-gray-700 border-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-800 min-w-[110px]"
+                onClick={handlePrint}
             >
               <PrinterIcon className="mr-2 h-4 w-4" />
               Cetak
@@ -164,6 +203,44 @@ export default function Schedule() {
           classFilter={classFilter}
         />
       </div>
+
+      {/* Print Table (Only Visible in Print) */}
+      <div className="print-only">
+        <table>
+          <thead>
+            <tr>
+              <th>Hari</th>
+              <th>Jam</th>
+              <th>Mata Pelajaran</th>
+              <th>Guru Pengampu</th>
+              <th>Ruang</th>
+              <th>Kelas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredSchedules.length > 0 ? (
+              filteredSchedules.map((item, index) => (
+                <tr key={index}>
+                  <td style={{ textAlign: "center", fontWeight: "bold" }}>{item.hari}</td>
+                  <td style={{ textAlign: "center" }}>{item.jam}</td>
+                  <td>{item.mataPelajaran}</td>
+                  <td style={{ fontWeight: "bold" }}>{item.guru}</td>
+                  <td style={{ textAlign: "center" }}>{item.ruang}</td>
+                  <td style={{ textAlign: "center" }}>{item.kelas}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center" }}>
+                  Tidak ada jadwal pelajaran.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <PrintSignature />
     </>
   );
 }

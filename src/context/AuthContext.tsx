@@ -98,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setAuthData = (userData: User) => {
+    localStorage.setItem('user_data', JSON.stringify(userData));
     setUser(userData);
   };
 

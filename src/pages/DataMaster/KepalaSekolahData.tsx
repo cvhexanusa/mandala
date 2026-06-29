@@ -17,6 +17,7 @@ import Badge from "../../components/ui/badge/Badge";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 export default function KepalaSekolahData() {
   const navigate = useNavigate();
@@ -150,7 +151,22 @@ export default function KepalaSekolahData() {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   return (
@@ -159,7 +175,14 @@ export default function KepalaSekolahData() {
         title="Kepala Sekolah | SIMAK Admin Panel"
         description="Kepala Sekolah management page"
       />
-      <div className="space-y-6">
+
+      <PrintReportLayout
+        title="LAPORAN DATA INDUK KEPALA SEKOLAH"
+        sekolahFilter={sekolahFilter}
+        schools={schools}
+      />
+
+      <div className="space-y-6 no-print">
         {/* Header Section */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
           <div>
@@ -287,6 +310,52 @@ export default function KepalaSekolahData() {
           </div>
         </div>
       </div>
+
+      {/* Print Table (Only Visible in Print) */}
+      <div className="print-only">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama Kepala Sekolah</th>
+              <th>JK</th>
+              <th>Nama Instansi / Sekolah</th>
+              <th>NUPTK</th>
+              <th>Status Kepegawaian</th>
+              <th>Nomor Telepon</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredHeadmasters.length > 0 ? (
+              filteredHeadmasters.map((item, index) => {
+                const school = schools.find((s) => s.sekolah_id === item.identitas?.sekolah_id);
+                const schoolName = school ? school.nama : item.identitas?.sekolah_id || "-";
+                const telp = item.data_pendukung?.no_hp || item.no_hp || item.identitas?.no_hp || "-";
+                
+                return (
+                  <tr key={item.identitas?.id || index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontWeight: "bold" }}>{item.identitas?.nama || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{item.identitas?.jenis_kelamin || "-"}</td>
+                    <td>{schoolName}</td>
+                    <td>{item.identitas?.nuptk || "-"}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold" }}>{item.kepegawaian?.status_kepegawaian || "-"}</td>
+                    <td>{telp}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center" }}>
+                  Tidak ada data kepala sekolah ditemukan.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <PrintSignature />
     </>
   );
 }

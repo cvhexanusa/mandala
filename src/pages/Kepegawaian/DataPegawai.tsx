@@ -6,7 +6,7 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
-import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, CopyIcon } from "../../icons";
+import { PencilIcon, PlusIcon, EyeIcon, CopyIcon, ArrowRightIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
@@ -49,7 +49,7 @@ interface DataPegawaiProps {
 }
 
 export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiProps) {
-  const { user } = useAuth();
+  const { user, setAuthData } = useAuth();
   const isSuperAdmin = user?.role?.toLowerCase() === "super admin" || user?.role?.toLowerCase() === "super-admin" || (user as any)?.jabatan === 0;
   const isLocked = !isSuperAdmin;
 
@@ -222,6 +222,20 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
 
       if (editingData) {
         await dapodikService.updatePegawai(editingData.pegawai_id, payload);
+
+        // Update user context if they are editing themselves
+        const isSelf = user && (user.id === editingData.pegawai_id || (user as unknown as Record<string, string>).pegawai_id === editingData.pegawai_id);
+        if (isSelf) {
+          const updatedUser = {
+            ...user,
+            nama: payload.nama_lengkap,
+            email: payload.email,
+            nip: payload.nip,
+            foto: payload.foto || user.foto
+          };
+          setAuthData(updatedUser);
+        }
+
         Swal.fire({
           icon: "success",
           title: "Berhasil",
@@ -269,25 +283,49 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleRegisterKeluar = (id: string) => {
     Swal.fire({
-      title: "Hapus Pegawai?",
-      text: "Data yang dihapus tidak dapat dikembalikan!",
+      title: "Registrasi Keluar Pegawai?",
+      text: "Pegawai ini akan dinonaktifkan dan dipindahkan ke daftar Pegawai Non-Aktif.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Ya, Hapus!",
+      confirmButtonText: "Ya, Register Keluar!",
       cancelButtonText: "Batal"
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await dapodikService.deletePegawai(id);
-          Swal.fire("Terhapus!", "Data pegawai telah dihapus.", "success");
+          await dapodikService.updatePegawai(id, { aktif: false });
+          Swal.fire("Berhasil!", "Pegawai telah berhasil diregistrasi keluar (non-aktif).", "success");
           fetchData();
         } catch (error: any) {
-          console.error("Delete error:", error);
-          Swal.fire("Error", error.response?.data?.message || "Gagal menghapus data", "error");
+          console.error("Deactivate error:", error);
+          Swal.fire("Error", error.response?.data?.message || "Gagal memproses registrasi keluar", "error");
+        }
+      }
+    });
+  };
+
+  const handleRestore = (id: string) => {
+    Swal.fire({
+      title: "Batalkan Registrasi Keluar?",
+      text: "Pegawai ini akan diaktifkan kembali dan dimasukkan ke daftar pegawai aktif.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, Aktifkan Kembali!",
+      cancelButtonText: "Batal"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await dapodikService.updatePegawai(id, { aktif: true });
+          Swal.fire("Berhasil!", "Pegawai telah diaktifkan kembali.", "success");
+          fetchData();
+        } catch (error: any) {
+          console.error("Restore error:", error);
+          Swal.fire("Error", error.response?.data?.message || "Gagal mengaktifkan kembali pegawai", "error");
         }
       }
     });
@@ -383,13 +421,23 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                           >
                             <PencilIcon className="size-4" />
                           </button>
-                          <button 
-                            onClick={() => handleDelete(item.pegawai_id)}
-                            className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
-                            title="Hapus"
-                          >
-                            <TrashBinIcon className="size-4" />
-                          </button>
+                          {showOnlyInactive ? (
+                            <button 
+                              onClick={() => handleRestore(item.pegawai_id)}
+                              className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors"
+                              title="Batalkan Registrasi Keluar"
+                            >
+                              <ArrowRightIcon className="size-4 rotate-180" />
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => handleRegisterKeluar(item.pegawai_id)}
+                              className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
+                              title="Register Keluar"
+                            >
+                              <ArrowRightIcon className="size-4" />
+                            </button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -7,10 +7,36 @@ import { DownloadIcon, PrinterIcon, PlusIcon, SearchIcon } from "../../icons";
 import Swal from "sweetalert2";
 import AcademicCalendarTable, { calendarData } from "../../components/academic/AcademicCalendarTable";
 import { exportToExcel } from "../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 export default function AcademicCalendar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const filteredCalendar = calendarData.filter(item => {
+    const matchesSearch = item.kegiatan.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || item.kategori === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handlePrint = () => {
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
+  };
 
   const categoryOptions = [
     { value: "all", label: "Semua Kategori" },
@@ -32,15 +58,9 @@ export default function AcademicCalendar() {
   };
 
   const handleExport = () => {
-    const filtered = calendarData.filter(item => {
-      const matchesSearch = item.kegiatan.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === "all" || item.kategori === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-
     Swal.fire({
       title: "Export Kalender Akademik?",
-      text: `Sebanyak ${filtered.length} kegiatan akan diunduh dalam format Excel.`,
+      text: `Sebanyak ${filteredCalendar.length} kegiatan akan diunduh dalam format Excel.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -50,7 +70,7 @@ export default function AcademicCalendar() {
     }).then((result) => {
       if (result.isConfirmed) {
         const headers = ["Tanggal", "Kegiatan", "Kategori", "Keterangan"];
-        const rows = filtered.map((item) => [
+        const rows = filteredCalendar.map((item) => [
           item.tanggal,
           item.kegiatan,
           item.kategori,
@@ -73,7 +93,16 @@ export default function AcademicCalendar() {
         title="SIMAK | Kalender Akademik"
         description="Halaman pengelolaan agenda akademik sekolah"
       />
-      <div className="space-y-6">
+
+      <PrintReportLayout
+        title="LAPORAN KALENDER AKADEMIK SEKOLAH"
+        sekolahFilter="all"
+        extraFilters={[
+          { label: "Kategori", value: categoryFilter === "all" ? "Semua Kategori" : categoryFilter }
+        ]}
+      />
+
+      <div className="space-y-6 no-print">
         {/* Header Actions */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -98,6 +127,7 @@ export default function AcademicCalendar() {
                 variant="outline" 
                 size="sm" 
                 className="text-gray-700 border-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-800 min-w-[110px]"
+                onClick={handlePrint}
             >
               <PrinterIcon className="mr-2 h-4 w-4" />
               Cetak Kalender
@@ -144,6 +174,42 @@ export default function AcademicCalendar() {
           categoryFilter={categoryFilter}
         />
       </div>
+
+      {/* Print Table (Only Visible in Print) */}
+      <div className="print-only">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Tanggal</th>
+              <th>Kegiatan</th>
+              <th>Kategori</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCalendar.length > 0 ? (
+              filteredCalendar.map((item, index) => (
+                <tr key={index}>
+                  <td style={{ textAlign: "center" }}>{index + 1}</td>
+                  <td style={{ textAlign: "center", fontWeight: "bold" }}>{item.tanggal}</td>
+                  <td style={{ fontWeight: "bold" }}>{item.kegiatan}</td>
+                  <td style={{ textAlign: "center" }}>{item.kategori}</td>
+                  <td>{item.keterangan || "-"}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center" }}>
+                  Tidak ada agenda/kegiatan.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <PrintSignature />
     </>
   );
 }

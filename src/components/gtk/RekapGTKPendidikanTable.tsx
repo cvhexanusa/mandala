@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { dapodikService } from "../../services/dapodikService";
+import { formatPendidikan } from "../../utils/dapodikUtils";
 import {
   Table,
   TableBody,
@@ -38,7 +39,7 @@ export default function RekapGTKPendidikanTable({ sekolahId }: { sekolahId?: str
           if (Array.isArray(responseData) && responseData.length > 0) {
             mappedData = responseData.map((item: any, index: number) => ({
               id: item.id || index,
-              pendidikan: item.pendidikan || item.nama_pendidikan || item.jenjang || "-",
+              pendidikan: formatPendidikan(item.pendidikan || item.nama_pendidikan || item.jenjang),
               lakiLaki: item.lakiLaki ?? item.laki_laki ?? item.L ?? 0,
               perempuan: item.perempuan ?? item.P ?? 0,
               totalJK: item.totalJK ?? ( (item.laki_laki||0) + (item.perempuan||0) ),
@@ -71,7 +72,7 @@ export default function RekapGTKPendidikanTable({ sekolahId }: { sekolahId?: str
           if (allGTK.length > 0) {
             const groups: Record<string, RekapGTKPendidikan> = {};
             allGTK.forEach((gtk: any) => {
-              const pendidikan = gtk.kepegawaian?.pendidikan_terakhir || gtk.identitas?.pendidikan_terakhir || "S1";
+              const pendidikan = formatPendidikan(gtk.kepegawaian?.pendidikan_terakhir || gtk.identitas?.pendidikan_terakhir || gtk.pendidikan_terakhir || "S1");
               const jk = (gtk.identitas?.jenis_kelamin || "").toUpperCase();
               const status = (gtk.kepegawaian?.status_kepegawaian || "").toUpperCase();
               const isAsn = status === "PNS" || status === "PPPK";

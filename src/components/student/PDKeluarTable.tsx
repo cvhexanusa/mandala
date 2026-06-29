@@ -54,13 +54,13 @@ export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm,
 
         if (result.status === 'success' || result.success === true) {
           fetchedData = result.data || [];
-          totalCount = result.meta?.total || result.total || fetchedData.length;
+          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
         } else if (Array.isArray(result)) {
           fetchedData = result;
           totalCount = result.length;
         } else if (result.data && Array.isArray(result.data)) {
           fetchedData = result.data;
-          totalCount = result.total || fetchedData.length;
+          totalCount = result.meta?.total_data || result.total || fetchedData.length;
         }
 
         setData(fetchedData);

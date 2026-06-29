@@ -17,6 +17,8 @@ import Pagination from "../../components/common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
+import { formatPendidikan } from "../../utils/dapodikUtils";
 
 interface PendidikanGTKDataProps {
   type?: "guru" | "tendik";
@@ -99,7 +101,7 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
       let anomaliCount = 0;
 
       schoolGtk.forEach((item) => {
-        const edu = (item.kepegawaian?.pendidikan_terakhir || item.identitas?.pendidikan_terakhir || "").toUpperCase();
+        const edu = formatPendidikan(item.kepegawaian?.pendidikan_terakhir || item.identitas?.pendidikan_terakhir || item.pendidikan_terakhir || "").toUpperCase();
         
         const isBelowS1 = !(
           edu.includes("S1") || 
@@ -221,7 +223,22 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   return (
@@ -230,7 +247,14 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
         title={type === "guru" ? "Pendidikan Guru | SIMAK" : type === "tendik" ? "Pendidikan Tendik | SIMAK" : "Pendidikan GTK | SIMAK"}
         description={type === "guru" ? "Analisa Kualifikasi Pendidikan Guru" : type === "tendik" ? "Analisa Kualifikasi Pendidikan Tendik" : "Analisa Kualifikasi Pendidikan GTK"}
       />
-      <div className="space-y-6 font-outfit">
+
+      <PrintReportLayout
+        title={type === "guru" ? "LAPORAN REKAPITULASI KUALIFIKASI PENDIDIKAN GURU" : type === "tendik" ? "LAPORAN REKAPITULASI KUALIFIKASI PENDIDIKAN TENDIK" : "LAPORAN REKAPITULASI KUALIFIKASI PENDIDIKAN GTK"}
+        sekolahFilter="all"
+        schools={schools}
+      />
+
+      <div className="space-y-6 font-outfit no-print">
         {/* Header Section */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
           <div>
@@ -385,6 +409,51 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
           )}
         </div>
       </div>
+
+      {/* Print Table (Only Visible in Print - renders all items without pagination) */}
+      <div className="print-only">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>NPSN</th>
+              <th>Nama Sekolah</th>
+              <th>Wilayah</th>
+              <th>{type === "guru" ? "Total Guru" : type === "tendik" ? "Total Tendik" : "Total GTK"}</th>
+              <th>Status Kualifikasi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredSchools.length > 0 ? (
+              filteredSchools.map((school, index) => {
+                let statusStr = "Sesuai";
+                if (type === "guru" && school.anomaliCount > 0) {
+                  statusStr = `${school.anomaliCount} Guru di bawah S1`;
+                }
+
+                return (
+                  <tr key={school.sekolah_id || index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontFamily: "monospace" }}>{school.npsn}</td>
+                    <td style={{ fontWeight: "bold" }}>{school.nama}</td>
+                    <td>{school.wilayah}</td>
+                    <td style={{ textAlign: "center", fontWeight: "bold" }}>{school.totalGtk}</td>
+                    <td style={{ textAlign: "center" }}>{statusStr}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center" }}>
+                  Tidak ada data kualifikasi pendidikan sekolah ditemukan.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <PrintSignature />
     </>
   );
 }

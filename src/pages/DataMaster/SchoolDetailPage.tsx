@@ -14,6 +14,7 @@ import {
 } from "../../icons";
 import ComponentCard from "../../components/common/ComponentCard";
 import Badge from "../../components/ui/badge/Badge";
+import { formatJenjang } from "../../utils/dapodikUtils";
 
 export default function SchoolDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,16 +29,18 @@ export default function SchoolDetailPage() {
       if (!id) return;
       setLoading(true);
       try {
-        // AMBIL DETAIL, SUMMARY, DAN GTK SECARA PARALEL
-        const [detailRes, summaryRes, gtkRes] = await Promise.all([
+        // AMBIL DETAIL, SUMMARY, GTK, DAN PD AKTIF SECARA PARALEL
+        const [detailRes, summaryRes, gtkRes, pdRes] = await Promise.all([
             mandalaService.getSchoolDetail(id),
             mandalaService.getSchoolSummary(id).catch(() => null),
-            dapodikService.getGTK(50, "", 1, undefined, "aktif", id).catch(() => null)
+            dapodikService.getGTK(50, "", 1, undefined, "aktif", id).catch(() => null),
+            dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, id).catch(() => null)
         ]);
         
         console.log("RAW Detail Response:", detailRes);
         console.log("RAW Summary Response:", summaryRes);
         console.log("RAW GTK Response:", gtkRes);
+        console.log("RAW PD Response:", pdRes);
         
         let detailData = null;
         // Ekstraksi Detail
@@ -66,13 +69,19 @@ export default function SchoolDetailPage() {
         }
         setPrincipal(foundPrincipal);
 
+        // Ekstraksi Jumlah Siswa Aktif
+        let totalActiveStudents = 0;
+        if (pdRes) {
+          totalActiveStudents = pdRes.meta?.total_data || pdRes.meta?.total || pdRes.total || (pdRes.data ? pdRes.data.length : 0);
+        }
+
         if (detailData && typeof detailData === 'object') {
           // GABUNGKAN DATA (Prioritaskan statistik dari summary jika tersedia)
           const mergedData = {
             ...detailData,
             // Jika di detail data tidak ada statistik, ambil dari summary
             total_gtk: detailData.total_gtk || summaryData?.jumlah_guru || summaryData?.total_gtk || detailData.jumlah_guru || 0,
-            total_siswa: detailData.total_siswa || summaryData?.jumlah_siswa || summaryData?.total_siswa || detailData.jumlah_siswa || 0,
+            total_siswa: totalActiveStudents || detailData.total_siswa || summaryData?.jumlah_siswa || summaryData?.total_siswa || detailData.jumlah_siswa || 0,
             // Tambahkan field statistik lain dari summary jika ada
             statistik: {
                 ...(detailData.statistik || {}),
@@ -164,7 +173,7 @@ export default function SchoolDetailPage() {
               <div className="space-y-5">
                 <div className="flex flex-col gap-1">
                     <span className="text-xs text-gray-400 uppercase font-medium tracking-wider">Bentuk Pendidikan</span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-white">{data.bentuk_pendidikan_id_str || data.bentuk_pendidikan_is_str || "-"}</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-white">{formatJenjang(data)}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                     <span className="text-xs text-gray-400 uppercase font-medium tracking-wider">Status Operasional</span>
@@ -204,7 +213,7 @@ export default function SchoolDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
                     <DetailRow label="Nama Resmi Sekolah" value={data.nama} icon={<SchoolIcon className="size-4 text-brand-500" />} />
                     <DetailRow label="Nomor Pokok Sekolah Nasional (NPSN)" value={data.npsn} icon={<BoxIcon className="size-4 text-brand-500" />} />
-                    <DetailRow label="Jenjang Pendidikan" value={data.bentuk_pendidikan_id_str || data.bentuk_pendidikan_is_str} icon={<GridIcon className="size-4 text-brand-500" />} />
+                    <DetailRow label="Jenjang Pendidikan" value={formatJenjang(data)} icon={<GridIcon className="size-4 text-brand-500" />} />
                     <DetailRow label="Kepala Sekolah" value={principal} icon={<UserIcon className="size-4 text-brand-500" />} />
                     <DetailRow label="Email Instansi" value={data.email || "-"} icon={<Badge color="light" size="sm">@</Badge>} />
                     <DetailRow label="Website Sekolah" value={data.website || "-"} icon={<GridIcon className="size-4 text-brand-500" />} />

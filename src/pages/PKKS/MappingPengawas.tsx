@@ -11,6 +11,7 @@ import { mandalaService, MandalaSchool } from "../../services/mandalaService";
 import { dapodikService } from "../../services/dapodikService";
 import ComponentCard from "../../components/common/ComponentCard";
 import Badge from "../../components/ui/badge/Badge";
+import { formatJenjang } from "../../utils/dapodikUtils";
 
 interface MappingPengawas {
   mapping_pengawas_id: string;
@@ -88,7 +89,7 @@ export default function MappingPengawasPage() {
   const jenjangOptions = useMemo(() => {
     const uniqueJenjang = new Set<string>();
     schoolItems.forEach(s => {
-      const val = s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str;
+      const val = formatJenjang(s);
       if (val) uniqueJenjang.add(val);
     });
     return Array.from(uniqueJenjang).sort().map(j => ({ value: j, label: j }));
@@ -209,7 +210,7 @@ export default function MappingPengawasPage() {
   // Filter schools based on selected Jenjang and Search Term
   const filteredSchools = useMemo(() => {
     return schoolItems.filter(s => {
-      const matchesJenjang = !selectedJenjang || (s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str) === selectedJenjang;
+      const matchesJenjang = !selectedJenjang || formatJenjang(s) === selectedJenjang;
       const matchesSearch = !schoolSearch || 
         s.nama.toLowerCase().includes(schoolSearch.toLowerCase()) || 
         s.npsn.includes(schoolSearch);

@@ -6,6 +6,7 @@ import PageMeta from '../../components/common/PageMeta';
 import { mandalaService, MandalaSchool } from '../../services/mandalaService';
 import Select from '../../components/form/Select';
 import Badge from '../../components/ui/badge/Badge';
+import { formatJenjang } from '../../utils/dapodikUtils';
 
 // Fix Leaflet's default icon issue with Webpack/Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -41,7 +42,7 @@ const pinIcons = {
 };
 
 const getSchoolIcon = (school: MandalaSchool) => {
-  const bentuk = (school.bentuk_pendidikan_id_str || school.bentuk_pendidikan_is_str || '').toLowerCase();
+  const bentuk = formatJenjang(school).toLowerCase();
   if (bentuk.includes('sma')) return pinIcons.sma;
   if (bentuk.includes('smk')) return pinIcons.smk;
   if (bentuk.includes('slb')) return pinIcons.slb;
@@ -211,7 +212,7 @@ export default function SpasialData() {
           ...uniqueStatus.map(val => ({ value: val as string, label: val as string }))
         ]);
 
-        const uniqueJenjang = [...new Set(validGeoSchools.map(s => s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str))].filter(Boolean);
+        const uniqueJenjang = [...new Set(validGeoSchools.map(s => formatJenjang(s)))].filter(Boolean);
         setJenjangOptions([
           { value: "all", label: "Semua Jenjang" },
           ...uniqueJenjang.map(val => ({ value: val as string, label: val as string }))
@@ -241,7 +242,7 @@ export default function SpasialData() {
     let match = true;
     if (kabKotaFilter !== "all" && (s.kabupaten_kota || s.kabupate_kota) !== kabKotaFilter) match = false;
     if (statusFilter !== "all" && s.status_sekolah !== statusFilter) match = false;
-    if (jenjangFilter !== "all" && (s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str) !== jenjangFilter) match = false;
+    if (jenjangFilter !== "all" && formatJenjang(s) !== jenjangFilter) match = false;
     return match;
   });
 
@@ -304,7 +305,7 @@ export default function SpasialData() {
                       className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-gray-800/50 last:border-b-0 transition flex flex-col"
                     >
                       <span className="font-semibold text-sm text-gray-800 dark:text-white/90 line-clamp-1">{school.nama}</span>
-                      <span className="text-xs text-gray-400 mt-0.5">NPSN: {school.npsn} • {school.bentuk_pendidikan_id_str || "Jenjang"}</span>
+                      <span className="text-xs text-gray-400 mt-0.5">NPSN: {school.npsn} • {formatJenjang(school)}</span>
                     </button>
                   ))}
                 </div>
@@ -553,7 +554,7 @@ export default function SpasialData() {
                       {activePopupSchool.status_sekolah || "Status"}
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600">
-                      {activePopupSchool.bentuk_pendidikan_id_str || activePopupSchool.bentuk_pendidikan_is_str || "Jenjang"}
+                      {formatJenjang(activePopupSchool)}
                     </span>
                   </div>
 
@@ -595,7 +596,7 @@ export default function SpasialData() {
                           {school.status_sekolah || "Status"}
                         </span>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600">
-                          {school.bentuk_pendidikan_id_str || school.bentuk_pendidikan_is_str || "Jenjang"}
+                          {formatJenjang(school)}
                         </span>
                       </div>
 

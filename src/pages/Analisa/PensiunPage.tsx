@@ -19,6 +19,7 @@ import { dapodikService } from "../../services/dapodikService";
 import { getFotoUrl } from "../../utils/image";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 interface GTKItem {
   identitas?: {
@@ -322,7 +323,22 @@ export default function PensiunPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   return (
@@ -448,15 +464,14 @@ export default function PensiunPage() {
         {/* Table Content Card */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 print-area shadow-sm">
           {/* Printable Header Section (Only visible during print) */}
-          <div className="print-only mb-6 border-b pb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">LAPORAN ANALITIK MASA PENSIUN GTK</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Satuan Pendidikan: <span className="font-semibold">{sekolahFilter === "all" ? "Semua Sekolah" : getSchoolName(sekolahFilter)}</span>
-            </p>
-            <p className="text-xs text-gray-550 dark:text-gray-500 mt-1">
-              Dicetak pada: {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-            </p>
-          </div>
+          <PrintReportLayout
+            title="LAPORAN ANALITIK MASA PENSIUN GTK"
+            sekolahFilter={sekolahFilter}
+            schools={schools}
+            extraFilters={[
+              { label: "Status Kepegawaian", value: statusFilter === "all" ? "PNS & PPPK/P3K" : statusFilter.toUpperCase() }
+            ]}
+          />
 
           {/* Rows Per Page Selector */}
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between no-print">
@@ -472,7 +487,8 @@ export default function PensiunPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+          {/* Screen Table (Hidden in Print) */}
+          <div className="no-print overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto custom-scrollbar relative">
               {loading && (
                 <div className="absolute inset-0 bg-white/50 dark:bg-black/50 z-10 flex items-center justify-center min-h-[200px]">
@@ -594,9 +610,83 @@ export default function PensiunPage() {
             </div>
           </div>
 
+          {/* Print Table (Only Visible in Print - renders all items without pagination) */}
+          <div className="print-only">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>NIP</th>
+                  <th>NUPTK</th>
+                  <th>Satuan Pendidikan</th>
+                  <th>Status / Kepegawaian</th>
+                  <th>Usia</th>
+                  <th>Status Pensiun</th>
+                  <th>Keterangan Analitik</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGTKList.length > 0 ? (
+                  filteredGTKList.map((item, index) => {
+                    const birthDateStr = item.identitas?.tanggal_lahir
+                      ? new Date(item.identitas.tanggal_lahir).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "-";
+                    let statusLabel = "";
+                    if (item.statusPensiun === "harus_pensiun") statusLabel = "Harus Pensiun";
+                    else if (item.statusPensiun === "menuju_pensiun") statusLabel = "Menuju Pensiun";
+                    else if (item.statusPensiun === "persiapan") statusLabel = "Persiapan Pensiun";
+                    else if (item.statusPensiun === "pra_persiapan") statusLabel = "Pra-Persiapan";
+
+                    let reasonLabel = "";
+                    if (item.statusPensiun === "harus_pensiun") {
+                      reasonLabel = `Usia telah mencapai ${item.age} tahun. Harap segera proses administrasi pensiun untuk menghindari anomali data kepegawaian aktif.`;
+                    } else if (item.statusPensiun === "menuju_pensiun") {
+                      reasonLabel = `Sisa ${getRemainingTimeText(item.age, item.months)} menuju usia 60 tahun. Persiapkan berkas administrasi pensiun sekarang.`;
+                    } else if (item.statusPensiun === "persiapan") {
+                      reasonLabel = `Memasuki masa persiapan pensiun. Sisa ${getRemainingTimeText(item.age, item.months)} lagi.`;
+                    } else if (item.statusPensiun === "pra_persiapan") {
+                      reasonLabel = `Masa pra-persiapan pensiun awal. Sisa ${getRemainingTimeText(item.age, item.months)} lagi.`;
+                    }
+
+                    return (
+                      <tr key={item.identitas?.id || index}>
+                        <td style={{ textAlign: "center" }}>{index + 1}</td>
+                        <td style={{ fontWeight: "bold" }}>{item.identitas?.nama}</td>
+                        <td>{item.identitas?.nip || "-"}</td>
+                        <td>{item.identitas?.nuptk || "-"}</td>
+                        <td>{getSchoolName(item.identitas?.sekolah_id)}</td>
+                        <td>
+                          {item.kepegawaian?.status_kepegawaian || "-"} - {item.kepegawaian?.jenis_ptk || "-"}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {item.age} Th {item.months} Bln ({birthDateStr})
+                        </td>
+                        <td style={{ textAlign: "center", fontWeight: "bold" }}>
+                          {statusLabel}
+                        </td>
+                        <td>{reasonLabel}</td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={9} style={{ textAlign: "center" }}>
+                      Tidak ada data GTK (PNS & PPPK) yang memasuki masa pensiun.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
           {/* Pagination Controls */}
           {!loading && filteredGTKList.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-6 no-print">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -604,6 +694,8 @@ export default function PensiunPage() {
               />
             </div>
           )}
+
+          <PrintSignature />
         </div>
       </div>
     </>

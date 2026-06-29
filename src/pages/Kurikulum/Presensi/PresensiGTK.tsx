@@ -21,6 +21,7 @@ import Badge from "../../../components/ui/badge/Badge";
 import { SearchIcon, SchoolIcon, GroupIcon, PrinterIcon, DownloadIcon, EyeIcon } from "../../../icons";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
+import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -482,7 +483,22 @@ const PresensiGTK: React.FC = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   return (
@@ -522,6 +538,15 @@ const PresensiGTK: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      <PrintReportLayout
+        title="LAPORAN HARIAN KEPATUHAN PRESENSI GURU & TENAGA KEPENDIDIKAN"
+        sekolahFilter={sekolahFilter}
+        schools={schools}
+        extraFilters={[
+          { label: "Tanggal Pemantauan", value: selectedDate ? new Date(selectedDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-" }
+        ]}
+      />
 
       <div className="space-y-6">
         {/* Filters Panel */}
@@ -595,7 +620,7 @@ const PresensiGTK: React.FC = () => {
                           <TableCell isHeader className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase bg-brand-500/5">Kehadiran GTK (%)</TableCell>
                           <TableCell isHeader className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase bg-emerald-500/5">Kehadiran Siswa (%)</TableCell>
                           <TableCell isHeader className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Status</TableCell>
-                          <TableCell isHeader className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Aksi</TableCell>
+                          <TableCell isHeader className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase no-print">Aksi</TableCell>
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -628,7 +653,7 @@ const PresensiGTK: React.FC = () => {
                                   <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">{sch.siswa.persentase}%</span>
                                 </TableCell>
                                 <TableCell className="px-4 py-3 text-center">{statusBadge}</TableCell>
-                                <TableCell className="px-4 py-3 text-right">
+                                <TableCell className="px-4 py-3 text-right no-print">
                                   <button
                                     onClick={() => handleInspect(sch)}
                                     className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
@@ -656,6 +681,7 @@ const PresensiGTK: React.FC = () => {
           </div>
         )}
       </div>
+      <PrintSignature />
     </>
   );
 };

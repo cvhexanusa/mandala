@@ -5,6 +5,7 @@ import Select from "../../components/form/Select";
 import { SearchIcon } from "../../icons";
 import SchoolTable from "../../components/school/SchoolTable";
 import { dapodikService } from "../../services/dapodikService";
+import { formatJenjang } from "../../utils/dapodikUtils";
 
 export default function SchoolData() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +42,7 @@ export default function SchoolData() {
           const uniqueStatus = [...new Set(schools.map((s: any) => s.status_sekolah))].filter(Boolean).sort();
           setStatusOptions([{ value: "all", label: "Status" }, ...uniqueStatus.map(s => ({ value: s, label: s }))]);
 
-          const uniqueJenjang = [...new Set(schools.map((s: any) => s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str))].filter(Boolean).sort();
+          const uniqueJenjang = [...new Set(schools.map((s: any) => formatJenjang(s)))].filter(Boolean).sort();
           setJenjangOptions([{ value: "all", label: "Jenjang" }, ...uniqueJenjang.map(j => ({ value: j, label: j }))]);
         }
       } catch (err) {

@@ -11,6 +11,7 @@ import Pagination from "../common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import { EyeIcon } from "../../icons";
 import { useNavigate, useParams } from "react-router";
+import { formatJenjang } from "../../utils/dapodikUtils";
 
 interface SchoolTableProps {
   searchTerm: string;
@@ -62,7 +63,7 @@ export default function SchoolTable({
           filtered = filtered.filter((s: any) => String(s.status_sekolah) === statusFilter);
         }
         if (jenjangFilter !== "all") {
-          filtered = filtered.filter((s: any) => (s.bentuk_pendidikan_id_str || s.bentuk_pendidikan_is_str) === jenjangFilter);
+          filtered = filtered.filter((s: any) => formatJenjang(s) === jenjangFilter);
         }
         if (searchTerm) {
           const lowerSearch = searchTerm.toLowerCase();
@@ -129,7 +130,7 @@ export default function SchoolTable({
                     {getStatusLabel(school.status_sekolah)}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.bentuk_pendidikan_id_str || school.bentuk_pendidikan_is_str || "-"}</TableCell>
+                <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{formatJenjang(school)}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kabupaten_kota || school.kabupate_kota || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kecamatan || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-right">

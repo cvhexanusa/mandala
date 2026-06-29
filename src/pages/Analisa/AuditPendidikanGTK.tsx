@@ -18,6 +18,8 @@ import Badge from "../../components/ui/badge/Badge";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../utils/exportUtils";
 import { DownloadIcon, PrinterIcon, SchoolIcon, SearchIcon, UserIcon } from "../../icons";
+import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
+import { formatPendidikan } from "../../utils/dapodikUtils";
 
 
 const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -103,7 +105,7 @@ const AuditPendidikanGTK: React.FC = () => {
             nama: item.identitas?.nama || "-",
             nuptk: item.identitas?.nuptk || item.identitas?.nip || "-",
             role: item.kepegawaian?.jenis_ptk || "-",
-            pendidikan: item.kepegawaian?.pendidikan_terakhir || item.identitas?.pendidikan_terakhir || "-",
+            pendidikan: formatPendidikan(item.kepegawaian?.pendidikan_terakhir || item.identitas?.pendidikan_terakhir || item.pendidikan_terakhir),
             bidangStudi: item.identitas?.bidang_studi_terakhir || item.kepegawaian?.bidang_studi_terakhir || item.kepegawaian?.jabatan || "-",
             foto: fotoUrl,
             rawItem: item
@@ -244,7 +246,22 @@ const AuditPendidikanGTK: React.FC = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    Swal.fire({
+      title: "Mempersiapkan Cetak PDF",
+      text: "Menyelaraskan data instansi...",
+      timer: 700,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    setTimeout(() => {
+      Swal.close();
+      setTimeout(() => {
+        window.print();
+      }, 600);
+    }, 700);
   };
 
   if (loading) {
@@ -262,6 +279,17 @@ const AuditPendidikanGTK: React.FC = () => {
         description="Analisa riwayat pendidikan formal Guru dan Tenaga Kependidikan."
       />
 
+      <PrintReportLayout
+        title="LAPORAN AUDIT KUALIFIKASI PENDIDIKAN GTK"
+        sekolahFilter={sekolahId}
+        schools={school ? [school] : []}
+        extraFilters={[
+          { label: "Status Kepegawaian", value: ptkFilter === "all" ? "Semua Pegawai" : ptkFilter.toUpperCase() },
+          { label: "Kategori Filter", value: activeTab === "all" ? "Semua Tingkat" : activeTab === "s1" ? "≥ S1 / D4" : "Di Bawah S1" }
+        ]}
+      />
+
+      <div className="no-print">
       {/* Action Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
         <button
@@ -537,6 +565,47 @@ const AuditPendidikanGTK: React.FC = () => {
           </div>
         )}
       </ComponentCard>
+      </div>
+
+      {/* Print Table (Only Visible in Print - renders all items without pagination) */}
+      <div className="print-only">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama Pegawai</th>
+              <th>NUPTK/NIP</th>
+              <th>Jabatan / Jenis PTK</th>
+              <th>Pendidikan Terakhir</th>
+              <th>Bidang Studi / Jurusan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRecords.length > 0 ? (
+              filteredRecords.map((log, index) => {
+                return (
+                  <tr key={log.id || index}>
+                    <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ fontWeight: "bold" }}>{log.nama}</td>
+                    <td>{log.nuptk || "-"}</td>
+                    <td>{log.role || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{log.pendidikan}</td>
+                    <td>{log.bidangStudi || "-"}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center" }}>
+                  Tidak ada data riwayat pendidikan GTK yang cocok dengan filter.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <PrintSignature />
     </>
   );
 };
