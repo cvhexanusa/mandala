@@ -76,7 +76,10 @@ export const SekolahProvider: React.FC<{ children: React.ReactNode }> = ({ child
       refreshSekolah();
     } else {
       setSekolah(null);
-      setLoading(false);
+      // Only set loading to false if there is no token in storage (truly logged out)
+      if (!localStorage.getItem('auth_token')) {
+        setLoading(false);
+      }
     }
   }, [user]);
 

@@ -17,7 +17,7 @@ import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
-import { formatJenjang } from "../../utils/dapodikUtils";
+import { formatJenjang, formatPtkInduk } from "../../utils/dapodikUtils";
 
 export default function GTKData() {
   const [searchParams] = useSearchParams();
@@ -342,8 +342,9 @@ export default function GTKData() {
       cancelButtonText: "Batal"
     }).then((result) => {
       if (result.isConfirmed) {
-        const headers = [
+         const headers = [
           "No",
+          "PTK Induk",
           "Nama Lengkap",
           "JK",
           "NUPTK",
@@ -355,6 +356,7 @@ export default function GTKData() {
 
         const rows = exportData.map((item, index) => {
           const no = (index + 1).toString();
+          const ptkInduk = formatPtkInduk(item.kepegawaian?.ptk_induk);
           const nama = item.identitas?.nama || "-";
           const jk = item.identitas?.jenis_kelamin || "-";
           const nuptk = item.identitas?.nuptk || "-";
@@ -368,7 +370,7 @@ export default function GTKData() {
           const telpRaw = item.data_pendukung?.no_hp || item.no_hp || item.identitas?.no_hp || item.data_pendukung?.no_telepon_rumah || item.no_telepon_rumah || "-";
           const telp = telpRaw || "-";
 
-          return [no, nama, jk, nuptk, status, jenisGtk, sekolah, telp];
+          return [no, ptkInduk, nama, jk, nuptk, status, jenisGtk, sekolah, telp];
         });
 
         const filename = `Data_${labelTab.replace(/\s+/g, '_')}${activeSchoolObj ? `_${activeSchoolObj.nama.replace(/\s+/g, '_')}` : ""}_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -897,10 +899,11 @@ export default function GTKData() {
       {/* Print Table (Only Visible in Print) */}
       {printData && (
         <div className="print-only">
-          <table>
+           <table>
             <thead>
               <tr>
                 <th>No</th>
+                <th>PTK Induk</th>
                 <th>Nama Lengkap</th>
                 <th>JK</th>
                 <th>NUPTK/NIP</th>
@@ -916,10 +919,12 @@ export default function GTKData() {
                 const schoolObj = allSchools.find(s => s.sekolah_id === schoolId);
                 const sekolah = schoolObj ? schoolObj.nama : schoolId || "-";
                 const telp = item.data_pendukung?.no_hp || item.no_hp || item.identitas?.no_hp || "-";
+                const ptkInduk = formatPtkInduk(item.kepegawaian?.ptk_induk);
                 
                 return (
                   <tr key={item.identitas?.id || index}>
                     <td style={{ textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ textAlign: "center" }}>{ptkInduk}</td>
                     <td style={{ fontWeight: "bold" }}>{item.identitas?.nama || "-"}</td>
                     <td style={{ textAlign: "center" }}>{item.identitas?.jenis_kelamin || "-"}</td>
                     <td>{item.identitas?.nuptk || item.identitas?.nip || "-"}</td>

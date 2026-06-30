@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -21,60 +21,112 @@ interface PDKeluarTableProps {
 
 export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm, itemsPerPage, sekolahId }: PDKeluarTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [data, setData] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
 
   useEffect(() => {
-    setSelectedRows([]);
-    setSelectedObjects([]);
-    onSelectionChange([], []);
-  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllStudents = async () => {
       setLoading(true);
       try {
-        const result = await dapodikService.getPesertaDidik(
-          itemsPerPage, 
-          searchTerm, 
-          currentPage, 
+        const targetSekolahId = (sekolahId === 'all' || !sekolahId) ? undefined : sekolahId;
+        const maxLimit = 100;
+
+        const firstPage = await dapodikService.getPesertaDidik(
+          maxLimit, 
+          "", 
+          1, 
           undefined, 
           'non-aktif',
           undefined,
-          sekolahId === 'all' ? undefined : sekolahId
+          targetSekolahId
         );
-
-        console.log("API Response PD Keluar:", result);
 
         let fetchedData = [];
         let totalCount = 0;
-
-        if (result.status === 'success' || result.success === true) {
-          fetchedData = result.data || [];
-          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
-        } else if (Array.isArray(result)) {
-          fetchedData = result;
-          totalCount = result.length;
-        } else if (result.data && Array.isArray(result.data)) {
-          fetchedData = result.data;
-          totalCount = result.meta?.total_data || result.total || fetchedData.length;
+        if (firstPage.status === 'success' || firstPage.success === true) {
+          fetchedData = firstPage.data || [];
+          totalCount = firstPage.meta?.total_data || firstPage.meta?.total || firstPage.total || fetchedData.length;
+        } else if (Array.isArray(firstPage)) {
+          fetchedData = firstPage;
+          totalCount = firstPage.length;
+        } else if (firstPage.data && Array.isArray(firstPage.data)) {
+          fetchedData = firstPage.data;
+          totalCount = firstPage.meta?.total_data || firstPage.total || fetchedData.length;
         }
 
-        setData(fetchedData);
-        setTotal(totalCount);
+        const totalPages = Math.ceil(totalCount / maxLimit);
+
+        if (totalPages > 1) {
+          const pagePromises = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(
+              dapodikService.getPesertaDidik(
+                maxLimit,
+                "",
+                p,
+                undefined,
+                'non-aktif',
+                undefined,
+                targetSekolahId
+              )
+            );
+          }
+          const otherPages = await Promise.all(pagePromises);
+          otherPages.forEach((pageRes) => {
+            let pageData = [];
+            if (pageRes.status === 'success' || pageRes.success === true) {
+              pageData = pageRes.data || [];
+            } else if (Array.isArray(pageRes)) {
+              pageData = pageRes;
+            } else if (pageRes.data && Array.isArray(pageRes.data)) {
+              pageData = pageRes.data;
+            }
+            fetchedData = [...fetchedData, ...pageData];
+          });
+        }
+
+        setAllStudents(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data PD keluar:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, [itemsPerPage, searchTerm, currentPage, sekolahId]);
+    fetchAllStudents();
+  }, [sekolahId]);
 
+  // Client-side filtering & search
+  const filteredStudents = useMemo(() => {
+    let list = allStudents;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      list = list.filter((item: any) => 
+        item.identitas?.nama?.toLowerCase().includes(lowerSearch) ||
+        item.identitas?.nisn?.includes(lowerSearch)
+      );
+    }
+    return list;
+  }, [allStudents, searchTerm]);
+
+  // Reset page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const total = filteredStudents.length;
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
+
+  const data = useMemo(() => {
+    return filteredStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredStudents, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {

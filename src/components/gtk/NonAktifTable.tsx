@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
 import { EyeIcon } from "../../icons";
 import { getFotoUrl } from "../../utils/image";
+import { formatPtkInduk } from "../../utils/dapodikUtils";
 
 interface NonAktifTableProps {
   onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
@@ -25,57 +26,110 @@ interface NonAktifTableProps {
 
 export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm, completenessFilter: _completenessFilter, itemsPerPage, sekolahId }: NonAktifTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [data, setData] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allGTK, setAllGTK] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
 
   useEffect(() => {
-    setSelectedRows([]);
-    setSelectedObjects([]);
-    onSelectionChange([], []);
-  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllGTK = async () => {
       setLoading(true);
       try {
-        const result = await dapodikService.getGTK(
-          itemsPerPage, 
-          searchTerm, 
-          currentPage, 
+        const targetSekolahId = (sekolahId === 'all' || !sekolahId) ? undefined : sekolahId;
+        const maxLimit = 100;
+        const firstPage = await dapodikService.getGTK(
+          maxLimit, 
+          "", 
+          1, 
           undefined, 
           'non-aktif',
-          sekolahId === 'all' ? undefined : sekolahId
+          targetSekolahId
         );
         
         let fetchedData = [];
         let totalCount = 0;
-
-        if (result && (result.status === 'success' || result.success === true)) {
-          fetchedData = result.data || [];
-          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
-        } else if (Array.isArray(result)) {
-          fetchedData = result;
-          totalCount = result.length;
-        } else if (result && result.data && Array.isArray(result.data)) {
-          fetchedData = result.data;
-          totalCount = result.meta?.total_data || result.total || fetchedData.length;
+        if (firstPage && (firstPage.status === 'success' || firstPage.success === true)) {
+          fetchedData = firstPage.data || [];
+          totalCount = firstPage.meta?.total_data || firstPage.meta?.total || firstPage.total || fetchedData.length;
+        } else if (Array.isArray(firstPage)) {
+          fetchedData = firstPage;
+          totalCount = firstPage.length;
+        } else if (firstPage && firstPage.data && Array.isArray(firstPage.data)) {
+          fetchedData = firstPage.data;
+          totalCount = firstPage.meta?.total_data || firstPage.total || fetchedData.length;
         }
 
-        setData(fetchedData);
-        setTotal(totalCount);
+        const totalPages = Math.ceil(totalCount / maxLimit);
+
+        if (totalPages > 1) {
+          const pagePromises = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(
+              dapodikService.getGTK(
+                maxLimit,
+                "",
+                p,
+                undefined,
+                'non-aktif',
+                targetSekolahId
+              )
+            );
+          }
+          const otherPages = await Promise.all(pagePromises);
+          otherPages.forEach((pageRes) => {
+            let pageData = [];
+            if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+              pageData = pageRes.data || [];
+            } else if (Array.isArray(pageRes)) {
+              pageData = pageRes;
+            } else if (pageRes && pageRes.data && Array.isArray(pageRes.data)) {
+              pageData = pageRes.data;
+            }
+            fetchedData = [...fetchedData, ...pageData];
+          });
+        }
+
+        setAllGTK(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data GTK non-aktif:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, [itemsPerPage, searchTerm, currentPage, sekolahId]);
+    fetchAllGTK();
+  }, [sekolahId]);
 
+  // Client-side filtering & search
+  const filteredGTK = useMemo(() => {
+    let list = allGTK;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      list = list.filter((item: any) => 
+        item.identitas?.nama?.toLowerCase().includes(lowerSearch) ||
+        item.identitas?.nuptk?.includes(lowerSearch) ||
+        item.identitas?.nip?.includes(lowerSearch)
+      );
+    }
+    return list;
+  }, [allGTK, searchTerm]);
+
+  // Reset page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const total = filteredGTK.length;
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
+
+  const data = useMemo(() => {
+    return filteredGTK.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredGTK, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -135,6 +189,7 @@ export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm,
                   onChange={handleSelectAll}
                 />
               </TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">PTK Induk</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status Kepegawaian</TableCell>
@@ -159,6 +214,11 @@ export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm,
                       checked={selectedRows.includes(item.identitas?.id)}
                       onChange={(checked) => handleSelectRow(item, checked)}
                     />
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-center">
+                    <Badge size="sm" color={formatPtkInduk(item.kepegawaian?.ptk_induk) === "Ya" ? "success" : "light"}>
+                      {formatPtkInduk(item.kepegawaian?.ptk_induk)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                     <div className="flex items-center gap-3">
@@ -198,7 +258,7 @@ export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm,
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={14} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                <TableCell colSpan={15} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                   Tidak ada data ditemukan untuk "{searchTerm}"
                 </TableCell>
               </TableRow>

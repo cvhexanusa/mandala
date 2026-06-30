@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
 import { EyeIcon } from "../../icons";
 import { getFotoUrl } from "../../utils/image";
+import { formatPtkInduk } from "../../utils/dapodikUtils";
 
 interface GuruTableProps {
   onSelectionChange: (selectedIds: string[], selectedObjects: any[]) => void;
@@ -27,8 +28,7 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
-  const [data, setData] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allGuru, setAllGuru] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
 
@@ -58,21 +58,15 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
   };
 
   useEffect(() => {
-    setSelectedRows([]);
-    setSelectedObjects([]);
-    onSelectionChange([], []);
-  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllGuru = async () => {
       setLoading(true);
       try {
         const targetSekolahId = (sekolahId === 'all' || !sekolahId) ? undefined : sekolahId;
-        
-        const result = await dapodikService.getGTK(
-          itemsPerPage, 
-          searchTerm, 
-          currentPage, 
+        const maxLimit = 100;
+        const firstPage = await dapodikService.getGTK(
+          maxLimit, 
+          "", 
+          1, 
           'guru', 
           'aktif', 
           targetSekolahId
@@ -80,20 +74,48 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
         
         let fetchedData = [];
         let totalCount = 0;
-
-        if (result && (result.status === 'success' || result.success === true)) {
-          fetchedData = result.data || [];
-          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
-        } else if (Array.isArray(result)) {
-          fetchedData = result;
-          totalCount = result.length;
-        } else if (result && result.data && Array.isArray(result.data)) {
-          fetchedData = result.data;
-          totalCount = result.meta?.total_data || result.total || fetchedData.length;
+        if (firstPage && (firstPage.status === 'success' || firstPage.success === true)) {
+          fetchedData = firstPage.data || [];
+          totalCount = firstPage.meta?.total_data || firstPage.meta?.total || firstPage.total || fetchedData.length;
+        } else if (Array.isArray(firstPage)) {
+          fetchedData = firstPage;
+          totalCount = firstPage.length;
+        } else if (firstPage && firstPage.data && Array.isArray(firstPage.data)) {
+          fetchedData = firstPage.data;
+          totalCount = firstPage.meta?.total_data || firstPage.total || fetchedData.length;
         }
 
-        setData(fetchedData);
-        setTotal(totalCount);
+        const totalPages = Math.ceil(totalCount / maxLimit);
+
+        if (totalPages > 1) {
+          const pagePromises = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(
+              dapodikService.getGTK(
+                maxLimit,
+                "",
+                p,
+                'guru',
+                'aktif',
+                targetSekolahId
+              )
+            );
+          }
+          const otherPages = await Promise.all(pagePromises);
+          otherPages.forEach((pageRes) => {
+            let pageData = [];
+            if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+              pageData = pageRes.data || [];
+            } else if (Array.isArray(pageRes)) {
+              pageData = pageRes;
+            } else if (pageRes && pageRes.data && Array.isArray(pageRes.data)) {
+              pageData = pageRes.data;
+            }
+            fetchedData = [...fetchedData, ...pageData];
+          });
+        }
+
+        setAllGuru(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data guru:", error);
       } finally {
@@ -101,10 +123,40 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
       }
     };
 
-    fetchData();
-  }, [currentPage, searchTerm, itemsPerPage, sekolahId]);
+    fetchAllGuru();
+  }, [sekolahId]);
 
+  // Client-side filtering & search
+  const filteredGuru = useMemo(() => {
+    let list = allGuru;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      list = list.filter((item: any) => 
+        item.identitas?.nama?.toLowerCase().includes(lowerSearch) ||
+        item.identitas?.nuptk?.includes(lowerSearch) ||
+        item.identitas?.nip?.includes(lowerSearch)
+      );
+    }
+    return list;
+  }, [allGuru, searchTerm]);
+
+  // Reset page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const total = filteredGuru.length;
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
+
+  const data = useMemo(() => {
+    return filteredGuru.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredGuru, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, itemsPerPage, sekolahId, currentPage]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -164,6 +216,7 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
                   onChange={handleSelectAll}
                 />
               </TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">PTK Induk</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Nama Guru</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Sekolah</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 whitespace-nowrap">JK</TableCell>
@@ -181,6 +234,11 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
                     checked={selectedRows.includes(item.identitas?.id)}
                     onChange={(checked) => handleSelectRow(item, checked)}
                   />
+                </TableCell>
+                <TableCell className="px-5 py-4 text-center">
+                  <Badge size="sm" color={formatPtkInduk(item.kepegawaian?.ptk_induk) === "Ya" ? "success" : "light"}>
+                    {formatPtkInduk(item.kepegawaian?.ptk_induk)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                     <div className="flex items-center gap-3">
@@ -209,7 +267,7 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
               </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={9} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                         Tidak ada data ditemukan
                     </TableCell>
                 </TableRow>

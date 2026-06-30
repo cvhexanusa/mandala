@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import { useNavigate, useParams } from "react-router";
 import { formatJenjang } from "../../utils/dapodikUtils";
 
 interface SchoolTableProps {
-  searchTerm: string;
+  searchQuery: string;
   kabKotaFilter: string;
   kecamatanFilter: string;
   statusFilter: string;
@@ -22,7 +22,7 @@ interface SchoolTableProps {
 }
 
 export default function SchoolTable({ 
-  searchTerm, 
+  searchQuery: searchTerm, 
   kabKotaFilter, 
   kecamatanFilter, 
   statusFilter, 
@@ -30,7 +30,7 @@ export default function SchoolTable({
 }: SchoolTableProps) {
   const navigate = useNavigate();
   const { role } = useParams();
-  const [data, setData] = useState<any[]>([]);
+  const [allSchools, setAllSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -49,31 +49,7 @@ export default function SchoolTable({
         } else if (response.data && Array.isArray(response.data)) {
           sekolahData = response.data;
         }
-
-        // Client-side filtering as the endpoint might not support all filters yet
-        let filtered = sekolahData;
-        
-        if (kabKotaFilter !== "all") {
-          filtered = filtered.filter((s: any) => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
-        }
-        if (kecamatanFilter !== "all") {
-          filtered = filtered.filter((s: any) => s.kecamatan === kecamatanFilter);
-        }
-        if (statusFilter !== "all") {
-          filtered = filtered.filter((s: any) => String(s.status_sekolah) === statusFilter);
-        }
-        if (jenjangFilter !== "all") {
-          filtered = filtered.filter((s: any) => formatJenjang(s) === jenjangFilter);
-        }
-        if (searchTerm) {
-          const lowerSearch = searchTerm.toLowerCase();
-          filtered = filtered.filter((s: any) => 
-            s.nama?.toLowerCase().includes(lowerSearch) || 
-            s.npsn?.includes(lowerSearch)
-          );
-        }
-
-        setData(filtered);
+        setAllSchools(sekolahData);
       } catch (error) {
         console.error("Gagal mengambil data sekolah:", error);
       } finally {
@@ -82,10 +58,41 @@ export default function SchoolTable({
     };
 
     fetchSchools();
+  }, []);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchTerm, kabKotaFilter, kecamatanFilter, statusFilter, jenjangFilter]);
 
-  const totalPages = Math.ceil(data.length / itemsPerPage) || 1;
-  const currentData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Client-side filtering & search
+  const filteredData = useMemo(() => {
+    let filtered = allSchools;
+    
+    if (kabKotaFilter !== "all") {
+      filtered = filtered.filter((s: any) => (s.kabupaten_kota || s.kabupate_kota) === kabKotaFilter);
+    }
+    if (kecamatanFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.kecamatan === kecamatanFilter);
+    }
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((s: any) => String(s.status_sekolah) === statusFilter);
+    }
+    if (jenjangFilter !== "all") {
+      filtered = filtered.filter((s: any) => formatJenjang(s) === jenjangFilter);
+    }
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter((s: any) => 
+        s.nama?.toLowerCase().includes(lowerSearch) || 
+        s.npsn?.includes(lowerSearch)
+      );
+    }
+    return filtered;
+  }, [allSchools, searchTerm, kabKotaFilter, kecamatanFilter, statusFilter, jenjangFilter]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+  const currentData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getStatusLabel = (status: any) => {
     if (status === "1" || status === 1 || status === "Negeri") return "Negeri";

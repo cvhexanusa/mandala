@@ -66,3 +66,14 @@ export const formatPendidikan = (eduVal: any): string => {
   
   return eduMap[numId] || strVal;
 };
+
+/**
+ * Helper to format PTK Induk field
+ */
+export const formatPtkInduk = (val: any): string => {
+  if (val === null || val === undefined) return "-";
+  const str = String(val).trim().toLowerCase();
+  if (str === "1" || str === "true" || str === "ya") return "Ya";
+  if (str === "0" || str === "false" || str === "tidak") return "Tidak";
+  return val;
+};

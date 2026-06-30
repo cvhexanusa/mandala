@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -27,8 +27,7 @@ interface StudentTableProps {
 
 export default function StudentTable({ onSelectionChange, onDetail, searchTerm, completenessFilter: _completenessFilter, gradeFilter, itemsPerPage, sekolahId, onDataLoaded }: StudentTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [data, setData] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
@@ -58,24 +57,19 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
     const school = schools.find((s) => s.sekolah_id === sekolahId);
     return school ? school.nama : sekolahId || "-";
   };
-  
-  useEffect(() => {
-    // Reset selection when filters change to avoid stale data
-    setSelectedRows([]);
-    setSelectedObjects([]);
-    onSelectionChange([], []);
-  }, [searchTerm, gradeFilter, sekolahId, currentPage, itemsPerPage]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllStudents = async () => {
       setLoading(true);
       try {
         const targetSekolahId = (sekolahId === 'all' || !sekolahId) ? undefined : sekolahId;
+        const maxLimit = 100;
         
-        const result = await dapodikService.getPesertaDidik(
-          itemsPerPage, 
-          searchTerm, 
-          currentPage, 
+        // Fetch first page to get total count
+        const firstPage = await dapodikService.getPesertaDidik(
+          maxLimit, 
+          "", 
+          1, 
           undefined, 
           'aktif', 
           gradeFilter === 'all' ? undefined : gradeFilter,
@@ -84,20 +78,49 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
         
         let fetchedData = [];
         let totalCount = 0;
+        if (firstPage && (firstPage.status === 'success' || firstPage.success === true)) {
+          fetchedData = firstPage.data || [];
+          totalCount = firstPage.meta?.total_data || firstPage.meta?.total || firstPage.total || fetchedData.length;
+        } else if (Array.isArray(firstPage)) {
+          fetchedData = firstPage;
+          totalCount = firstPage.length;
+        } else if (firstPage && firstPage.data && Array.isArray(firstPage.data)) {
+          fetchedData = firstPage.data;
+          totalCount = firstPage.meta?.total_data || firstPage.total || fetchedData.length;
+        }
 
-        if (result && (result.status === 'success' || result.success === true)) {
-          fetchedData = result.data || [];
-          totalCount = result.meta?.total_data || result.meta?.total || result.total || fetchedData.length;
-        } else if (Array.isArray(result)) {
-          fetchedData = result;
-          totalCount = result.length;
-        } else if (result && result.data && Array.isArray(result.data)) {
-          fetchedData = result.data;
-          totalCount = result.meta?.total_data || result.total || fetchedData.length;
+        const totalPages = Math.ceil(totalCount / maxLimit);
+
+        if (totalPages > 1) {
+          const pagePromises = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(
+              dapodikService.getPesertaDidik(
+                maxLimit,
+                "",
+                p,
+                undefined,
+                'aktif',
+                gradeFilter === 'all' ? undefined : gradeFilter,
+                targetSekolahId
+              )
+            );
+          }
+          const otherPages = await Promise.all(pagePromises);
+          otherPages.forEach((pageRes) => {
+            let pageData = [];
+            if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+              pageData = pageRes.data || [];
+            } else if (Array.isArray(pageRes)) {
+              pageData = pageRes;
+            } else if (pageRes && pageRes.data && Array.isArray(pageRes.data)) {
+              pageData = pageRes.data;
+            }
+            fetchedData = [...fetchedData, ...pageData];
+          });
         }
           
-        setData(fetchedData);
-        setTotal(totalCount);
+        setAllStudents(fetchedData);
         if (onDataLoaded) onDataLoaded(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data peserta didik:", error);
@@ -105,11 +128,41 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
         setLoading(false);
       }
     };
-    fetchData();
-  }, [itemsPerPage, searchTerm, currentPage, gradeFilter, sekolahId]);
-  
+    fetchAllStudents();
+  }, [gradeFilter, sekolahId]);
+
+  // Client-side filtering & search
+  const filteredStudents = useMemo(() => {
+    let list = allStudents;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      list = list.filter((item: any) => 
+        item.identitas?.nama?.toLowerCase().includes(lowerSearch) ||
+        item.identitas?.nisn?.includes(lowerSearch)
+      );
+    }
+    return list;
+  }, [allStudents, searchTerm]);
+
+  // Reset page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const total = filteredStudents.length;
   const totalPages = Math.ceil(total / itemsPerPage) || 1;
 
+  const data = useMemo(() => {
+    return filteredStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredStudents, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    // Reset selection when filters change to avoid stale data
+    setSelectedRows([]);
+    setSelectedObjects([]);
+    onSelectionChange([], []);
+  }, [searchTerm, gradeFilter, sekolahId, currentPage, itemsPerPage]);
+  
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const allIds = data.map((item) => item.identitas?.id);

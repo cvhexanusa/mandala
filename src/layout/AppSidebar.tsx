@@ -222,6 +222,11 @@ const navItems: NavItem[] = [
         path: "/analisa/pensiun",
         icon: <DotIcon />,
       },
+      {
+        name: "Sertifikasi Guru",
+        path: "/analisa/sertifikasi",
+        icon: <DotIcon />,
+      },
     ],
   },
   {
