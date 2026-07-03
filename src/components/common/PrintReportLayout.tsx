@@ -32,18 +32,43 @@ export default function PrintReportLayout({
           cachedCadisdikList = list;
         }
         
-        if (user?.cadisdik_id) {
-          const found = list.find((c: any) => c.id === user.cadisdik_id || c.cadisdik_id === user.cadisdik_id);
-          if (found) {
-            setCurrentCadisdik(found);
+        let targetCadisdikId = user?.cadisdik_id;
+        if (sekolahFilter && sekolahFilter !== "all" && schools && schools.length > 0) {
+          const school = schools.find((s) => s.sekolah_id === sekolahFilter || s.id === sekolahFilter);
+          if (school) {
+            if (school.cadisdik_id) {
+              targetCadisdikId = school.cadisdik_id;
+            } else {
+              // Fallback lookup via KCD pegawai
+              let pegawaiList = cachedPegawaiList;
+              if (!pegawaiList) {
+                const pRes = await dapodikService.getPegawai().catch(() => ({ data: [] }));
+                pegawaiList = pRes.data || [];
+                cachedPegawaiList = pegawaiList;
+              }
+              const matchedKcd = pegawaiList.find((p: any) => Number(p.jabatan) === 3);
+              if (matchedKcd && matchedKcd.cadisdik_id) {
+                targetCadisdikId = matchedKcd.cadisdik_id;
+              }
+            }
           }
         }
+
+        if (targetCadisdikId) {
+          const found = list.find((c: any) => c.id === targetCadisdikId || c.cadisdik_id === targetCadisdikId);
+          if (found) {
+            setCurrentCadisdik(found);
+            return;
+          }
+        }
+        
+        setCurrentCadisdik(null);
       } catch (err) {
         console.error("Gagal mengambil data cadisdik untuk layout cetak:", err);
       }
     };
     fetchCadisdik();
-  }, [user]);
+  }, [user, sekolahFilter, schools]);
 
   const getSchoolName = () => {
     if (!sekolahFilter || sekolahFilter === "all") return "Semua Sekolah";
@@ -55,14 +80,14 @@ export default function PrintReportLayout({
   const instansiAddress = currentCadisdik?.alamat || "Jalan Dr. Radjiman No. 6, Pasir Kaliki, Kec. Cicendo, Kota Bandung, Jawa Barat 40171";
 
   return (
-    <div className="print-only w-full text-black font-serif my-4">
+    <div className="print-only w-full text-black font-serif mt-0 mb-4">
       {/* Style overrides to enforce professional print layouts */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           /* Force standard margins and white background */
           @page {
             size: A4 portrait;
-            margin: 20mm 15mm 20mm 15mm;
+            margin: 10mm 15mm 20mm 15mm;
           }
           
           body {
@@ -127,7 +152,6 @@ export default function PrintReportLayout({
         {/* Center: Text Headers */}
         <div className="text-center flex-1 px-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide leading-tight text-gray-900">Pemerintah Provinsi Jawa Barat</h3>
-          <h2 className="text-md font-bold uppercase tracking-wide leading-tight text-gray-900">Dinas Pendidikan</h2>
           <h1 className="text-lg font-extrabold uppercase tracking-widest leading-none my-1 text-gray-950">{instansiName}</h1>
           <p className="text-[10px] text-gray-600 leading-tight">
             {instansiAddress}
