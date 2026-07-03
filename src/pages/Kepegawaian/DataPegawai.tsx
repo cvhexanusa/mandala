@@ -27,6 +27,7 @@ interface Pegawai {
   nomor_telepon: string | null;
   foto: string | null;
   aktif: boolean;
+  golongan?: string;
   created_at?: string;
 }
 
@@ -73,6 +74,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     jabatan: "5", // default string for Select, parse to int on submit
     jenis_kelamin: "0",
     nomor_telepon: "",
+    golongan: "",
     aktif: true,
   });
 
@@ -126,6 +128,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         jabatan: item.jabatan.toString(),
         jenis_kelamin: item.jenis_kelamin.toString(),
         nomor_telepon: item.nomor_telepon || "",
+        golongan: item.golongan || "",
         aktif: item.aktif,
       });
     } else {
@@ -139,6 +142,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         jabatan: "5",
         jenis_kelamin: "0",
         nomor_telepon: "",
+        golongan: "",
         aktif: showOnlyInactive ? false : true,
       });
     }
@@ -199,6 +203,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         jenis_kelamin: parseInt(formData.jenis_kelamin),
         nomor_telepon: formData.nomor_telepon?.trim() || "000000000000",
         aktif: formData.aktif,
+        golongan: formData.golongan?.trim() || "",
         // Nilai default untuk field yang diwajibkan backend namun belum ditampilkan di form
         nik: dummyNik, 
         tempat_lahir: "Tidak Diketahui",
@@ -335,6 +340,14 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const jabatanOptions = Object.entries(JABATAN_MAP).map(([val, label]) => ({ value: val, label }));
   const jkOptions = Object.entries(JK_MAP).map(([val, label]) => ({ value: val, label }));
   const instansiOptions = instansiList.map(inst => ({ value: inst.cadisdik_id, label: inst.nama_instansi }));
+  const golonganOptions = [
+    { value: "", label: "Pilih Golongan" },
+    { value: "IV.a", label: "IV.a" },
+    { value: "IV.b", label: "IV.b" },
+    { value: "IV.c", label: "IV.c" },
+    { value: "IV.d", label: "IV.d" },
+    { value: "IV.e", label: "IV.e" }
+  ];
 
   return (
     <div>
@@ -503,6 +516,16 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Golongan</label>
+                <Select 
+                  options={golonganOptions}
+                  value={formData.golongan}
+                  defaultValue={formData.golongan}
+                  onChange={(val) => handleSelectChange('golongan', val)}
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
                 <Input 
                   type="email"
@@ -604,6 +627,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 <DataRow label="Jabatan" value={JABATAN_MAP[viewingData.jabatan] || "Tidak Diketahui"} />
                 <DataRow label="Jenis Kelamin" value={JK_MAP[viewingData.jenis_kelamin] || "-"} />
                 <DataRow label="Nomor Telepon" value={viewingData.nomor_telepon} />
+                <DataRow label="Golongan" value={viewingData.golongan} />
                 <DataRow label="Instansi" value={instansiList.find(i => i.cadisdik_id === viewingData.cadisdik_id)?.nama_instansi || "Instansi Tidak Ditemukan"} />
                 <DataRow label="Status Akun" value={viewingData.aktif ? "Aktif" : "Non-Aktif"} />
               </div>

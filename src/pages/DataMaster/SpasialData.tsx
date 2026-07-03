@@ -126,6 +126,7 @@ function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }
 export default function SpasialData() {
   const [schools, setSchools] = useState<MandalaSchool[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mappings, setMappings] = useState<Record<string, string>>({});
 
   // Filters
   const [kabKotaFilter, setKabKotaFilter] = useState("all");
@@ -175,7 +176,13 @@ export default function SpasialData() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await mandalaService.getSchools();
+      const [response, mappingResponse] = await Promise.all([
+        mandalaService.getSchools(),
+        mandalaService.getMappingPengawas().catch(err => {
+          console.error("Gagal mengambil mapping pengawas:", err);
+          return { data: [] };
+        })
+      ]);
       
       let fetchedSchools: MandalaSchool[] = [];
       if (response && (response.status === 'success' || response.success === true)) {
@@ -183,6 +190,16 @@ export default function SpasialData() {
       } else if (Array.isArray(response)) {
         fetchedSchools = response;
       }
+
+      // Process mappings
+      const mappingList = mappingResponse.data || [];
+      const mappingMap: Record<string, string> = {};
+      mappingList.forEach((m: any) => {
+        if (m.sekolah_id && m.pegawai?.nama_lengkap) {
+          mappingMap[m.sekolah_id] = m.pegawai.nama_lengkap;
+        }
+      });
+      setMappings(mappingMap);
 
       // Filter only schools that have valid lintang & bujur
       const validGeoSchools = fetchedSchools.filter(s => 
@@ -558,6 +575,17 @@ export default function SpasialData() {
                     </span>
                   </div>
 
+                  {mappings[activePopupSchool.sekolah_id] && (
+                    <div className="mb-3 px-2.5 py-2 bg-brand-50/50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 rounded-lg flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">
+                      <svg className="size-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-5.5-2.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM10 12a5.978 5.978 0 00-5.196 3 5.996 5.996 0 0010.392 0A5.978 5.978 0 0010 12z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium truncate">
+                        Pengawas: {mappings[activePopupSchool.sekolah_id]}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="text-xs text-gray-600 mb-3 border-t border-gray-100 pt-3">
                     <p className="mb-1.5"><span className="text-gray-400 block mb-0.5 text-[10px] uppercase">Alamat</span> {activePopupSchool.alamat || activePopupSchool.desa_kelurahan || "Tidak tersedia"}</p>
                     <p><span className="text-gray-400 block mb-0.5 text-[10px] uppercase">Wilayah</span> {activePopupSchool.kecamatan}, {activePopupSchool.kabupaten_kota || activePopupSchool.kabupate_kota}</p>
@@ -599,6 +627,17 @@ export default function SpasialData() {
                           {formatJenjang(school)}
                         </span>
                       </div>
+
+                      {mappings[school.sekolah_id] && (
+                        <div className="mb-3 px-2.5 py-2 bg-brand-50/50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 rounded-lg flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">
+                          <svg className="size-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-5.5-2.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM10 12a5.978 5.978 0 00-5.196 3 5.996 5.996 0 0010.392 0A5.978 5.978 0 0010 12z" clipRule="evenodd" />
+                          </svg>
+                          <span className="font-medium truncate">
+                            Pengawas: {mappings[school.sekolah_id]}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="text-xs text-gray-600 mb-3 border-t border-gray-100 pt-3">
                         <p className="mb-1.5"><span className="text-gray-400 block mb-0.5 text-[10px] uppercase">Alamat</span> {school.alamat || school.desa_kelurahan || "Tidak tersedia"}</p>

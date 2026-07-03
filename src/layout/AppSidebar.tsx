@@ -227,6 +227,11 @@ const navItems: NavItem[] = [
         path: "/analisa/sertifikasi",
         icon: <DotIcon />,
       },
+      {
+        name: "SPTJM Dapodik",
+        path: "/analisa/sptjm-dapodik",
+        icon: <DotIcon />,
+      },
     ],
   },
   {
