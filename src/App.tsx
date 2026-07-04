@@ -49,6 +49,7 @@ import LayananMandalaPage from "./pages/Layanan/LayananMandalaPage";
 import DataPegawai from "./pages/Kepegawaian/DataPegawai";
 import MappingPengawasPage from "./pages/PKKS/MappingPengawas";
 import DaftarAntrian from "./pages/Layanan/DaftarAntrian";
+import SystemSettingsPage from "./pages/Settings/SystemSettings";
 import PelaporanPage from "./pages/Pelaporan/index";
 import CreatePelaporanPage from "./pages/Pelaporan/create";
 import DetailPelaporanPage from "./pages/Pelaporan/detail";
@@ -57,6 +58,11 @@ import MonitorAntrian from "./pages/Layanan/Public/MonitorAntrian";
 
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
+
+import SuratMasukPage from "./pages/AdministrasiSurat/SuratMasukPage";
+import SuratKeluarPage from "./pages/AdministrasiSurat/SuratKeluarPage";
+import TemplateSuratPage from "./pages/AdministrasiSurat/TemplateSuratPage";
+import PengaturanSuratPage from "./pages/AdministrasiSurat/PengaturanSuratPage";
 
 function HomeRedirect() {
   return <Navigate to="/admin" replace />;
@@ -151,10 +157,10 @@ export default function App() {
             <Route path="dokumen-layanan" element={<TablePlaceholder title="Dokumen Layanan" columns={["Nama Dokumen", "Kategori", "Tgl Upload"]} />} />
 
             {/* Administrasi Surat */}
-            <Route path="administrasi-surat/masuk" element={<TablePlaceholder title="Surat Masuk" columns={["No. Surat", "Asal Surat", "Perihal", "Tgl Terima"]} />} />
-            <Route path="administrasi-surat/keluar" element={<TablePlaceholder title="Surat Keluar" columns={["No. Surat", "Tujuan", "Perihal", "Tgl Keluar"]} />} />
-            <Route path="administrasi-surat/arsip" element={<TablePlaceholder title="Arsip Surat" columns={["Kode Arsip", "Judul Arsip", "Tahun"]} />} />
-            <Route path="administrasi-surat/template" element={<TablePlaceholder title="Template Surat" columns={["Nama Template", "Kategori", "Preview"]} />} />
+            <Route path="administrasi-surat/masuk" element={<SuratMasukPage />} />
+            <Route path="administrasi-surat/keluar" element={<SuratKeluarPage />} />
+            <Route path="administrasi-surat/template" element={<TemplateSuratPage />} />
+            <Route path="administrasi-surat/pengaturan" element={<PengaturanSuratPage />} />
 
             {/* Daftar Antrian */}
             <Route path="daftar-antrian" element={<DaftarAntrian />} />
@@ -190,6 +196,7 @@ export default function App() {
 
             {/* Other */}
             <Route path="sync-api" element={<ApiSyncPage />} />
+            <Route path="pengaturan/sistem" element={<SystemSettingsPage />} />
           </Route>
         </Route>
 

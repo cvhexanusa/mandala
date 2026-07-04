@@ -2,12 +2,14 @@ import React from "react";
 import GridShape from "../../components/common/GridShape";
 import { Link } from "react-router";
 import ThemeTogglerTwo from "../../components/common/ThemeTogglerTwo";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { settings, getStorageUrl } = useSystemSettings();
   return (
     <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
       <div className="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900 sm:p-0">
@@ -19,15 +21,23 @@ export default function AuthLayout({
             <div className="flex flex-col items-center max-w-xs">
               <Link to="/" className="block mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-brand-500/20">
-                        M
-                    </div>
+                    {settings?.appLogo ? (
+                      <img 
+                        src={getStorageUrl(settings.appLogo)} 
+                        alt="Logo" 
+                        className="w-14 h-14 object-contain" 
+                      />
+                    ) : (
+                      <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-brand-500/20">
+                        {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
+                      </div>
+                    )}
                     <div className="flex flex-col">
                         <span className="font-bold text-white text-3xl tracking-tight">
-                        MANDALA
+                          {settings?.appShortName || "MANDALA"}
                         </span>
                         <span className="text-xs text-gray-400 uppercase tracking-widest">
-                        Sistem Informasi
+                          Sistem Informasi
                         </span>
                     </div>
                 </div>

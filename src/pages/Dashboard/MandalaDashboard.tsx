@@ -98,7 +98,7 @@ export default function MandalaDashboard() {
           try {
             const [aktifRes, gtkRes] = await Promise.all([
               dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, school.sekolah_id),
-              dapodikService.getGTK(1, "", 1, "guru", "aktif", school.sekolah_id)
+              dapodikService.getGTK(1, "", 1, undefined, "aktif", school.sekolah_id)
             ]);
             
             const totalActiveStudents = getCountHelper(aktifRes);
@@ -237,10 +237,9 @@ export default function MandalaDashboard() {
 
   const maxKecamatanCount = kecamatanStats.length > 0 ? kecamatanStats[0].count : 1;
 
-  // Sort schools by total active student population to display in comparisons bar chart
-  const topSchoolsForChart = [...schools]
-    .sort((a, b) => ((b.total_siswa || b.jumlah_siswa || 0) - (a.total_siswa || a.jumlah_siswa || 0)))
-    .slice(0, 5);
+  // Accumulate totals for active students and GTK across all schools
+  const totalSiswaAll = schools.reduce((acc, s) => acc + (s.total_siswa || s.jumlah_siswa || 0), 0);
+  const totalGTKAll = schools.reduce((acc, s) => acc + (s.total_gtk || s.jumlah_guru || 0), 0);
 
   const barChartOptions: ApexOptions = {
     colors: ["#465fff", "#10b981"],
@@ -255,12 +254,20 @@ export default function MandalaDashboard() {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "40%",
-        borderRadius: 4,
+        columnWidth: "30%",
+        borderRadius: 8,
+        distributed: true,
       },
     },
     dataLabels: {
-      enabled: false,
+      enabled: true,
+      formatter: (val: number) => val.toLocaleString() + " Orang",
+      style: {
+        fontSize: "12px",
+        fontFamily: "Outfit, sans-serif",
+        fontWeight: "600",
+        colors: ["#ffffff"],
+      },
     },
     stroke: {
       show: true,
@@ -268,21 +275,26 @@ export default function MandalaDashboard() {
       colors: ["transparent"],
     },
     xaxis: {
-      categories: topSchoolsForChart.map(s => {
-        const name = s.nama || "Sekolah";
-        return name.length > 15 ? name.substring(0, 15) + "..." : name;
-      }),
+      categories: ["Total Siswa Aktif", "Total GTK"],
       axisBorder: {
         show: false,
       },
       axisTicks: {
         show: false,
       },
+      labels: {
+        style: {
+          fontSize: "12px",
+          fontFamily: "Outfit",
+          fontWeight: 600,
+        },
+      },
     },
     yaxis: {
-      title: {
+      labels: {
+        formatter: (val: number) => val.toLocaleString(),
         style: {
-          fontSize: "0px",
+          fontFamily: "Outfit",
         },
       },
     },
@@ -290,10 +302,7 @@ export default function MandalaDashboard() {
       opacity: 1,
     },
     legend: {
-      show: true,
-      position: "top",
-      horizontalAlign: "left",
-      fontFamily: "Outfit",
+      show: false,
     },
     tooltip: {
       y: {
@@ -308,12 +317,8 @@ export default function MandalaDashboard() {
 
   const barChartSeries = [
     {
-      name: "Siswa Aktif",
-      data: topSchoolsForChart.map(s => s.total_siswa || s.jumlah_siswa || 0),
-    },
-    {
-      name: "Pendidik & GTK",
-      data: topSchoolsForChart.map(s => s.total_gtk || s.jumlah_guru || 0),
+      name: "Jumlah",
+      data: [totalSiswaAll, totalGTKAll],
     },
   ];
 
@@ -452,9 +457,9 @@ export default function MandalaDashboard() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
                   <UserIcon className="size-5 text-brand-500" />
-                  Perbandingan Jumlah Siswa & GTK Sekolah Terbesar
+                  Grafik Seluruh Siswa dan GTK
                 </h3>
-                <p className="text-xs text-gray-400 mt-1">Membandingkan total populasi aktif pada 5 sekolah dengan siswa terbanyak.</p>
+                <p className="text-xs text-gray-400 mt-1">Total akumulasi seluruh siswa aktif dan GTK dari semua sekolah.</p>
               </div>
               <div className="h-[310px] w-full">
                 {loadingSchools ? (
@@ -549,14 +554,14 @@ export default function MandalaDashboard() {
           {/* Column Right: School Ratios, Kecamatan Bars & Real-Time Queue Monitor (5/12) */}
           <div className="col-span-12 lg:col-span-5 space-y-6">
             
-            {/* Sebaran Status & Kecamatan Sekolah */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm space-y-6">
+            {/* Sebaran Status Sekolah */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
               
               {/* Ratio Status Donut Chart */}
               <div>
                 <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
                   <GridIcon className="size-4.5 text-brand-500" />
-                  Rasio Status Satuan Pendidikan (Negeri vs Swasta)
+                  Rasio Status Satuan Pendidikan (Negeri & Swasta)
                 </h3>
                 <div className="h-[220px] flex items-center justify-center">
                   {loadingSchools ? (
@@ -565,36 +570,6 @@ export default function MandalaDashboard() {
                     <Chart options={donutChartOptions} series={donutChartSeries} type="donut" height={220} />
                   ) : (
                     <div className="text-gray-400 text-xs italic">Data sekolah kosong</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Kecamatan progress bars (limited to top 3 to keep layout compact and elegant) */}
-              <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-                <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Top Wilayah Kecamatan</h4>
-                <div className="space-y-3">
-                  {loadingSchools ? (
-                    <div className="space-y-2 animate-pulse">
-                      <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-800 rounded-md"></div>
-                      <div className="h-2 w-full bg-gray-200 dark:bg-gray-800 rounded-full"></div>
-                    </div>
-                  ) : kecamatanStats.length > 0 ? (
-                    kecamatanStats.slice(0, 3).map((stat, index) => (
-                      <div key={index} className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300">{stat.name}</span>
-                          <span className="font-bold text-gray-900 dark:text-white">{stat.count} Sekolah</span>
-                        </div>
-                        <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                          <div 
-                            className="h-full rounded-full bg-brand-500 transition-all duration-1000 ease-out"
-                            style={{ width: `${(stat.count / maxKecamatanCount) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-gray-400 italic">Data tidak tersedia</p>
                   )}
                 </div>
               </div>

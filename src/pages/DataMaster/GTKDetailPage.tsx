@@ -5,6 +5,7 @@ import Button from "../../components/ui/button/Button";
 import Avatar from "../../components/ui/avatar/Avatar";
 import useGoBack from "../../hooks/useGoBack";
 import { dapodikService } from "../../services/dapodikService";
+import { getFotoUrl } from "../../utils/image";
 
 export default function GTKDetailPage() {
   const location = useLocation();
@@ -122,7 +123,7 @@ export default function GTKDetailPage() {
           {/* Top Identity Row */}
           <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start border-b border-gray-100 dark:border-white/5">
             <Avatar 
-                src={identitas?.foto} 
+                src={getFotoUrl(identitas?.foto)} 
                 size="large" 
                 className="h-28 w-28 rounded-xl border border-gray-200 dark:border-gray-700" 
             />

@@ -67,7 +67,8 @@ const Scanner: React.FC = () => {
       const timeString = new Date(timeLog).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       const statusText = isCheckOut ? 'Pulang' : 'Masuk';
       
-      const fotoUrl = getFotoUrl(profile.foto, '/images/user/user-01.jpg');
+      const fallbackUrl = `${import.meta.env.BASE_URL || "/"}images/user/user-01.jpg`.replace(/\/+/g, "/");
+      const fotoUrl = getFotoUrl(profile.foto, fallbackUrl);
 
       // Show beautiful SweetAlert2 modal
       Swal.fire({
@@ -75,7 +76,7 @@ const Scanner: React.FC = () => {
         html: `
           <div class="flex flex-col items-center gap-4 mt-2">
             <div class="w-28 h-28 rounded-full overflow-hidden border-4 border-green-500 shadow-md">
-              <img src="${fotoUrl}" alt="${profile.nama}" class="w-full h-full object-cover" onerror="this.src='/images/user/user-01.jpg'" />
+              <img src="${fotoUrl}" alt="${profile.nama}" class="w-full h-full object-cover" onerror="if(this.src!=='${fallbackUrl}') this.src='${fallbackUrl}'" />
             </div>
             <div class="text-center">
               <h4 class="text-lg font-bold text-gray-800 dark:text-white/90">${profile.nama}</h4>

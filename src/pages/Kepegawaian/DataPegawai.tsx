@@ -27,7 +27,7 @@ interface Pegawai {
   nomor_telepon: string | null;
   foto: string | null;
   aktif: boolean;
-  golongan?: string;
+  golongan?: number | null;
   created_at?: string;
 }
 
@@ -43,6 +43,14 @@ const JABATAN_MAP: Record<number, string> = {
 const JK_MAP: Record<number, string> = {
   0: "Laki-laki",
   1: "Perempuan",
+};
+
+const GOLONGAN_MAP: Record<number, string> = {
+  0: "IV.a",
+  1: "IV.b",
+  2: "IV.c",
+  3: "IV.d",
+  4: "IV.e",
 };
 
 interface DataPegawaiProps {
@@ -128,7 +136,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         jabatan: item.jabatan.toString(),
         jenis_kelamin: item.jenis_kelamin.toString(),
         nomor_telepon: item.nomor_telepon || "",
-        golongan: item.golongan || "",
+        golongan: item.golongan !== undefined && item.golongan !== null ? item.golongan.toString() : "",
         aktif: item.aktif,
       });
     } else {
@@ -203,7 +211,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         jenis_kelamin: parseInt(formData.jenis_kelamin),
         nomor_telepon: formData.nomor_telepon?.trim() || "000000000000",
         aktif: formData.aktif,
-        golongan: formData.golongan?.trim() || "",
+        golongan: formData.golongan !== "" ? parseInt(formData.golongan) : null,
         // Nilai default untuk field yang diwajibkan backend namun belum ditampilkan di form
         nik: dummyNik, 
         tempat_lahir: "Tidak Diketahui",
@@ -342,11 +350,11 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const instansiOptions = instansiList.map(inst => ({ value: inst.cadisdik_id, label: inst.nama_instansi }));
   const golonganOptions = [
     { value: "", label: "Pilih Golongan" },
-    { value: "IV.a", label: "IV.a" },
-    { value: "IV.b", label: "IV.b" },
-    { value: "IV.c", label: "IV.c" },
-    { value: "IV.d", label: "IV.d" },
-    { value: "IV.e", label: "IV.e" }
+    { value: "0", label: "IV.a" },
+    { value: "1", label: "IV.b" },
+    { value: "2", label: "IV.c" },
+    { value: "3", label: "IV.d" },
+    { value: "4", label: "IV.e" }
   ];
 
   return (
@@ -590,7 +598,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                   className="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500"
                 />
                 <label htmlFor="aktif" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                  Akun Aktif <span className="text-xs text-gray-500 block">Tandai jika pegawai ini aktif bertugas</span>
+                  {formData.aktif ? "Pegawai Aktif" : "Pegawai Non Aktif"} <span className="text-xs text-gray-500 block">Tandai jika pegawai ini aktif bertugas</span>
                 </label>
               </div>
             </div>
@@ -627,7 +635,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 <DataRow label="Jabatan" value={JABATAN_MAP[viewingData.jabatan] || "Tidak Diketahui"} />
                 <DataRow label="Jenis Kelamin" value={JK_MAP[viewingData.jenis_kelamin] || "-"} />
                 <DataRow label="Nomor Telepon" value={viewingData.nomor_telepon} />
-                <DataRow label="Golongan" value={viewingData.golongan} />
+                <DataRow label="Golongan" value={viewingData.golongan !== undefined && viewingData.golongan !== null ? GOLONGAN_MAP[viewingData.golongan] : "-"} />
                 <DataRow label="Instansi" value={instansiList.find(i => i.cadisdik_id === viewingData.cadisdik_id)?.nama_instansi || "Instansi Tidak Ditemukan"} />
                 <DataRow label="Status Akun" value={viewingData.aktif ? "Aktif" : "Non-Aktif"} />
               </div>

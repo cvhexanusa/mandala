@@ -33,10 +33,14 @@ export default function UserDropdown() {
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11 border border-gray-200 dark:border-gray-800">
           <img 
-            src={user.foto || "/images/user/owner.jpg"} 
+            src={user.foto || `${import.meta.env.BASE_URL || "/"}images/user/owner.jpg`.replace(/\/+/g, "/")} 
             alt="User" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "/images/user/owner.jpg";
+              const target = e.target as HTMLImageElement;
+              const fallback = `${import.meta.env.BASE_URL || "/"}images/user/owner.jpg`.replace(/\/+/g, "/");
+              if (target.src !== fallback && !target.src.endsWith(fallback)) {
+                target.src = fallback;
+              }
             }}
           />
         </span>

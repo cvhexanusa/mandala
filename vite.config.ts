@@ -6,7 +6,7 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: "./",
+  base: "/mandala-pegawai/",
   plugins: [react(), tailwindcss(), svgr()],
   resolve: {
     alias: {

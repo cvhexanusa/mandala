@@ -6,7 +6,6 @@ import Select from "../../components/form/Select";
 import Input from "../../components/form/input/InputField";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import {
-  TrashBinIcon,
   PlusIcon,
   ChevronLeftIcon,
   SearchIcon,
@@ -16,7 +15,8 @@ import {
   InfoIcon,
   PieChartIcon,
   TaskIcon,
-  AlertIcon
+  AlertIcon,
+  CloseLineIcon
 } from "../../icons";
 import Swal from "sweetalert2";
 import { mandalaService, MandalaSchool } from "../../services/mandalaService";
@@ -243,11 +243,11 @@ export default function MappingPengawasPage() {
     }
   };
 
-  const handleDelete = async (id: string, isBulk = false, supervisorName = "", schoolName = "") => {
-    const title = isBulk ? "Hapus Semua Binaan?" : "Hapus Binaan Sekolah?";
+  const handleCancelMapping = async (id: string, isBulk = false, supervisorName = "", schoolName = "") => {
+    const title = isBulk ? "Batalkan Semua Pemetaan?" : "Batalkan Pemetaan Sekolah?";
     const text = isBulk
-      ? `Semua mapping sekolah untuk pengawas ${supervisorName} akan dihapus secara permanen!`
-      : `Hapus sekolah ${schoolName} dari pembinaan pengawas ini?`;
+      ? `Semua pemetaan sekolah untuk pengawas ${supervisorName} akan dibatalkan.`
+      : `Batalkan pemetaan sekolah ${schoolName} dari pengawas ini?`;
 
     const result = await Swal.fire({
       title,
@@ -256,7 +256,7 @@ export default function MappingPengawasPage() {
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Ya, hapus!",
+      confirmButtonText: "Ya, batalkan!",
       cancelButtonText: "Batal",
     });
 
@@ -271,11 +271,11 @@ export default function MappingPengawasPage() {
           await mandalaService.deleteMappingPengawas(id);
         }
 
-        Swal.fire("Terhapus!", "Data berhasil dihapus.", "success");
+        Swal.fire("Dibatalkan!", "Pemetaan sekolah berhasil dibatalkan.", "success");
         fetchData();
       } catch (error) {
-        console.error("Failed to delete:", error);
-        Swal.fire("Error", "Gagal menghapus data", "error");
+        console.error("Failed to cancel mapping:", error);
+        Swal.fire("Error", "Gagal membatalkan pemetaan sekolah", "error");
       }
     }
   };
@@ -412,9 +412,6 @@ export default function MappingPengawasPage() {
                   <h3 className="text-base font-medium text-gray-800 dark:text-white/90">
                     Daftar Pengawas
                   </h3>
-                  <Button size="sm" onClick={() => handleGoToAdd()} startIcon={<PlusIcon />}>
-                    Tambah
-                  </Button>
                 </div>
                 <div className="relative">
                   <span className="absolute -translate-y-1/2 left-3 top-1/2 text-gray-400">
@@ -519,15 +516,15 @@ export default function MappingPengawasPage() {
                             variant="error-outline"
                             size="sm"
                             onClick={() =>
-                              handleDelete(
+                              handleCancelMapping(
                                 "",
                                 true,
                                 currentSelectedGroup.pegawai.nama_lengkap
                               )
                             }
-                            startIcon={<TrashBinIcon />}
+                            startIcon={<CloseLineIcon />}
                           >
-                            Hapus Semua
+                            Batalkan Semua Pemetaan
                           </Button>
                         )}
                         <Button
@@ -536,7 +533,7 @@ export default function MappingPengawasPage() {
                           onClick={() => handleGoToAdd(currentSelectedGroup.pegawai_id)}
                           startIcon={<PlusIcon />}
                         >
-                          Tambah Sekolah
+                          Tambah Pemetaan
                         </Button>
                       </div>
                     </div>
@@ -585,7 +582,7 @@ export default function MappingPengawasPage() {
                                 <TableCell className="text-center py-3.5">
                                   <button
                                     onClick={() =>
-                                      handleDelete(
+                                      handleCancelMapping(
                                         item.mapping_pengawas_id,
                                         false,
                                         "",
@@ -593,9 +590,9 @@ export default function MappingPengawasPage() {
                                       )
                                     }
                                     className="p-1.5 text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
-                                    title="Hapus Mapping Sekolah"
+                                    title="Batalkan Pemetaan Sekolah"
                                   >
-                                    <TrashBinIcon className="size-4" />
+                                    <CloseLineIcon className="size-4" />
                                   </button>
                                 </TableCell>
                               </TableRow>

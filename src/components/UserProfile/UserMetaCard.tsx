@@ -50,11 +50,15 @@ export default function UserMetaCard({ pegawaiData }: UserMetaCardProps) {
           <div className="relative flex flex-col items-center -mt-12 xl:flex-row xl:items-end xl:gap-6">
             <div className="w-24 h-24 overflow-hidden border-4 border-white rounded-full dark:border-gray-900 shadow-lg">
               <img 
-                src={pegawaiData.foto || "/images/user/owner.jpg"} 
+                src={pegawaiData.foto || `${import.meta.env.BASE_URL || "/"}images/user/owner.jpg`.replace(/\/+/g, "/")} 
                 alt="user" 
                 className="h-full w-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/images/user/owner.jpg";
+                  const target = e.target as HTMLImageElement;
+                  const fallback = `${import.meta.env.BASE_URL || "/"}images/user/owner.jpg`.replace(/\/+/g, "/");
+                  if (target.src !== fallback && !target.src.endsWith(fallback)) {
+                    target.src = fallback;
+                  }
                 }}
               />
             </div>

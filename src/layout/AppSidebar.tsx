@@ -25,6 +25,7 @@ import SidebarWidget from "./SidebarWidget";
 import { useSekolah } from "../context/SekolahContext";
 import { useAuth } from "../context/AuthContext";
 import { getRoleSlug } from "../services/roleUtils";
+import { useSystemSettings } from "../context/SystemSettingsContext";
 
 type NavItem = {
   name: string;
@@ -286,13 +287,13 @@ const navItems: NavItem[] = [
         icon: <DotIcon />,
       },
       {
-        name: "Arsip Surat",
-        path: "/administrasi-surat/arsip",
+        name: "Template Surat",
+        path: "/administrasi-surat/template",
         icon: <DotIcon />,
       },
       {
-        name: "Template Surat",
-        path: "/administrasi-surat/template",
+        name: "Pengaturan Penomoran",
+        path: "/administrasi-surat/pengaturan",
         icon: <DotIcon />,
       },
     ],
@@ -312,6 +313,11 @@ const navItems: NavItem[] = [
     icon: <PlugInIcon />,
     subItems: [
       {
+        name: "Pengaturan Sistem",
+        path: "/pengaturan/sistem",
+        icon: <UserCircleIcon />,
+      },
+      {
         name: "Koneksi Mandala",
         path: "/sync-api",
         icon: <BoltIcon />,
@@ -324,6 +330,7 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { sekolah } = useSekolah();
   const { user } = useAuth();
+  const { settings, getStorageUrl } = useSystemSettings();
   const location = useLocation();
 
   const rolePrefix = user ? `/${getRoleSlug(user.role)}` : "";
@@ -510,12 +517,20 @@ const AppSidebar: React.FC = () => {
         <Link to={rolePrefix || "/"} className="flex items-center gap-3">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                M
-              </div>
+              {settings?.appLogo ? (
+                <img 
+                  src={getStorageUrl(settings.appLogo)} 
+                  alt="App Logo" 
+                  className="w-10 h-10 object-contain"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                  {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
+                </div>
+              )}
               <div className="flex flex-col">
-                <span className="font-bold text-gray-900 dark:text-white leading-tight uppercase">
-                  MANDALA
+                <span className="font-bold text-gray-900 dark:text-white leading-tight uppercase truncate max-w-[150px]" title={settings?.appName || "MANDALA"}>
+                  {settings?.appShortName || "MANDALA"}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   Sistem Informasi
@@ -523,9 +538,17 @@ const AppSidebar: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-              M
-            </div>
+            settings?.appLogo ? (
+              <img 
+                src={getStorageUrl(settings.appLogo)} 
+                alt="App Logo" 
+                className="w-8 h-8 object-contain"
+              />
+            ) : (
+              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
+              </div>
+            )
           )}
         </Link>
       </div>

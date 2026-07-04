@@ -181,6 +181,24 @@ export const mandalaService = {
     });
     return response.data;
   },
+
+  // J. Pengaturan Sistem (System Settings)
+  getSystemSettings: async (cadisdikId?: string) => {
+    const url = cadisdikId
+      ? `/mandala/cadisdik/${cadisdikId}/system-settings`
+      : `/mandala/system-settings`;
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  updateSystemSettings: async (cadisdikId: string, formData: FormData) => {
+    const response = await api.put(`/mandala/cadisdik/${cadisdikId}/system-settings`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
 };
 
 export interface Pelaporan {

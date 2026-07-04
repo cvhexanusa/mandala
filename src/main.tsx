@@ -8,16 +8,19 @@ import { AppWrapper } from "./components/common/PageMeta.tsx";
 import { ThemeProvider } from "./context/ThemeContext.tsx";
 import { AuthProvider } from "./context/AuthContext.tsx";
 import { SekolahProvider } from "./context/SekolahContext.tsx";
+import { SystemSettingsProvider } from "./context/SystemSettingsContext.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <AuthProvider>
-        <SekolahProvider>
-          <AppWrapper>
-            <App />
-          </AppWrapper>
-        </SekolahProvider>
+        <SystemSettingsProvider>
+          <SekolahProvider>
+            <AppWrapper>
+              <App />
+            </AppWrapper>
+          </SekolahProvider>
+        </SystemSettingsProvider>
       </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
