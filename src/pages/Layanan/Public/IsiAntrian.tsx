@@ -48,20 +48,25 @@ export default function IsiAntrian() {
     }
 
     const initPage = async () => {
+      // 1. Fetch categories (Public, only requires x-mandala-key)
       try {
-        const [kategoriRes, instansiRes] = await Promise.all([
-          mandalaService.getKategoriKeperluan(cadisdik_id),
-          dapodikService.getCadisdik(),
-        ]);
+        const kategoriRes = await mandalaService.getKategoriKeperluan(cadisdik_id);
         setKategori(kategoriRes.data || []);
-        
+      } catch (catError) {
+        console.error("Gagal memuat kategori keperluan:", catError);
+      }
+
+      // 2. Fetch instansi name (Requires auth, will fail/fallback gracefully for guests)
+      try {
+        const instansiRes = await dapodikService.getCadisdik();
         const matched = (instansiRes.data || []).find((i: any) => i.cadisdik_id === cadisdik_id);
         setInstansiName(matched ? matched.nama_instansi : "Kantor Cabang Dinas Pendidikan");
-      } catch (error) {
-        console.error("Gagal memuat data buku tamu:", error);
-      } finally {
-        setLoading(false);
+      } catch (instansiError) {
+        console.warn("Gagal memuat nama instansi (menggunakan fallback):", instansiError);
+        setInstansiName("Kantor Cabang Dinas Pendidikan");
       }
+
+      setLoading(false);
     };
 
     initPage();
