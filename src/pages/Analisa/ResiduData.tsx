@@ -86,6 +86,21 @@ export default function ResiduData() {
     return val === null || val === undefined || String(val).trim() === "" || String(val).trim() === "-";
   };
 
+  const isResiduFieldEmpty = (val: any) => {
+    // Jika properti undefined (belum ditambahkan/dikembalikan oleh API backend),
+    // kita anggap valid (jangan jadikan pemicu status residu) agar tidak banjir false positive.
+    if (val === undefined) return false;
+    return val === null || String(val).trim() === "" || String(val).trim() === "-";
+  };
+
+  // Helper untuk mengambil nilai pertama yang didefinisikan (bukan undefined)
+  const getFirstDefinedValue = (...vals: any[]) => {
+    for (const val of vals) {
+      if (val !== undefined) return val;
+    }
+    return undefined;
+  };
+
   // Residu Checkers
   const isResiduRecord = (item: any) => {
     const identitas = item.identitas || {};
@@ -108,19 +123,28 @@ export default function ResiduData() {
 
     const jkEmpty = isFieldEmpty(identitas.jenis_kelamin);
     
-    const desaEmpty = isFieldEmpty(
-      item.desa_kelurahan || 
-      dataPendukung.desa_kelurahan || 
-      item.desa || 
-      dataPendukung.desa ||
-      dataPendukung.alamat_jalan ||
+    const desaVal = getFirstDefinedValue(
+      item.desa_kelurahan,
+      dataPendukung.desa_kelurahan,
+      item.desa,
+      dataPendukung.desa,
+      dataPendukung.alamat_jalan,
       item.alamat_jalan
     );
+    const desaEmpty = isResiduFieldEmpty(desaVal);
 
     if (type === "peserta-didik") {
       const nisnEmpty = isFieldEmpty(identitas.nisn);
       const rombelEmpty = isFieldEmpty(akademik.nama_rombel || akademik.rombel);
-      const nipdEmpty = isFieldEmpty(identitas.nipd || item.nipd || akademik.nipd || identitas.nis || item.nis || akademik.nis);
+      const nipdVal = getFirstDefinedValue(
+        identitas.nipd,
+        item.nipd,
+        akademik.nipd,
+        identitas.nis,
+        item.nis,
+        akademik.nis
+      );
+      const nipdEmpty = isResiduFieldEmpty(nipdVal);
 
       return npsnEmpty || namaEmpty || nisnEmpty || rombelEmpty || nikEmpty || tempatLahirEmpty || tanggalLahirEmpty || ibuKandungEmpty || jkEmpty || desaEmpty || nipdEmpty;
     }

@@ -63,8 +63,20 @@ export default function RekapPDKompetensiTable({ searchTerm, sekolahId }: RekapP
             pdData.forEach((pd: any) => {
               const kompetensi = pd.akademik?.jurusan || "Lainnya";
               const jk = (pd.identitas?.jenis_kelamin || "").toUpperCase();
-              const jenisDaftar = (pd.identitas?.jenis_pendaftaran_id_str || "").toLowerCase();
-              const isBaru = jenisDaftar.includes("baru");
+              const pendaftaranVal = String(
+                pd.identitas?.jenis_pendaftaran_id_str ?? 
+                pd.jenis_pendaftaran_id_str ?? 
+                pd.akademik?.jenis_pendaftaran_id_str ?? 
+                pd.identitas?.jenis_pendaftaran_id ?? 
+                pd.jenis_pendaftaran_id ?? 
+                pd.akademik?.jenis_pendaftaran_id ?? 
+                ""
+              ).trim();
+              const isPindahan = 
+                pendaftaranVal === "2" || 
+                pendaftaranVal.toLowerCase().includes("pindahan") || 
+                pendaftaranVal.toLowerCase().includes("transfer");
+              const isBaru = !isPindahan;
               
               if (!groups[kompetensi]) {
                 groups[kompetensi] = {

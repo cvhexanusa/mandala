@@ -94,8 +94,20 @@ export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTer
                 else return;
 
                 const jk = (pd.identitas?.jenis_kelamin || "").toUpperCase();
-                const jenisDaftar = (pd.identitas?.jenis_pendaftaran_id_str || "").toLowerCase();
-                const isBaru = jenisDaftar.includes("baru");
+                const pendaftaranVal = String(
+                  pd.identitas?.jenis_pendaftaran_id_str ?? 
+                  pd.jenis_pendaftaran_id_str ?? 
+                  pd.akademik?.jenis_pendaftaran_id_str ?? 
+                  pd.identitas?.jenis_pendaftaran_id ?? 
+                  pd.jenis_pendaftaran_id ?? 
+                  pd.akademik?.jenis_pendaftaran_id ?? 
+                  ""
+                ).trim();
+                const isPindahan = 
+                  pendaftaranVal === "2" || 
+                  pendaftaranVal.toLowerCase().includes("pindahan") || 
+                  pendaftaranVal.toLowerCase().includes("transfer");
+                const isBaru = !isPindahan;
 
                 const g = groups[key];
                 if (jk === "L") g.lakiLaki++; else g.perempuan++;

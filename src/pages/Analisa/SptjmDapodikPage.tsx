@@ -283,8 +283,14 @@ export default function SptjmDapodikPage() {
         }
 
         // Check if transfer student (masuk) who entered within the active school year
-        const jenisDaftar = String(student.identitas?.jenis_pendaftaran_id_str || "").toLowerCase();
-        const isTransfer = jenisDaftar.includes("pindahan") || jenisDaftar.includes("masuk") || jenisDaftar.includes("transfer");
+        const pendaftaranId = student.identitas?.jenis_pendaftaran_id ?? student.jenis_pendaftaran_id ?? student.akademik?.jenis_pendaftaran_id;
+        const pendaftaranIdStr = student.identitas?.jenis_pendaftaran_id_str ?? student.jenis_pendaftaran_id_str ?? student.akademik?.jenis_pendaftaran_id_str;
+        const isTransfer = 
+          pendaftaranId === 2 || 
+          String(pendaftaranId) === "2" || 
+          String(pendaftaranIdStr).toLowerCase().includes("pindahan") || 
+          String(pendaftaranIdStr).toLowerCase().includes("masuk") || 
+          String(pendaftaranIdStr).toLowerCase().includes("transfer");
         if (isTransfer) {
           const entryTime = student.created_at || student.identitas?.created_at;
           if (entryTime) {
