@@ -67,10 +67,14 @@ api.interceptors.response.use(
       !originalRequest.url?.includes('/mandala/auth/login')
     ) {
       const refreshToken = localStorage.getItem('refresh_token');
+      const isPublicPage = 
+        window.location.pathname.endsWith('/isi-antrian') || 
+        window.location.pathname.endsWith('/monitor-antrian');
+      
       if (!refreshToken) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
-        if (window.location.pathname !== '/signin') {
+        if (window.location.pathname !== '/signin' && !isPublicPage) {
           window.location.href = '/signin';
         }
         return Promise.reject(error);
@@ -106,7 +110,7 @@ api.interceptors.response.use(
         localStorage.removeItem('auth_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_data');
-        if (window.location.pathname !== '/signin') {
+        if (window.location.pathname !== '/signin' && !isPublicPage) {
           window.location.href = '/signin';
         }
         return Promise.reject(refreshError);

@@ -25,6 +25,39 @@ const QUEUE_STATUS_MAP: Record<number, { label: string; color: string }> = {
   4: { label: "Batal", color: "bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400" },
 };
 
+const getRelativeTimeString = (dateStr: string) => {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  
+  if (diffMs < 0) return "Baru saja";
+  
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
+  
+  if (diffSec < 60) {
+    return "Baru saja";
+  } else if (diffMin < 60) {
+    return `${diffMin} menit yang lalu`;
+  } else if (diffHour < 24) {
+    return `${diffHour} jam yang lalu`;
+  } else if (diffDay < 7) {
+    return `${diffDay} hari yang lalu`;
+  } else if (diffWeek < 4) {
+    return `${diffWeek} minggu yang lalu`;
+  } else if (diffMonth < 12) {
+    return `${diffMonth} bulan yang lalu`;
+  } else {
+    return `${diffYear} tahun yang lalu`;
+  }
+};
+
 export default function MandalaDashboard() {
   const navigate = useNavigate();
   const { role } = useParams();
@@ -241,15 +274,6 @@ export default function MandalaDashboard() {
   const totalSiswaAll = schools.reduce((acc, s) => acc + (s.total_siswa || s.jumlah_siswa || 0), 0);
   const totalGTKAll = schools.reduce((acc, s) => acc + (s.total_gtk || s.jumlah_guru || 0), 0);
 
-  const schoolNames = schools.map(s => {
-    const rawName = s.nama || s.nama_sekolah || '';
-    return rawName
-      .replace(/SMK NEGERI/i, "SMKN")
-      .replace(/SMK SWASTA/i, "SMKS")
-      .replace(/SEKOLAH MENENGAH KEJURUAN NEGERI/i, "SMKN")
-      .replace(/SEKOLAH MENENGAH KEJURUAN SWASTA/i, "SMKS");
-  });
-
   const siswaChartOptions: ApexOptions = {
     colors: ["#3b82f6"],
     chart: {
@@ -263,15 +287,15 @@ export default function MandalaDashboard() {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "40%",
-        borderRadius: 6,
+        columnWidth: "30%",
+        borderRadius: 8,
       },
     },
     dataLabels: {
       enabled: true,
-      formatter: (val: number) => val.toLocaleString(),
+      formatter: (val: number) => val.toLocaleString() + " Orang",
       style: {
-        fontSize: "11px",
+        fontSize: "12px",
         fontFamily: "Outfit, sans-serif",
         fontWeight: "600",
         colors: ["#ffffff"],
@@ -283,7 +307,7 @@ export default function MandalaDashboard() {
       colors: ["transparent"],
     },
     xaxis: {
-      categories: schoolNames,
+      categories: ["Semua Sekolah"],
       axisBorder: {
         show: false,
       },
@@ -291,11 +315,10 @@ export default function MandalaDashboard() {
         show: false,
       },
       labels: {
-        rotate: -30,
         style: {
-          fontSize: "10px",
+          fontSize: "12px",
           fontFamily: "Outfit",
-          fontWeight: 500,
+          fontWeight: 600,
         },
       },
     },
@@ -324,7 +347,7 @@ export default function MandalaDashboard() {
   const siswaChartSeries = [
     {
       name: "Siswa Aktif",
-      data: schools.map(s => s.total_siswa || s.jumlah_siswa || 0),
+      data: [totalSiswaAll],
     },
   ];
 
@@ -341,15 +364,15 @@ export default function MandalaDashboard() {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "40%",
-        borderRadius: 6,
+        columnWidth: "30%",
+        borderRadius: 8,
       },
     },
     dataLabels: {
       enabled: true,
-      formatter: (val: number) => val.toLocaleString(),
+      formatter: (val: number) => val.toLocaleString() + " Orang",
       style: {
-        fontSize: "11px",
+        fontSize: "12px",
         fontFamily: "Outfit, sans-serif",
         fontWeight: "600",
         colors: ["#ffffff"],
@@ -361,7 +384,7 @@ export default function MandalaDashboard() {
       colors: ["transparent"],
     },
     xaxis: {
-      categories: schoolNames,
+      categories: ["Semua Sekolah"],
       axisBorder: {
         show: false,
       },
@@ -369,11 +392,10 @@ export default function MandalaDashboard() {
         show: false,
       },
       labels: {
-        rotate: -30,
         style: {
-          fontSize: "10px",
+          fontSize: "12px",
           fontFamily: "Outfit",
-          fontWeight: 500,
+          fontWeight: 600,
         },
       },
     },
@@ -402,7 +424,7 @@ export default function MandalaDashboard() {
   const gtkChartSeries = [
     {
       name: "GTK Aktif",
-      data: schools.map(s => s.total_gtk || s.jumlah_guru || 0),
+      data: [totalGTKAll],
     },
   ];
 
@@ -544,10 +566,10 @@ export default function MandalaDashboard() {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
                       <UserIcon className="size-4.5 text-blue-500" />
-                      Siswa Aktif per Sekolah
+                      Grafik Total Siswa Aktif
                     </h3>
                   </div>
-                  <p className="text-[10px] text-gray-400">Distribusi jumlah siswa aktif di tiap sekolah.</p>
+                  <p className="text-[10px] text-gray-400">Total akumulasi seluruh siswa aktif dari semua sekolah.</p>
                   <div className="mt-3 flex items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
                       Total: {totalSiswaAll.toLocaleString()} Orang
@@ -577,10 +599,10 @@ export default function MandalaDashboard() {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
                       <GroupIcon className="size-4.5 text-emerald-500" />
-                      GTK Aktif per Sekolah
+                      Grafik Total GTK Aktif
                     </h3>
                   </div>
-                  <p className="text-[10px] text-gray-400">Distribusi jumlah guru & tendik di tiap sekolah.</p>
+                  <p className="text-[10px] text-gray-400">Total akumulasi seluruh GTK aktif dari semua sekolah.</p>
                   <div className="mt-3 flex items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
                       Total: {totalGTKAll.toLocaleString()} Orang
@@ -606,72 +628,64 @@ export default function MandalaDashboard() {
 
             </div>
 
-            {/* Document Compliance Campaigns Tracker */}
+            {/* 10 Sekolah Terakhir Sinkron */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <BoxIcon className="size-5 text-brand-500" />
-                    Tracker Kepatuhan Pelaporan Dokumen
+                    <SchoolIcon className="size-5 text-brand-500" />
+                    10 Sekolah Terakhir Sinkron
                   </h3>
-                  <p className="text-xs text-gray-400 mt-1">Daftar kampanye pelaporan aktif dan ringkasan dokumen terunggah.</p>
+                  <p className="text-xs text-gray-400 mt-1">Daftar satuan pendidikan yang terakhir kali melakukan sinkronisasi data.</p>
                 </div>
-                <Link 
-                  to={`/${roleSlug}/pelaporan-dokumen`}
-                  className="text-xs font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400 flex items-center gap-1"
-                >
-                  Lihat Semua
-                  <ArrowRightIcon className="size-3.5" />
-                </Link>
               </div>
               
               <div className="space-y-3">
-                {loadingPelaporan ? (
+                {loadingSchools ? (
                   [1, 2, 3].map(i => (
                     <div key={i} className="h-16 w-full animate-pulse rounded-xl bg-gray-50 dark:bg-gray-800/40"></div>
                   ))
-                ) : pelaporan.length > 0 ? (
-                  pelaporan.map((item) => (
-                    <div 
-                      key={item.pelaporan_id}
-                      className="p-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-xl border border-gray-100 dark:border-gray-800/80 hover:border-brand-300 dark:hover:border-brand-500/30 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-                    >
-                      <div className="overflow-hidden">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                          item.aktif 
-                            ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' 
-                            : 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400'
-                        } mb-1.5`}>
-                          {item.aktif ? 'Aktif' : 'Non-aktif'}
-                        </span>
-                        <h4 className="text-xs font-bold text-gray-800 dark:text-white truncate" title={item.judul}>
-                          {item.judul}
-                        </h4>
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          Batas Waktu: {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString("id-ID") : "-"}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-end">
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-gray-900 dark:text-white">
-                            {item.jumlah_dokumen}
-                          </span>
-                          <span className="text-[10px] text-gray-400 block font-medium">Dokumen Terkumpul</span>
-                        </div>
-                        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
-                        <Link 
-                          to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}
-                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+                ) : schools.length > 0 ? (
+                  schools
+                    .slice()
+                    .sort((a, b) => {
+                      const timeA = a.last_update ? new Date(a.last_update).getTime() : 0;
+                      const timeB = b.last_update ? new Date(b.last_update).getTime() : 0;
+                      return timeB - timeA;
+                    })
+                    .slice(0, 10)
+                    .map((school) => {
+                      const relativeTime = getRelativeTimeString(school.last_update);
+                      return (
+                        <div 
+                          key={school.sekolah_id}
+                          className="p-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-xl border border-gray-100 dark:border-gray-800/80 hover:border-brand-300 dark:hover:border-brand-500/30 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
                         >
-                          Detail
-                        </Link>
-                      </div>
-                    </div>
-                  ))
+                          <div className="overflow-hidden">
+                            <h4 className="text-xs font-bold text-gray-800 dark:text-white truncate" title={school.nama}>
+                              {school.nama}
+                            </h4>
+                            <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-2">
+                              <span>NPSN: {school.npsn}</span>
+                              <span>•</span>
+                              <span>{school.kecamatan || school.kabupaten_kota}</span>
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-end">
+                            <div className="text-right">
+                              <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-2.5 py-0.5 rounded-full">
+                                {relativeTime}
+                              </span>
+                              <span className="text-[9px] text-gray-400 block font-medium mt-1">Terakhir Update</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                 ) : (
                   <div className="py-8 text-center text-gray-400 text-xs italic">
-                    Belum ada kampanye pelaporan dokumen aktif.
+                    Belum ada data sekolah yang melakukan sinkronisasi.
                   </div>
                 )}
               </div>

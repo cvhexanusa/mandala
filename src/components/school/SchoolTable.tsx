@@ -21,6 +21,43 @@ interface SchoolTableProps {
   jenjangFilter: string;
 }
 
+const getSyncStatus = (dateStr: string) => {
+  if (!dateStr) return { text: "Belum pernah", isWarning: true };
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+  const isWarning = diffMs > oneWeekMs || diffMs < 0;
+  
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
+  
+  let text = "";
+  if (diffSec < 60) {
+    text = "Baru saja";
+  } else if (diffMin < 60) {
+    text = `${diffMin} menit yang lalu`;
+  } else if (diffHour < 24) {
+    text = `${diffHour} jam yang lalu`;
+  } else if (diffDay < 7) {
+    text = `${diffDay} hari yang lalu`;
+  } else if (diffWeek < 4) {
+    text = `${diffWeek} minggu yang lalu`;
+  } else if (diffMonth < 12) {
+    text = `${diffMonth} bulan yang lalu`;
+  } else {
+    text = `${diffYear} tahun yang lalu`;
+  }
+  
+  return { text, isWarning };
+};
+
 export default function SchoolTable({ 
   searchQuery: searchTerm, 
   kabKotaFilter, 
@@ -122,6 +159,7 @@ export default function SchoolTable({
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jenjang</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Kab/Kota</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Kecamatan</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Terakhir Sinkron</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
             </TableRow>
           </TableHeader>
@@ -140,6 +178,20 @@ export default function SchoolTable({
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{formatJenjang(school)}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kabupaten_kota || school.kabupate_kota || "-"}</TableCell>
                 <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{school.kecamatan || "-"}</TableCell>
+                <TableCell className="px-5 py-4 text-start">
+                  {(() => {
+                    const { text, isWarning } = getSyncStatus(school.last_update);
+                    return isWarning ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-100 dark:border-red-800/20">
+                        ⚠️ {text}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/20">
+                        {text}
+                      </span>
+                    );
+                  })()}
+                </TableCell>
                 <TableCell className="px-5 py-4 text-right">
                   <button 
                     onClick={() => navigate(`/${role}/satuan-pendidikan/detail/${school.sekolah_id}`)}
@@ -152,7 +204,7 @@ export default function SchoolTable({
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                <TableCell colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                   Tidak ada data sekolah ditemukan
                 </TableCell>
               </TableRow>

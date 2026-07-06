@@ -448,12 +448,15 @@ export default function IsiAntrian() {
                   <rect x="95" y="0" width="3" height="25" />
                 </svg>
                 <span className="text-[7px] font-mono tracking-widest text-gray-500 mt-1 block">
-                  MNDLA-QP-{createdTicket.nomor_antrian}
+              MNDLA-QP-{createdTicket.nomor_antrian}
                 </span>
               </div>
             </div>
 
             <div className="w-full flex flex-col gap-3 px-2 z-10 mt-2">
+              <p className="text-center text-xs text-white/90 font-medium mb-1 drop-shadow-sm">
+                📸 Silakan ambil tangkapan layar (screenshot) sebagai bukti antrean Anda
+              </p>
               <button
                 onClick={() => printThermalReceipt(createdTicket)}
                 className="flex items-center justify-center gap-2 w-full bg-success-600 hover:bg-success-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
