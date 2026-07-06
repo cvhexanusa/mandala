@@ -37,7 +37,15 @@ export default function IsiAntrian() {
     nomor_hp: "",
   });
 
+  // Jika URL mengandung token dari QR code admin, simpan ke localStorage
+  // agar api.ts interceptor otomatis mengirimnya sebagai Bearer token
+  // Harus dilakukan SEBELUM fetch data agar token tersedia saat request
   useEffect(() => {
+    const urlToken = searchParams.get("token");
+    if (urlToken) {
+      localStorage.setItem("auth_token", urlToken);
+    }
+
     if (!cadisdik_id) {
       Swal.fire(
         "Akses Ditolak",
@@ -49,7 +57,7 @@ export default function IsiAntrian() {
     }
 
     const initPage = async () => {
-      // 1. Fetch categories (Public, only requires x-mandala-key)
+      // 1. Fetch categories
       try {
         const kategoriRes = await mandalaService.getKategoriKeperluan(cadisdik_id);
         const list = kategoriRes.data || [];
@@ -65,7 +73,7 @@ export default function IsiAntrian() {
         setErrorMsg(`Gagal memuat layanan: ${msg}`);
       }
 
-      // 2. Fetch instansi name (Requires auth, will fail/fallback gracefully for guests)
+      // 2. Fetch instansi name (fallback gracefully for guests)
       try {
         const instansiRes = await dapodikService.getCadisdik();
         const matched = (instansiRes.data || []).find((i: any) => i.cadisdik_id === cadisdik_id);

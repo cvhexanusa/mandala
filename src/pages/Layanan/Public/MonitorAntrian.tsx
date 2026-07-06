@@ -154,8 +154,9 @@ const SIBIVideoPlayer = ({
 export default function MonitorAntrian() {
   const [searchParams] = useSearchParams();
   const cadisdik_id = searchParams.get("cadisdik_id") || "";
+  const adminToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") || "" : "";
   const qrUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/isi-antrian?cadisdik_id=${cadisdik_id}`
+    ? `${window.location.origin}/isi-antrian?cadisdik_id=${cadisdik_id}${adminToken ? `&token=${encodeURIComponent(adminToken)}` : ""}`
     : `https://simak.go.id/isi-antrian?cadisdik_id=${cadisdik_id}`;
 
   const [antrian, setAntrian] = useState<Antrian[]>([]);
