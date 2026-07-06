@@ -20,6 +20,7 @@ import { getFotoUrl } from "../../utils/image";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
+import { formatPtkInduk } from "../../utils/dapodikUtils";
 
 interface GTKItem {
   identitas?: {
@@ -35,6 +36,7 @@ interface GTKItem {
   kepegawaian?: {
     status_kepegawaian?: string;
     jenis_ptk?: string;
+    ptk_induk?: any;
   };
 }
 
@@ -157,7 +159,9 @@ export default function PensiunPage() {
     return gtkData
       .filter((item) => {
         const status = item.kepegawaian?.status_kepegawaian?.toUpperCase() || "";
-        return status === "PNS" || status === "PPPK" || status === "P3K";
+        const isTargetStatus = status === "PNS" || status === "PPPK" || status === "P3K";
+        const isPtkInduk = formatPtkInduk(item.kepegawaian?.ptk_induk) === "Ya";
+        return isTargetStatus && isPtkInduk;
       })
       .map((item) => {
         const ageDetails = calculateAgeDetails(item.identitas?.tanggal_lahir);

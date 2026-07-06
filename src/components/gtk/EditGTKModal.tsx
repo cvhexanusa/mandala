@@ -610,7 +610,7 @@ const EditGTKModal: React.FC<EditGTKModalProps> = ({ isOpen, onClose, selectedId
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="w-full lg:w-1/3 flex flex-col items-center border-r border-gray-100 dark:border-white/[0.05] pr-8">
               <div className="relative group">
-                <div className="w-48 h-48 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-white/[0.02]">
+                <div className="w-48 h-48 rounded-full border-2 border-dashed border-gray-200 dark:border-gray-800 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-white/[0.02]">
                   {formData.avatar ? (
                     <img src={formData.avatar} alt="Profile" className="w-full h-full object-cover" />
                   ) : (

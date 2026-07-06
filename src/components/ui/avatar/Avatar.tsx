@@ -38,9 +38,9 @@ const Avatar: React.FC<AvatarProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`relative rounded-full ${sizeClasses[size]} ${className}`}>
+    <div className={`relative rounded-full shrink-0 ${sizeClasses[size]} ${className}`}>
       {/* Avatar Image */}
-      <img src={src} alt={alt} className="object-cover rounded-full" />
+      <img src={src} alt={alt} className="w-full h-full object-cover rounded-full" />
 
       {/* Status Indicator */}
       {status !== "none" && (

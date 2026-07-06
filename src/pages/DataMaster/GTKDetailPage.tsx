@@ -125,7 +125,7 @@ export default function GTKDetailPage() {
             <Avatar 
                 src={getFotoUrl(identitas?.foto)} 
                 size="large" 
-                className="h-28 w-28 rounded-xl border border-gray-200 dark:border-gray-700" 
+                className="h-28 w-28 rounded-full border border-gray-200 dark:border-gray-700" 
             />
             <div className="space-y-1">
                 <h1 className="text-xl font-semibold text-gray-800 dark:text-white">{identitas?.nama}</h1>
