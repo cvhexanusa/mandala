@@ -22,6 +22,7 @@ export default function IsiAntrian() {
   const cadisdik_id = searchParams.get("cadisdik_id") || "";
 
   const [kategori, setKategori] = useState<KategoriKeperluan[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [instansiName, setInstansiName] = useState("");
@@ -51,9 +52,17 @@ export default function IsiAntrian() {
       // 1. Fetch categories (Public, only requires x-mandala-key)
       try {
         const kategoriRes = await mandalaService.getKategoriKeperluan(cadisdik_id);
-        setKategori(kategoriRes.data || []);
-      } catch (catError) {
+        const list = kategoriRes.data || [];
+        setKategori(list);
+        if (list.length === 0) {
+          setErrorMsg("Belum ada kategori layanan yang terdaftar untuk instansi ini.");
+        } else {
+          setErrorMsg(null);
+        }
+      } catch (catError: any) {
         console.error("Gagal memuat kategori keperluan:", catError);
+        const msg = catError.response?.data?.message || catError.message || "Koneksi ke API pusat gagal";
+        setErrorMsg(`Gagal memuat layanan: ${msg}`);
       }
 
       // 2. Fetch instansi name (Requires auth, will fail/fallback gracefully for guests)
@@ -290,6 +299,11 @@ export default function IsiAntrian() {
                 placeholder="Pilih Kategori Layanan"
                 value={formData.kategori_keperluan_id}
               />
+              {errorMsg && (
+                <div className="mt-2 p-3 text-xs text-red-600 bg-red-50 dark:bg-red-950/20 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-900/30 font-medium">
+                  ⚠️ {errorMsg}
+                </div>
+              )}
             </div>
 
             <div>

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Konfigurasi Axios dengan praktik keamanan dasar
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://centralsimak.smakniscjr.sch.id/api',
+  baseURL: (import.meta.env.VITE_API_URL || 'https://centralsimak.smakniscjr.sch.id/api').trim(),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -23,7 +23,7 @@ api.interceptors.request.use(
     // API Key (Mandala Integration)
     // Sesuai strategi: Setiap request WAJIB menyertakan x-mandala-key
     // Mengambil dari .env (VITE_MANDALA_KEY)
-    const mandalaKey = import.meta.env.VITE_MANDALA_KEY || '';
+    const mandalaKey = (import.meta.env.VITE_MANDALA_KEY || '').trim();
     
     if (mandalaKey) {
       config.headers['x-mandala-key'] = mandalaKey;

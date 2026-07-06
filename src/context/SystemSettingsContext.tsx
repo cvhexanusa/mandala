@@ -38,7 +38,7 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
   const getStorageUrl = (filename: string | null | undefined) => {
     if (!filename) return "";
     if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
-    const baseUrl = (import.meta.env.VITE_API_URL || "https://centralsimak.smakniscjr.sch.id/api").replace(/\/api$/, "");
+    const baseUrl = (import.meta.env.VITE_API_URL || "https://centralsimak.smakniscjr.sch.id/api").trim().replace(/\/api$/, "");
     return `${baseUrl}/storage/${filename}`;
   };
 
@@ -116,7 +116,7 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     // Append API key variations to payload to satisfy backend DTO validation (e.g. key, apiKey, etc.)
-    const mandalaKey = import.meta.env.VITE_MANDALA_KEY || "";
+    const mandalaKey = (import.meta.env.VITE_MANDALA_KEY || "").trim();
     if (mandalaKey) {
       if (!formData.has("key")) formData.append("key", mandalaKey);
       if (!formData.has("apiKey")) formData.append("apiKey", mandalaKey);
