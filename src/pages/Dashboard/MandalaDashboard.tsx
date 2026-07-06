@@ -241,12 +241,21 @@ export default function MandalaDashboard() {
   const totalSiswaAll = schools.reduce((acc, s) => acc + (s.total_siswa || s.jumlah_siswa || 0), 0);
   const totalGTKAll = schools.reduce((acc, s) => acc + (s.total_gtk || s.jumlah_guru || 0), 0);
 
-  const barChartOptions: ApexOptions = {
-    colors: ["#465fff", "#10b981"],
+  const schoolNames = schools.map(s => {
+    const rawName = s.nama || s.nama_sekolah || '';
+    return rawName
+      .replace(/SMK NEGERI/i, "SMKN")
+      .replace(/SMK SWASTA/i, "SMKS")
+      .replace(/SEKOLAH MENENGAH KEJURUAN NEGERI/i, "SMKN")
+      .replace(/SEKOLAH MENENGAH KEJURUAN SWASTA/i, "SMKS");
+  });
+
+  const siswaChartOptions: ApexOptions = {
+    colors: ["#3b82f6"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",
-      height: 310,
+      height: 240,
       toolbar: {
         show: false,
       },
@@ -254,16 +263,15 @@ export default function MandalaDashboard() {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "30%",
-        borderRadius: 8,
-        distributed: true,
+        columnWidth: "40%",
+        borderRadius: 6,
       },
     },
     dataLabels: {
       enabled: true,
-      formatter: (val: number) => val.toLocaleString() + " Orang",
+      formatter: (val: number) => val.toLocaleString(),
       style: {
-        fontSize: "12px",
+        fontSize: "11px",
         fontFamily: "Outfit, sans-serif",
         fontWeight: "600",
         colors: ["#ffffff"],
@@ -275,7 +283,7 @@ export default function MandalaDashboard() {
       colors: ["transparent"],
     },
     xaxis: {
-      categories: ["Total Siswa Aktif", "Total GTK"],
+      categories: schoolNames,
       axisBorder: {
         show: false,
       },
@@ -283,10 +291,11 @@ export default function MandalaDashboard() {
         show: false,
       },
       labels: {
+        rotate: -30,
         style: {
-          fontSize: "12px",
+          fontSize: "10px",
           fontFamily: "Outfit",
-          fontWeight: 600,
+          fontWeight: 500,
         },
       },
     },
@@ -299,14 +308,11 @@ export default function MandalaDashboard() {
       },
     },
     fill: {
-      opacity: 1,
-    },
-    legend: {
-      show: false,
+      opacity: 0.9,
     },
     tooltip: {
       y: {
-        formatter: (val: number) => val.toLocaleString() + " Orang",
+        formatter: (val: number) => val.toLocaleString() + " Siswa",
       },
     },
     grid: {
@@ -315,10 +321,88 @@ export default function MandalaDashboard() {
     }
   };
 
-  const barChartSeries = [
+  const siswaChartSeries = [
     {
-      name: "Jumlah",
-      data: [totalSiswaAll, totalGTKAll],
+      name: "Siswa Aktif",
+      data: schools.map(s => s.total_siswa || s.jumlah_siswa || 0),
+    },
+  ];
+
+  const gtkChartOptions: ApexOptions = {
+    colors: ["#10b981"],
+    chart: {
+      fontFamily: "Outfit, sans-serif",
+      type: "bar",
+      height: 240,
+      toolbar: {
+        show: false,
+      },
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: "40%",
+        borderRadius: 6,
+      },
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val: number) => val.toLocaleString(),
+      style: {
+        fontSize: "11px",
+        fontFamily: "Outfit, sans-serif",
+        fontWeight: "600",
+        colors: ["#ffffff"],
+      },
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ["transparent"],
+    },
+    xaxis: {
+      categories: schoolNames,
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false,
+      },
+      labels: {
+        rotate: -30,
+        style: {
+          fontSize: "10px",
+          fontFamily: "Outfit",
+          fontWeight: 500,
+        },
+      },
+    },
+    yaxis: {
+      labels: {
+        formatter: (val: number) => val.toLocaleString(),
+        style: {
+          fontFamily: "Outfit",
+        },
+      },
+    },
+    fill: {
+      opacity: 0.9,
+    },
+    tooltip: {
+      y: {
+        formatter: (val: number) => val.toLocaleString() + " Orang GTK",
+      },
+    },
+    grid: {
+      borderColor: "#f2f4f7",
+      strokeDashArray: 4,
+    }
+  };
+
+  const gtkChartSeries = [
+    {
+      name: "GTK Aktif",
+      data: schools.map(s => s.total_gtk || s.jumlah_guru || 0),
     },
   ];
 
@@ -451,31 +535,75 @@ export default function MandalaDashboard() {
           
           {/* Column Left: Visual Analytics & Campaign Tracker (7/12) */}
           <div className="col-span-12 lg:col-span-7 space-y-6">
-            
-            {/* Academic Comparison Chart (ApexCharts Bar) */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
-              <div className="mb-4">
-                <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                  <UserIcon className="size-5 text-brand-500" />
-                  Grafik Seluruh Siswa dan GTK
-                </h3>
-                <p className="text-xs text-gray-400 mt-1">Total akumulasi seluruh siswa aktif dan GTK dari semua sekolah.</p>
+                 {/* Split Charts (Siswa and GTK) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Card 1: Siswa Chart */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                      <UserIcon className="size-4.5 text-blue-500" />
+                      Siswa Aktif per Sekolah
+                    </h3>
+                  </div>
+                  <p className="text-[10px] text-gray-400">Distribusi jumlah siswa aktif di tiap sekolah.</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                      Total: {totalSiswaAll.toLocaleString()} Orang
+                    </span>
+                  </div>
+                </div>
+                <div className="h-[240px] w-full mt-4">
+                  {loadingSchools ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+                    </div>
+                  ) : schools.length > 0 ? (
+                    <div className="-ml-3">
+                      <Chart options={siswaChartOptions} series={siswaChartSeries} type="bar" height={240} />
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400 text-xs italic">
+                      Data sekolah tidak ditemukan.
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="h-[310px] w-full">
-                {loadingSchools ? (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
+
+              {/* Card 2: GTK Chart */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                      <GroupIcon className="size-4.5 text-emerald-500" />
+                      GTK Aktif per Sekolah
+                    </h3>
                   </div>
-                ) : schools.length > 0 ? (
-                  <div className="-ml-4">
-                    <Chart options={barChartOptions} series={barChartSeries} type="bar" height={310} />
+                  <p className="text-[10px] text-gray-400">Distribusi jumlah guru & tendik di tiap sekolah.</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                      Total: {totalGTKAll.toLocaleString()} Orang
+                    </span>
                   </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                    Data sekolah tidak ditemukan.
-                  </div>
-                )}
+                </div>
+                <div className="h-[240px] w-full mt-4">
+                  {loadingSchools ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+                    </div>
+                  ) : schools.length > 0 ? (
+                    <div className="-ml-3">
+                      <Chart options={gtkChartOptions} series={gtkChartSeries} type="bar" height={240} />
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400 text-xs italic">
+                      Data sekolah tidak ditemukan.
+                    </div>
+                  )}
+                </div>
               </div>
+
             </div>
 
             {/* Document Compliance Campaigns Tracker */}
