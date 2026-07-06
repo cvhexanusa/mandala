@@ -69,8 +69,10 @@ function HomeRedirect() {
 }
 
 export default function App() {
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, "");
+
   return (
-    <Router>
+    <Router basename={basename}>
       <ScrollToTop />
       <Routes>
         {/* Auth Routes */}
