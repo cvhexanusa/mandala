@@ -456,11 +456,11 @@ export default function SptjmDapodikDetailPage() {
               <h4 className="text-xl font-bold text-gray-800 dark:text-white/90 mt-1">{printData.counts.baseline.Total}</h4>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-              <span className="text-theme-xs text-gray-500 dark:text-gray-400">Siswa Masuk (Pindahan)</span>
+              <span className="text-theme-xs text-gray-500 dark:text-gray-400">Siswa Masuk</span>
               <h4 className="text-xl font-bold text-brand-500 mt-1">{printData.counts.masuk.Total}</h4>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-              <span className="text-theme-xs text-gray-500 dark:text-gray-400">Siswa Keluar (Selain Lulus)</span>
+              <span className="text-theme-xs text-gray-500 dark:text-gray-400">Siswa Keluar</span>
               <h4 className="text-xl font-bold text-error-500 mt-1">{printData.counts.keluar.Total}</h4>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -485,7 +485,7 @@ export default function SptjmDapodikDetailPage() {
                     : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 }`}
               >
-                Siswa Masuk / Pindahan ({pdMasukList.length})
+                Siswa Masuk ({pdMasukList.length})
               </button>
               <button
                 onClick={() => {
@@ -498,7 +498,7 @@ export default function SptjmDapodikDetailPage() {
                     : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 }`}
               >
-                Siswa Keluar / Selain Lulus ({pdKeluarList.length})
+                Siswa Keluar ({pdKeluarList.length})
               </button>
             </div>
             
@@ -535,7 +535,10 @@ export default function SptjmDapodikDetailPage() {
                   <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                     {filteredPdMasuk.length > 0 ? (
                       filteredPdMasuk.map((student, idx) => {
-                        const regName = student.identitas?.jenis_pendaftaran_id_str ?? student.jenis_pendaftaran_id_str ?? student.akademik?.jenis_pendaftaran_id_str ?? "Pindahan";
+                        let regName = student.identitas?.jenis_pendaftaran_id_str ?? student.jenis_pendaftaran_id_str ?? student.akademik?.jenis_pendaftaran_id_str;
+                        if (!regName || regName === "2" || String(regName) === "2") {
+                          regName = "Pindahan";
+                        }
                         return (
                           <TableRow key={student.identitas?.id || idx}>
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{idx + 1}</TableCell>
