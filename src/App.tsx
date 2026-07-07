@@ -19,6 +19,7 @@ import AuditPendidikanGTK from "./pages/Analisa/AuditPendidikanGTK";
 import PensiunPage from "./pages/Analisa/PensiunPage";
 import SertifikasiGTKPage from "./pages/Analisa/SertifikasiGTKPage";
 import SptjmDapodikPage from "./pages/Analisa/SptjmDapodikPage";
+import SptjmDapodikDetailPage from "./pages/Analisa/SptjmDapodikDetailPage";
 import GTKDetailPage from "./pages/DataMaster/GTKDetailPage";
 import ClassData from "./pages/DataMaster/ClassData";
 import SubjectData from "./pages/DataMaster/SubjectData";
@@ -126,6 +127,7 @@ export default function App() {
             <Route path="analisa/pensiun" element={<PensiunPage />} />
             <Route path="analisa/sertifikasi" element={<SertifikasiGTKPage />} />
             <Route path="analisa/sptjm-dapodik" element={<SptjmDapodikPage />} />
+            <Route path="analisa/sptjm-dapodik/detail/:sekolahId" element={<SptjmDapodikDetailPage />} />
 
             {/* PKKS */}
             <Route path="pkks/instrumen" element={<TablePlaceholder title="Instrumen Penilaian" columns={["Nama Instrumen", "Kategori", "Tahun"]} />} />
