@@ -248,36 +248,31 @@ export default function SptjmDapodikDetailPage() {
             if (exitTime) {
               const exitDate = new Date(exitTime);
               if (exitDate < startOfSchoolYear || exitDate >= endOfSchoolYear) return false;
+            } else {
+              return false; // exclude if no exit time/semester is present
             }
           }
           return true;
         });
 
-        // Entries list: active, other than "Siswa Baru" (id 1)
+        // Entries list: active, other than "Siswa Baru" (matched with RekapPDTable isPindahan)
         const filteredEntries = activeStudents.filter((student: any) => {
-          const pendaftaranId = student.identitas?.jenis_pendaftaran_id ?? student.jenis_pendaftaran_id ?? student.akademik?.jenis_pendaftaran_id;
-          const pendaftaranIdStr = student.identitas?.jenis_pendaftaran_id_str ?? student.jenis_pendaftaran_id_str ?? student.akademik?.jenis_pendaftaran_id_str;
-          
-          const isTransfer = 
-            pendaftaranId !== undefined && 
-            pendaftaranId !== null && 
-            pendaftaranId !== "" &&
-            pendaftaranId !== 1 && 
-            String(pendaftaranId) !== "1" && 
-            !String(pendaftaranIdStr).toLowerCase().includes("baru");
+          const pendaftaranVal = String(
+            student.identitas?.jenis_pendaftaran_id_str ?? 
+            student.jenis_pendaftaran_id_str ?? 
+            student.akademik?.jenis_pendaftaran_id_str ?? 
+            student.identitas?.jenis_pendaftaran_id ?? 
+            student.jenis_pendaftaran_id ?? 
+            student.akademik?.jenis_pendaftaran_id ?? 
+            ""
+          ).trim();
 
-          if (!isTransfer) return false;
+          const isPindahan = 
+            pendaftaranVal === "2" || 
+            pendaftaranVal.toLowerCase().includes("pindahan") || 
+            pendaftaranVal.toLowerCase().includes("transfer");
 
-          const entryTime = student.created_at || student.identitas?.created_at;
-          if (entryTime) {
-            const entryDate = new Date(entryTime);
-            if (entryDate >= startOfSchoolYear && entryDate < endOfSchoolYear) {
-              return true;
-            }
-          } else {
-            return true;
-          }
-          return false;
+          return isPindahan;
         });
 
         setPdMasukList(filteredEntries);
