@@ -1,7 +1,7 @@
 import api from './api';
 
 export const dapodikService = {
-  getPesertaDidik: async (limit: number = 10, search: string = '', page: number = 1, rombelName?: string, status?: 'aktif' | 'non-aktif', tingkat?: string, sekolahId?: string) => {
+  getPesertaDidik: async (limit: number = 10, search: string = '', page: number = 1, rombelName?: string, status?: 'aktif' | 'non-aktif', tingkat?: string, sekolahId?: string, semesterId?: string) => {
     try {
       const response = await api.get('/mandala/dapodik/peserta-didik', {
         params: {
@@ -11,7 +11,8 @@ export const dapodikService = {
           rombel: rombelName,
           status,
           tingkat,
-          sekolah_id: sekolahId
+          sekolah_id: sekolahId,
+          semester_id: semesterId
         }
       });
       return response.data;

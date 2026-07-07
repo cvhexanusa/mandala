@@ -4,7 +4,7 @@ import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import Pagination from "../../components/common/Pagination";
-import { SearchIcon, PrinterIcon } from "../../icons";
+import { SearchIcon, PrinterIcon, EyeIcon } from "../../icons";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import {
 import { dapodikService } from "../../services/dapodikService";
 import { mandalaService } from "../../services/mandalaService";
 import Swal from "sweetalert2";
+import { Modal } from "../../components/ui/modal";
 
 // Helper to convert numbers to Indonesian spelled-out words (terbilang)
 function terbilangAngka(n: number): string {
@@ -40,6 +41,26 @@ const DAYS_INDO = [
   "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
 ];
 
+// Helper to format semester name dynamically based on semester or semester_id
+function formatSemester(tp: any): string {
+  if (!tp) return "1 (Ganjil)";
+  const sem = String(tp.semester || "").toLowerCase();
+  if (sem.includes("genap") || sem === "2") {
+    return "2 (Genap)";
+  }
+  if (sem.includes("ganjil") || sem === "1") {
+    return "1 (Ganjil)";
+  }
+  const semId = String(tp.semester_id || "");
+  if (semId.endsWith("2")) {
+    return "2 (Genap)";
+  }
+  if (semId.endsWith("1")) {
+    return "1 (Ganjil)";
+  }
+  return tp.semester || "1 (Ganjil)";
+}
+
 export default function SptjmDapodikPage() {
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +70,7 @@ export default function SptjmDapodikPage() {
 
   // State for print template data
   const [printData, setPrintData] = useState<any | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Load School List
   useEffect(() => {
@@ -101,12 +123,12 @@ export default function SptjmDapodikPage() {
     );
   }, [filteredSchools, currentPage, itemsPerPage]);
 
-  // Print PDF Handler
-  const handlePrint = async (school: any) => {
+  // Detail Preview Handler
+  const handleShowDetail = async (school: any) => {
     const schoolId = school.sekolah_id || school.id;
 
     Swal.fire({
-      title: "Mempersiapkan Cetak",
+      title: "Mempersiapkan Data",
       text: `Menarik data pendukung untuk ${school.nama}...`,
       allowOutsideClick: false,
       didOpen: () => {
@@ -115,7 +137,25 @@ export default function SptjmDapodikPage() {
     });
 
     try {
-      // 1. Fetch Mapping Pengawas
+      // 1. Fetch active Tahun Pelajaran to determine school year dates and cut-off year dynamically
+      const tpRes = await dapodikService.getTahunPelajaran().catch(() => ({ data: [] }));
+      const tpList = tpRes.data || [];
+      const activeTp = tpList.find((t: any) => t.status === "Aktif") || tpList[0];
+      
+      let cutOffYear = new Date().getFullYear() - 1;
+      if (activeTp && activeTp.tahun_pelajaran) {
+        const match = activeTp.tahun_pelajaran.match(/^(\d{4})/);
+        if (match && match[1]) {
+          cutOffYear = parseInt(match[1]);
+        }
+      }
+      const cutOffText = `31 Agustus ${cutOffYear}`;
+
+      // Determine school year date range (July 1st of cutOffYear to July 1st of next year)
+      const startOfSchoolYear = new Date(cutOffYear, 6, 1);
+      const endOfSchoolYear = new Date(cutOffYear + 1, 6, 1);
+
+      // 2. Fetch Mapping Pengawas
       const mappingRes = await mandalaService.getMappingPengawas().catch(() => ({ data: [] }));
       const mappings = mappingRes.data || [];
       const matchedMapping = mappings.find((m: any) => m.sekolah_id === schoolId);
@@ -123,7 +163,7 @@ export default function SptjmDapodikPage() {
       const pengawasName = matchedMapping?.pegawai?.nama_lengkap || "-";
       const pengawasNip = matchedMapping?.pegawai?.nip || "-";
 
-      // 2. Fetch Kepala Sekolah (GTK)
+      // 3. Fetch Kepala Sekolah (GTK)
       const gtkRes = await dapodikService.getGTK(100, "", 1, undefined, "aktif", schoolId).catch(() => ({ data: [] }));
       const gtkList = gtkRes.data || [];
       const matchedPrincipal = gtkList.find((g: any) =>
@@ -134,7 +174,7 @@ export default function SptjmDapodikPage() {
       const principalName = matchedPrincipal?.identitas?.nama || "-";
       const principalNip = matchedPrincipal?.identitas?.nip || "-";
 
-      // 3. Fetch KCD (Pegawai with jabatan === 3) and find their Cadisdik Instansi name
+      // 4. Fetch KCD (Pegawai with jabatan === 3) and find their Cadisdik Instansi name
       const pegawaiRes = await dapodikService.getPegawai().catch(() => ({ data: [] }));
       const pegawaiList = pegawaiRes.data || [];
       
@@ -158,7 +198,7 @@ export default function SptjmDapodikPage() {
         instansiKcdName = instansiKcdName.substring(7);
       }
 
-      // 4. Fetch Active Students (Page-by-page)
+      // 5. Fetch Active Students (Page-by-page)
       const firstPagePd = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, schoolId);
       let activeStudents = [];
       let totalCount = 0;
@@ -197,8 +237,8 @@ export default function SptjmDapodikPage() {
         });
       }
 
-      // 5. Fetch Inactive Students (Page-by-page)
-      const firstPagePdKeluar = await dapodikService.getPesertaDidik(100, "", 1, undefined, "non-aktif", undefined, schoolId);
+      // 6. Fetch Inactive Students (Page-by-page) filtered by active semester
+      const firstPagePdKeluar = await dapodikService.getPesertaDidik(100, "", 1, undefined, "non-aktif", undefined, schoolId, activeTp?.semester_id);
       let inactiveStudents = [];
       let totalCountKeluar = 0;
       if (firstPagePdKeluar) {
@@ -218,7 +258,7 @@ export default function SptjmDapodikPage() {
       if (totalPagesPdKeluar > 1) {
         const pagePromises = [];
         for (let p = 2; p <= totalPagesPdKeluar; p++) {
-          pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "non-aktif", undefined, schoolId));
+          pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "non-aktif", undefined, schoolId, activeTp?.semester_id));
         }
         const otherPages = await Promise.all(pagePromises);
         otherPages.forEach((pageRes) => {
@@ -235,24 +275,6 @@ export default function SptjmDapodikPage() {
           inactiveStudents = [...inactiveStudents, ...pageData];
         });
       }
-
-      // 6. Fetch active Tahun Pelajaran to determine school year dates and cut-off year dynamically
-      const tpRes = await dapodikService.getTahunPelajaran().catch(() => ({ data: [] }));
-      const tpList = tpRes.data || [];
-      const activeTp = tpList.find((t: any) => t.status === "Aktif") || tpList[0];
-      
-      let cutOffYear = new Date().getFullYear() - 1;
-      if (activeTp && activeTp.tahun_pelajaran) {
-        const match = activeTp.tahun_pelajaran.match(/^(\d{4})/);
-        if (match && match[1]) {
-          cutOffYear = parseInt(match[1]);
-        }
-      }
-      const cutOffText = `31 Agustus ${cutOffYear}`;
-
-      // Determine school year date range (July 1st of cutOffYear to July 1st of next year)
-      const startOfSchoolYear = new Date(cutOffYear, 6, 1);
-      const endOfSchoolYear = new Date(cutOffYear + 1, 6, 1);
 
       // 7. Aggregate calculations per Tingkat X, XI, XII
       const rombelSets: Record<string, Set<string>> = { X: new Set(), XI: new Set(), XII: new Set() };
@@ -285,12 +307,16 @@ export default function SptjmDapodikPage() {
         // Check if transfer student (masuk) who entered within the active school year
         const pendaftaranId = student.identitas?.jenis_pendaftaran_id ?? student.jenis_pendaftaran_id ?? student.akademik?.jenis_pendaftaran_id;
         const pendaftaranIdStr = student.identitas?.jenis_pendaftaran_id_str ?? student.jenis_pendaftaran_id_str ?? student.akademik?.jenis_pendaftaran_id_str;
+        
+        // Registration is considered entering if it's NOT a new student (siswa baru = id 1)
         const isTransfer = 
-          pendaftaranId === 2 || 
-          String(pendaftaranId) === "2" || 
-          String(pendaftaranIdStr).toLowerCase().includes("pindahan") || 
-          String(pendaftaranIdStr).toLowerCase().includes("masuk") || 
-          String(pendaftaranIdStr).toLowerCase().includes("transfer");
+          pendaftaranId !== undefined && 
+          pendaftaranId !== null && 
+          pendaftaranId !== "" &&
+          pendaftaranId !== 1 && 
+          String(pendaftaranId) !== "1" && 
+          !String(pendaftaranIdStr).toLowerCase().includes("baru");
+
         if (isTransfer) {
           const entryTime = student.created_at || student.identitas?.created_at;
           if (entryTime) {
@@ -321,17 +347,30 @@ export default function SptjmDapodikPage() {
         else if (tingkatRaw.includes("12") || tingkatRaw === "XII") k = "XII";
         else return;
 
-        const exitTime = student.updated_at || student.identitas?.updated_at;
-        if (exitTime) {
-          const exitDate = new Date(exitTime);
-          if (exitDate >= startOfSchoolYear && exitDate < endOfSchoolYear) {
-            counts.keluar[k]++;
-            counts.keluar.Total++;
-          }
+        // Exclude graduated students
+        const jenisKeluarId = student.akademik?.jenis_keluar_id ?? student.jenis_keluar_id ?? student.identitas?.jenis_keluar_id;
+        const jenisKeluarIdStr = student.akademik?.jenis_keluar_id_str ?? student.jenis_keluar_id_str ?? student.identitas?.jenis_keluar_id_str;
+        const isLulus = 
+          jenisKeluarId === 1 || 
+          String(jenisKeluarId) === "1" || 
+          String(jenisKeluarIdStr).toLowerCase().includes("lulus");
+
+        if (isLulus) return;
+
+        // Double-check semester or exit dates as fallback
+        const studentSemesterId = student.akademik?.semester_id ?? student.semester_id;
+        if (studentSemesterId) {
+          if (studentSemesterId !== activeTp?.semester_id) return;
         } else {
-          counts.keluar[k]++;
-          counts.keluar.Total++;
+          const exitTime = student.updated_at || student.identitas?.updated_at;
+          if (exitTime) {
+            const exitDate = new Date(exitTime);
+            if (exitDate < startOfSchoolYear || exitDate >= endOfSchoolYear) return;
+          }
         }
+
+        counts.keluar[k]++;
+        counts.keluar.Total++;
       });
 
       // Calculate Baseline ("Jumlah Peserta Didik" row)
@@ -367,11 +406,7 @@ export default function SptjmDapodikPage() {
       });
 
       Swal.close();
-
-      // Trigger print after state update is applied
-      setTimeout(() => {
-        window.print();
-      }, 500);
+      setIsDetailModalOpen(true);
 
     } catch (err) {
       console.error("Gagal menarik data cetak:", err);
@@ -467,10 +502,10 @@ export default function SptjmDapodikPage() {
                             <Button
                               variant="primary"
                               size="sm"
-                              startIcon={<PrinterIcon className="size-4" />}
-                              onClick={() => handlePrint(school)}
+                              startIcon={<EyeIcon className="size-4" />}
+                              onClick={() => handleShowDetail(school)}
                             >
-                              Cetak
+                              Lihat Detail
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -764,7 +799,7 @@ export default function SptjmDapodikPage() {
 
                   <div className="flex justify-between mb-2 text-[9.5pt] font-semibold px-1">
                     <div>Kelas: {rombelName}</div>
-                    <div>Semester: {printData.activeTp?.semester || "1 (Ganjil)"}</div>
+                    <div>Semester: {formatSemester(printData.activeTp)}</div>
                   </div>
 
                   <table className="student-list-table">
@@ -797,6 +832,166 @@ export default function SptjmDapodikPage() {
           })()}
         </div>
       )}
+
+      {/* Detail & Print Preview Modal (Hidden in Print) */}
+      <Modal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 md:p-8 no-print"
+      >
+        <div className="flex justify-between items-center pb-4 mb-6 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">
+            Pratinjau Berita Acara SPTJM
+          </h3>
+          <button
+            onClick={() => setIsDetailModalOpen(false)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {printData && (
+          <div className="space-y-6 text-gray-800 dark:text-gray-200 font-serif leading-relaxed text-sm bg-white dark:bg-gray-950 p-6 rounded-xl border border-gray-150 dark:border-gray-800 shadow-inner max-w-3xl mx-auto">
+            {/* Kop / Header */}
+            <div className="text-center space-y-1">
+              <h2 className="text-base font-bold uppercase text-gray-900 dark:text-white">BERITA ACARA</h2>
+              <h2 className="text-sm font-bold uppercase text-gray-900 dark:text-white">VERIFIKASI DAN VALIDASI DATA FAKTUAL SISWA</h2>
+              <h2 className="text-sm font-bold uppercase text-gray-900 dark:text-white">JENJANG SMK NEGERI DAN SWASTA</h2>
+              <h2 className="text-sm font-bold uppercase text-gray-900 dark:text-white">DI LINGKUNGAN DINAS PENDIDIKAN PROVINSI JAWA BARAT</h2>
+              <div className="w-full border-b-2 border-double border-gray-300 dark:border-gray-700 my-3"></div>
+            </div>
+
+            {/* Spelled Date */}
+            <p className="text-justify">{printData.spelledDateText}</p>
+
+            {/* Pihak Pertama */}
+            <div className="space-y-1 pl-4">
+              <div className="flex"><span className="w-24 font-semibold">Nama</span><span>: <strong className="text-gray-900 dark:text-white">{printData.pengawasName}</strong></span></div>
+              <div className="flex"><span className="w-24 font-semibold">NIP</span><span>: {printData.pengawasNip}</span></div>
+              <div className="flex"><span className="w-24 font-semibold">Jabatan</span><span>: Pengawas Tingkat/IV.a</span></div>
+              <p className="font-semibold text-xs text-gray-500">Selanjutnya disebut PIHAK PERTAMA</p>
+            </div>
+
+            {/* Pihak Kedua */}
+            <div className="space-y-1 pl-4">
+              <div className="flex"><span className="w-24 font-semibold">Nama</span><span>: <strong className="text-gray-900 dark:text-white">{printData.principalName}</strong></span></div>
+              <div className="flex"><span className="w-24 font-semibold">NIP</span><span>: {printData.principalNip === "-" ? "-" : printData.principalNip}</span></div>
+              <div className="flex"><span className="w-24 font-semibold">Jabatan</span><span>: Kepala {printData.school.nama}</span></div>
+              <p className="font-semibold text-xs text-gray-500">Selanjutnya disebut PIHAK KEDUA</p>
+            </div>
+
+            <p className="text-justify">
+              PIHAK PERTAMA telah melakukan Verifikasi dan Validasi Data Faktual Siswa terhadap PIHAK KEDUA. Berdasarkan data <strong>Cut-Off {printData.cutOffText}</strong> dan hasil Verifikasi dan Validasi Data Faktual Siswa didapatkan data rombel dan jumlah siswa sebagai berikut:
+            </p>
+
+            {/* Table */}
+            <table className="w-full border-collapse border border-gray-300 dark:border-gray-800 text-xs">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-white/[0.02] text-gray-900 dark:text-white">
+                  <th rowSpan={2} className="border border-gray-300 dark:border-gray-800 p-2 text-center w-12">No</th>
+                  <th rowSpan={2} className="border border-gray-300 dark:border-gray-800 p-2 text-left">Uraian</th>
+                  <th colSpan={3} className="border border-gray-300 dark:border-gray-800 p-2 text-center">Kelas</th>
+                  <th rowSpan={2} className="border border-gray-300 dark:border-gray-800 p-2 text-center w-20">Total</th>
+                </tr>
+                <tr className="bg-gray-50 dark:bg-white/[0.02] text-gray-900 dark:text-white">
+                  <th className="border border-gray-300 dark:border-gray-800 p-2 text-center w-16">X</th>
+                  <th className="border border-gray-300 dark:border-gray-800 p-2 text-center w-16">XI</th>
+                  <th className="border border-gray-300 dark:border-gray-800 p-2 text-center w-16">XII</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">1</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2">Jumlah Rombel</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.rombel.X}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.rombel.XI}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.rombel.XII}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center font-bold text-gray-950 dark:text-white">{printData.counts.rombel.Total}</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">2</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2">Jumlah Peserta Didik</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.baseline.X}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.baseline.XI}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.baseline.XII}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center font-bold text-gray-950 dark:text-white">{printData.counts.baseline.Total}</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">3</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2">Jumlah Peserta Didik Keluar</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.keluar.X}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.keluar.XI}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.keluar.XII}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center font-bold text-gray-950 dark:text-white">{printData.counts.keluar.Total}</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">4</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2">Jumlah Peserta Didik Masuk</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.masuk.X}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.masuk.XI}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.masuk.XII}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center font-bold text-gray-950 dark:text-white">{printData.counts.masuk.Total}</td>
+                </tr>
+                <tr className="font-bold bg-gray-50 dark:bg-white/[0.02]">
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center"></td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2">JUMLAH (2 - 3 + 4)</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.active.X}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.active.XI}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center">{printData.counts.active.XII}</td>
+                  <td className="border border-gray-300 dark:border-gray-800 p-2 text-center text-brand-500 font-bold">{printData.counts.active.Total}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Signature Block Preview */}
+            <div className="grid grid-cols-2 gap-4 text-center text-xs pt-4">
+              <div className="space-y-12">
+                <div>
+                  <p className="font-semibold">PIHAK PERTAMA</p>
+                  <p>Pengawas,</p>
+                </div>
+                <div>
+                  <p className="font-bold underline text-gray-900 dark:text-white">{printData.pengawasName}</p>
+                  <p>NIP. {printData.pengawasNip}</p>
+                </div>
+              </div>
+              <div className="space-y-12">
+                <div>
+                  <p className="font-semibold">PIHAK KEDUA</p>
+                  <p>Kepala Sekolah,</p>
+                </div>
+                <div>
+                  <p className="font-bold underline text-gray-900 dark:text-white">{printData.principalName}</p>
+                  <p>NIP. {printData.principalNip === "-" ? "-" : printData.principalNip}</p>
+                </div>
+              </div>
+              <div className="col-span-2 text-center space-y-12 pt-2">
+                <div>
+                  <p>Mengetahui,</p>
+                  <p className="font-semibold">Kepala {printData.instansiKcdName}</p>
+                  <p className="font-semibold">Dinas Pendidikan Provinsi Jawa Barat</p>
+                </div>
+                <div>
+                  <p className="font-bold underline text-gray-900 dark:text-white">{printData.kcdName}</p>
+                  <p>NIP. {printData.kcdNip}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-100 dark:border-gray-800">
+          <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
+            Tutup
+          </Button>
+          <Button variant="primary" onClick={() => window.print()} startIcon={<PrinterIcon className="size-4" />}>
+            Cetak SPTJM
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }
