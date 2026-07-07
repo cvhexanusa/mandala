@@ -86,7 +86,7 @@ export default function SignInForm() {
         <div className="px-5 sm:px-0">
           <div className="mb-8">
             <h1 className="mb-2 font-bold text-gray-800 text-title-md dark:text-white/90">
-              Masuk ke {settings?.appShortName || "MANDALA"}
+              Masuk ke {settings?.appShortName || "SAPA VI"}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Silakan masukkan NIP dan kata sandi Anda.

@@ -525,12 +525,12 @@ const AppSidebar: React.FC = () => {
                 />
               ) : (
                 <div className="w-12 h-12 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-2xl">
-                  {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
+                  {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "S"}
                 </div>
               )}
               <div className="flex flex-col">
-                <span className="font-bold text-gray-900 dark:text-white text-xl leading-tight uppercase truncate max-w-[150px]" title={settings?.appName || "MANDALA"}>
-                  {settings?.appShortName || "MANDALA"}
+                <span className="font-bold text-gray-900 dark:text-white text-xl leading-tight uppercase truncate max-w-[150px]" title={settings?.appName || "SAPA VI"}>
+                  {settings?.appShortName || "SAPA VI"}
                 </span>
               </div>
             </>
@@ -543,7 +543,7 @@ const AppSidebar: React.FC = () => {
               />
             ) : (
               <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
+                {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "S"}
               </div>
             )
           )}

@@ -58,7 +58,25 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
         }
       }
 
-      if (!cadisdikId) return;
+      if (!cadisdikId) {
+        setSettings((prev) => prev || {
+          cadisdik_id: "",
+          appName: "SAPA VI",
+          appShortName: "SAPA VI",
+          appLogo: null,
+          appLogoDark: null,
+          appFavicon: null,
+          contactEmail: null,
+          contactPhone: null,
+          contactAddress: null,
+          copyrightText: "© 2026 SAPA VI. All Rights Reserved.",
+          metaDescription: null,
+          metaKeywords: null,
+          maintenanceMode: false,
+        });
+        setLoading(false);
+        return;
+      }
 
       // Updated to match the latest NestJS route: GET /api/mandala/system-setting/:cadisdik_id
       const response = await api.get(`/mandala/system-setting/${cadisdikId}`);
@@ -72,15 +90,15 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
       // Fallback local defaults
       setSettings((prev) => prev || {
         cadisdik_id: user?.cadisdik_id || "",
-        appName: "SIMAK",
-        appShortName: "Mandala",
+        appName: "SAPA VI",
+        appShortName: "SAPA VI",
         appLogo: null,
         appLogoDark: null,
         appFavicon: null,
         contactEmail: null,
         contactPhone: null,
         contactAddress: null,
-        copyrightText: "© 2026 SIMAK. All Rights Reserved.",
+        copyrightText: "© 2026 SAPA VI. All Rights Reserved.",
         metaDescription: null,
         metaKeywords: null,
         maintenanceMode: false,

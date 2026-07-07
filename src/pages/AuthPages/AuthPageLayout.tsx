@@ -29,12 +29,12 @@ export default function AuthLayout({
                       />
                     ) : (
                       <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-brand-500/20">
-                        {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
+                        {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "S"}
                       </div>
                     )}
                     <div className="flex flex-col">
                         <span className="font-bold text-white text-3xl tracking-tight">
-                          {settings?.appShortName || "MANDALA"}
+                          {settings?.appShortName || "SAPA VI"}
                         </span>
                     </div>
                 </div>
