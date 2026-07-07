@@ -143,8 +143,8 @@ export default function SptjmDapodikPage() {
         (school.cadisdik_id ? p.cadisdik_id === school.cadisdik_id : true)
       ) || pegawaiList.find((p: any) => Number(p.jabatan) === 3);
 
-      const kcdName = matchedKcd?.nama_lengkap || "Dr. Nonong Winarni, S.Pd., M.Pd.";
-      const kcdNip = matchedKcd?.nip || "1970012210 199303 2 003";
+      const kcdName = matchedKcd?.nama_lengkap || "-";
+      const kcdNip = matchedKcd?.nip || "-";
 
       const cadisdikRes = await dapodikService.getCadisdik().catch(() => ({ data: [] }));
       const cadisdikList = cadisdikRes.data || [];
