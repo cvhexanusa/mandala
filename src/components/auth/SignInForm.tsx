@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import { Modal } from "../ui/modal";
 import { getRoleSlug } from "../../services/roleUtils";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +24,7 @@ export default function SignInForm() {
   const [error, setError] = useState<string | null>(null);
 
   const { login, verify2FA, setAuthData } = useAuth();
+  const { settings } = useSystemSettings();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -84,7 +86,7 @@ export default function SignInForm() {
         <div className="px-5 sm:px-0">
           <div className="mb-8">
             <h1 className="mb-2 font-bold text-gray-800 text-title-md dark:text-white/90">
-              Masuk ke MANDALA
+              Masuk ke {settings?.appShortName || "MANDALA"}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Silakan masukkan NIP dan kata sandi Anda.

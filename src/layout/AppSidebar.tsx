@@ -529,11 +529,11 @@ const AppSidebar: React.FC = () => {
                 </div>
               )}
               <div className="flex flex-col">
-                <span className="font-bold text-gray-900 dark:text-white leading-tight uppercase truncate max-w-[150px]" title={settings?.appName || "MANDALA"}>
+                <span className="font-bold text-gray-900 dark:text-white leading-tight uppercase truncate max-w-[100px]" title={settings?.appName || "MANDALA"}>
                   {settings?.appShortName || "MANDALA"}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Sistem Informasi
+                  
                 </span>
               </div>
             </>
