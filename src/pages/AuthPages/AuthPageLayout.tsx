@@ -36,8 +36,8 @@ export default function AuthLayout({
                         <span className="font-bold text-white text-3xl tracking-tight">
                           {settings?.appShortName || "MANDALA"}
                         </span>
-                        <span className="text-xs text-gray-400 uppercase tracking-widest">
-                          Sistem Informasi
+                        <span className="text-xs text-gray-400 uppercase tracking-widest truncate max-w-[200px]" title={settings?.appName || "Sistem Informasi"}>
+                          {settings?.appName || "Sistem Informasi"}
                         </span>
                     </div>
                 </div>

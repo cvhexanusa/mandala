@@ -521,19 +521,16 @@ const AppSidebar: React.FC = () => {
                 <img 
                   src={getStorageUrl(settings.appLogo)} 
                   alt="App Logo" 
-                  className="w-10 h-10 object-contain"
+                  className="w-12 h-12 object-contain"
                 />
               ) : (
-                <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                <div className="w-12 h-12 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold text-2xl">
                   {settings?.appShortName ? settings.appShortName.charAt(0).toUpperCase() : "M"}
                 </div>
               )}
               <div className="flex flex-col">
-                <span className="font-bold text-gray-900 dark:text-white leading-tight uppercase truncate max-w-[100px]" title={settings?.appName || "MANDALA"}>
+                <span className="font-bold text-gray-900 dark:text-white text-xl leading-tight uppercase truncate max-w-[150px]" title={settings?.appName || "MANDALA"}>
                   {settings?.appShortName || "MANDALA"}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  
                 </span>
               </div>
             </>
