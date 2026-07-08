@@ -6,8 +6,10 @@ import Button from "../../components/ui/button/Button";
 import Swal from "sweetalert2";
 import { PlusIcon, TrashBinIcon, PencilIcon, DownloadIcon } from "../../icons";
 import { suratService, SuratMasuk } from "../../services/suratService";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SuratMasukPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<SuratMasuk[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,7 +103,8 @@ export default function SuratMasukPage() {
         tanggal_surat: tanggalSurat,
         tanggal_terima: tanggalTerima,
         ringkasan,
-        file_surat: fileSurat
+        file_surat: fileSurat,
+        cadisdik_id: user?.cadisdik_id
       };
 
       if (editingId) {

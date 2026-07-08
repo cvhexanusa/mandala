@@ -6,8 +6,10 @@ import Button from "../../components/ui/button/Button";
 import Swal from "sweetalert2";
 import { PlusIcon, TrashBinIcon, PencilIcon, EyeIcon } from "../../icons";
 import { suratService, TemplateSurat } from "../../services/suratService";
+import { useAuth } from "../../context/AuthContext";
 
 export default function TemplateSuratPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<TemplateSurat[]>([]);
 
@@ -16,17 +18,31 @@ export default function TemplateSuratPage() {
 
   // Form states
   const [namaTemplate, setNamaTemplate] = useState("");
+  const [kategori, setKategori] = useState(1);
   const [konten, setKonten] = useState("");
   const [marginTop, setMarginTop] = useState(20);
   const [marginBottom, setMarginBottom] = useState(20);
   const [marginLeft, setMarginLeft] = useState(25);
   const [marginRight, setMarginRight] = useState(20);
   const [ukuranKertas, setUkuranKertas] = useState("A4");
-
-  // Preview state
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState("");
   const [previewMargins, setPreviewMargins] = useState({ t: 20, b: 20, l: 25, r: 20 });
+
+  const getCategoryLabel = (cat?: number) => {
+    const labels: Record<number, string> = {
+      1: "Surat Dinas",
+      2: "Surat Keputusan (SK)",
+      3: "Surat Tugas (ST)",
+      4: "Surat Undangan",
+      5: "Surat Keterangan",
+      6: "Surat Pengantar",
+      7: "Surat Edaran",
+      8: "Surat Kuasa",
+      9: "Surat Lainnya"
+    };
+    return labels[cat || 1] || "Surat Dinas";
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -56,6 +72,7 @@ export default function TemplateSuratPage() {
   const resetToNewForm = () => {
     setEditingId(null);
     setNamaTemplate("");
+    setKategori(1);
     setMarginTop(20);
     setMarginBottom(20);
     setMarginLeft(25);
@@ -98,11 +115,13 @@ export default function TemplateSuratPage() {
   const selectTemplateForEdit = (item: TemplateSurat) => {
     setEditingId(item.id || null);
     setNamaTemplate(item.nama_template);
+    setKategori(item.kategori || 1);
     setKonten(item.konten);
     setMarginTop(item.margin_top);
     setMarginBottom(item.margin_bottom);
     setMarginLeft(item.margin_left);
     setMarginRight(item.margin_right);
+    setUkuranKertas(item.ukuran_kertas || "A4");
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -119,7 +138,10 @@ export default function TemplateSuratPage() {
         margin_top: Number(marginTop),
         margin_bottom: Number(marginBottom),
         margin_left: Number(marginLeft),
-        margin_right: Number(marginRight)
+        margin_right: Number(marginRight),
+        ukuran_kertas: ukuranKertas,
+        kategori: Number(kategori),
+        cadisdik_id: user?.cadisdik_id
       };
 
       if (editingId) {
@@ -288,10 +310,10 @@ export default function TemplateSuratPage() {
 
             <form onSubmit={handleSave} className="space-y-5">
               
-              {/* Form Input fields: Judul & Ukuran Kertas */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Form Input fields: Judul, Kategori & Ukuran Kertas */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2">
-                  <Label>JUDUL SURAT *</Label>
+                  <Label>JUDUL TEMPLATE *</Label>
                   <Input
                     type="text"
                     placeholder="Contoh: Surat Keterangan Lulus"
@@ -299,6 +321,25 @@ export default function TemplateSuratPage() {
                     onChange={(e) => setNamaTemplate(e.target.value)}
                     required
                   />
+                </div>
+                <div>
+                  <Label>KATEGORI SURAT *</Label>
+                  <select
+                    value={kategori}
+                    onChange={(e) => setKategori(Number(e.target.value))}
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-transparent py-2.5 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-white/90"
+                    required
+                  >
+                    <option value={1} className="dark:bg-gray-900">Surat Dinas</option>
+                    <option value={2} className="dark:bg-gray-900">Surat Keputusan (SK)</option>
+                    <option value={3} className="dark:bg-gray-900">Surat Tugas (ST)</option>
+                    <option value={4} className="dark:bg-gray-900">Surat Undangan</option>
+                    <option value={5} className="dark:bg-gray-900">Surat Keterangan</option>
+                    <option value={6} className="dark:bg-gray-900">Surat Pengantar</option>
+                    <option value={7} className="dark:bg-gray-900">Surat Edaran</option>
+                    <option value={8} className="dark:bg-gray-900">Surat Kuasa</option>
+                    <option value={9} className="dark:bg-gray-900">Surat Lainnya</option>
+                  </select>
                 </div>
                 <div>
                   <Label>UKURAN KERTAS</Label>
@@ -583,9 +624,14 @@ export default function TemplateSuratPage() {
                         <span className="text-xs font-semibold text-gray-850 dark:text-white/80 group-hover:text-brand-600 dark:group-hover:text-brand-400 block truncate">
                           {item.nama_template}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-mono">
-                          M: {item.margin_top}/{item.margin_right}/{item.margin_bottom}/{item.margin_left}
-                        </span>
+                        <div className="flex gap-2 items-center text-[10px] text-gray-400 font-mono mt-1">
+                          <span className="px-1.5 py-0.2 bg-gray-100 dark:bg-white/[0.05] rounded text-gray-500">
+                            {getCategoryLabel(item.kategori)}
+                          </span>
+                          <span>
+                            M: {item.margin_top}/{item.margin_right}/{item.margin_bottom}/{item.margin_left}
+                          </span>
+                        </div>
                       </div>
                       
                       {/* Action buttons */}

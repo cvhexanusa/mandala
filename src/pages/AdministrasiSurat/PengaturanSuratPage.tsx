@@ -6,8 +6,10 @@ import Button from "../../components/ui/button/Button";
 import Swal from "sweetalert2";
 import { PlusIcon, TrashBinIcon, PencilIcon } from "../../icons";
 import { suratService, PengaturanPenomoran } from "../../services/suratService";
+import { useAuth } from "../../context/AuthContext";
 
 export default function PengaturanSuratPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<PengaturanPenomoran[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -15,11 +17,27 @@ export default function PengaturanSuratPage() {
 
   // Form states
   const [nama, setNama] = useState("");
+  const [kategori, setKategori] = useState(1);
   const [prefix, setPrefix] = useState("");
   const [suffix, setSuffix] = useState("");
   const [counter, setCounter] = useState(1);
   const [format, setFormat] = useState("{prefix}/{counter}/{suffix}/{year}");
   const [aktif, setAktif] = useState(true);
+
+  const getCategoryLabel = (cat?: number) => {
+    const labels: Record<number, string> = {
+      1: "Surat Dinas",
+      2: "Surat Keputusan (SK)",
+      3: "Surat Tugas (ST)",
+      4: "Surat Undangan",
+      5: "Surat Keterangan",
+      6: "Surat Pengantar",
+      7: "Surat Edaran",
+      8: "Surat Kuasa",
+      9: "Surat Lainnya"
+    };
+    return labels[cat || 1] || "Surat Dinas";
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -46,6 +64,7 @@ export default function PengaturanSuratPage() {
   const openAddModal = () => {
     setEditingId(null);
     setNama("");
+    setKategori(1);
     setPrefix("");
     setSuffix("");
     setCounter(1);
@@ -57,8 +76,9 @@ export default function PengaturanSuratPage() {
   const openEditModal = (item: PengaturanPenomoran) => {
     setEditingId(item.id || null);
     setNama(item.nama);
-    setPrefix(item.prefix);
-    setSuffix(item.suffix);
+    setKategori(item.kategori || 1);
+    setPrefix(item.prefix || "");
+    setSuffix(item.suffix || "");
     setCounter(item.counter);
     setFormat(item.format);
     setAktif(item.aktif);
@@ -67,8 +87,8 @@ export default function PengaturanSuratPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nama || !prefix || !format) {
-      Swal.fire("Peringatan", "Nama, Prefix, dan Format wajib diisi", "warning");
+    if (!nama || !format) {
+      Swal.fire("Peringatan", "Nama dan Format wajib diisi", "warning");
       return;
     }
 
@@ -79,7 +99,9 @@ export default function PengaturanSuratPage() {
         suffix,
         counter: Number(counter),
         format,
-        aktif
+        aktif,
+        cadisdik_id: user?.cadisdik_id,
+        kategori: Number(kategori)
       };
 
       if (editingId) {
@@ -185,6 +207,7 @@ export default function PengaturanSuratPage() {
                     <tr>
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">No</th>
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Nama Format</th>
+                      <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Kategori</th>
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Format Pola</th>
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Pratinjau Nomor</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Counter</th>
@@ -198,9 +221,10 @@ export default function PengaturanSuratPage() {
                         <tr key={item.id || idx}>
                           <td className="px-5 py-4 text-start text-sm text-gray-500">{idx + 1}</td>
                           <td className="px-5 py-4 text-start text-sm font-semibold text-gray-850 dark:text-white/90">{item.nama}</td>
+                          <td className="px-5 py-4 text-start text-sm text-gray-500">{getCategoryLabel(item.kategori)}</td>
                           <td className="px-5 py-4 text-start text-sm font-mono text-gray-500">{item.format}</td>
                           <td className="px-5 py-4 text-start text-sm font-mono text-brand-600 dark:text-brand-400">
-                            {getPreviewFormat(item.prefix, item.counter, item.suffix, item.format)}
+                            {getPreviewFormat(item.prefix || "", item.counter, item.suffix || "", item.format)}
                           </td>
                           <td className="px-5 py-4 text-center text-sm font-semibold text-gray-800 dark:text-gray-200">{item.counter}</td>
                           <td className="px-5 py-4 text-center">
@@ -232,7 +256,7 @@ export default function PengaturanSuratPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                           Belum ada konfigurasi penomoran surat.
                         </td>
                       </tr>
@@ -254,15 +278,36 @@ export default function PengaturanSuratPage() {
             </h3>
 
             <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <Label>Nama Format Penomoran</Label>
-                <Input
-                  type="text"
-                  placeholder="Contoh: Format Surat Dinas"
-                  value={nama}
-                  onChange={(e) => setNama(e.target.value)}
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Kategori Surat *</Label>
+                  <select
+                    value={kategori}
+                    onChange={(e) => setKategori(Number(e.target.value))}
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-transparent py-2.5 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-white/90"
+                    required
+                  >
+                    <option value={1} className="dark:bg-gray-900">Surat Dinas</option>
+                    <option value={2} className="dark:bg-gray-900">Surat Keputusan (SK)</option>
+                    <option value={3} className="dark:bg-gray-900">Surat Tugas (ST)</option>
+                    <option value={4} className="dark:bg-gray-900">Surat Undangan</option>
+                    <option value={5} className="dark:bg-gray-900">Surat Keterangan</option>
+                    <option value={6} className="dark:bg-gray-900">Surat Pengantar</option>
+                    <option value={7} className="dark:bg-gray-900">Surat Edaran</option>
+                    <option value={8} className="dark:bg-gray-900">Surat Kuasa</option>
+                    <option value={9} className="dark:bg-gray-900">Surat Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Nama Format Penomoran *</Label>
+                  <Input
+                    type="text"
+                    placeholder="Contoh: Format Surat Dinas"
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

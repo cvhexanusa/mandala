@@ -161,6 +161,16 @@ export const dapodikService = {
     }
   },
 
+  getSemesterAktif: async () => {
+    try {
+      const response = await api.get('/mandala/dapodik/semester_id');
+      return response.data;
+    } catch (error: any) {
+      console.error('Gagal mengambil data semester aktif:', error);
+      throw error;
+    }
+  },
+
   getTanah: async () => {
     try {
       const response = await api.get('/dapodik/tanah');

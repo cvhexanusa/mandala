@@ -7,8 +7,10 @@ import Select from "../../components/form/Select";
 import Swal from "sweetalert2";
 import { PlusIcon, TrashBinIcon, PencilIcon, EyeIcon, TaskIcon, CheckCircleIcon } from "../../icons";
 import { suratService, SuratKeluar, TemplateSurat, PengaturanPenomoran } from "../../services/suratService";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SuratKeluarPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<SuratKeluar[]>([]);
   const [templates, setTemplates] = useState<TemplateSurat[]>([]);
@@ -23,9 +25,25 @@ export default function SuratKeluarPage() {
   const [tujuan, setTujuan] = useState("");
   const [perihal, setPerihal] = useState("");
   const [tanggalSurat, setTanggalSurat] = useState("");
+  const [kategori, setKategori] = useState(1);
   const [templateId, setTemplateId] = useState("");
   const [numberConfigId, setNumberConfigId] = useState("");
   const [isiSurat, setIsiSurat] = useState("");
+
+  const getCategoryLabel = (cat?: number) => {
+    const labels: Record<number, string> = {
+      1: "Surat Dinas",
+      2: "Surat Keputusan (SK)",
+      3: "Surat Tugas (ST)",
+      4: "Surat Undangan",
+      5: "Surat Keterangan",
+      6: "Surat Pengantar",
+      7: "Surat Edaran",
+      8: "Surat Kuasa",
+      9: "Surat Lainnya"
+    };
+    return labels[cat || 1] || "Surat Dinas";
+  };
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState("");
@@ -79,6 +97,7 @@ export default function SuratKeluarPage() {
     setTujuan("");
     setPerihal("");
     setTanggalSurat(new Date().toISOString().substring(0, 10));
+    setKategori(1);
     setTemplateId(templates[0]?.id || "");
     setNumberConfigId(numberConfigs.find(c => c.aktif)?.id || numberConfigs[0]?.id || "");
     setIsiSurat(`<p>Dengan hormat,</p>
@@ -91,6 +110,7 @@ export default function SuratKeluarPage() {
     setTujuan(item.tujuan);
     setPerihal(item.perihal);
     setTanggalSurat(item.tanggal_surat ? item.tanggal_surat.substring(0, 10) : "");
+    setKategori(item.kategori || 1);
     setTemplateId(item.template_id);
     setNumberConfigId(item.nomor_pengaturan_id || "");
     setIsiSurat(item.isi_surat);
@@ -112,7 +132,9 @@ export default function SuratKeluarPage() {
         template_id: templateId,
         nomor_pengaturan_id: numberConfigId || undefined,
         isi_surat: isiSurat,
-        status: "draft"
+        status: "draft",
+        kategori: Number(kategori),
+        cadisdik_id: user?.cadisdik_id
       };
 
       if (editingId) {
@@ -352,6 +374,7 @@ export default function SuratKeluarPage() {
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Nomor Surat</th>
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Tujuan Penerima</th>
                       <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Perihal / Hal</th>
+                      <th className="px-5 py-3 text-start text-xs font-semibold text-gray-500 uppercase">Kategori</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Tgl Surat</th>
                       <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Template</th>
                       <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Aksi</th>
@@ -376,6 +399,9 @@ export default function SuratKeluarPage() {
                           </td>
                           <td className="px-5 py-4 text-start text-sm text-gray-500 max-w-xs truncate font-medium">
                             {item.perihal}
+                          </td>
+                          <td className="px-5 py-4 text-start text-sm text-gray-500">
+                            {getCategoryLabel(item.kategori)}
                           </td>
                           <td className="px-5 py-4 text-center text-sm text-gray-500 font-mono">
                             {item.tanggal_surat ? new Date(item.tanggal_surat).toLocaleDateString('id-ID') : "-"}
@@ -421,7 +447,7 @@ export default function SuratKeluarPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                           {activeTab === "draft" ? "Tidak ada draft surat keluar." : "Tidak ada surat keluar yang terbit."}
                         </td>
                       </tr>
@@ -466,7 +492,7 @@ export default function SuratKeluarPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label>Tanggal Surat *</Label>
                   <Input
@@ -475,6 +501,25 @@ export default function SuratKeluarPage() {
                     onChange={(e) => setTanggalSurat(e.target.value)}
                     required
                   />
+                </div>
+                <div>
+                  <Label>Kategori Surat *</Label>
+                  <select
+                    value={kategori}
+                    onChange={(e) => setKategori(Number(e.target.value))}
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-transparent py-2.5 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-white/90"
+                    required
+                  >
+                    <option value={1} className="dark:bg-gray-900">Surat Dinas</option>
+                    <option value={2} className="dark:bg-gray-900">Surat Keputusan (SK)</option>
+                    <option value={3} className="dark:bg-gray-900">Surat Tugas (ST)</option>
+                    <option value={4} className="dark:bg-gray-900">Surat Undangan</option>
+                    <option value={5} className="dark:bg-gray-900">Surat Keterangan</option>
+                    <option value={6} className="dark:bg-gray-900">Surat Pengantar</option>
+                    <option value={7} className="dark:bg-gray-900">Surat Edaran</option>
+                    <option value={8} className="dark:bg-gray-900">Surat Kuasa</option>
+                    <option value={9} className="dark:bg-gray-900">Surat Lainnya</option>
+                  </select>
                 </div>
                 <div>
                   <Label>Layout Template Surat *</Label>

@@ -60,6 +60,30 @@ function formatSemester(tp: any): string {
   return tp.semester || "1 (Ganjil)";
 }
 
+// Helper to check if a date falls within a specific semester (e.g. '20252')
+// keynya itu dari bulan 7 - 12 ganjil (1), 1 - 6 genap (2)
+function isDateInSemester(dateInput: any, semesterId: string): boolean {
+  if (!dateInput) return false;
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return false;
+
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // 1-12
+
+  // Extract baseYear and semester type from semesterId (e.g., '20252')
+  const baseYear = parseInt(semesterId.substring(0, 4));
+  const semType = semesterId.charAt(4); // '1' or '2'
+
+  if (semType === '1') {
+    // Ganjil: months 7 - 12 (July to December) of baseYear
+    return year === baseYear && month >= 7 && month <= 12;
+  } else if (semType === '2') {
+    // Genap: months 1 - 6 (January to June) of baseYear + 1
+    return year === (baseYear + 1) && month >= 1 && month <= 6;
+  }
+  return false;
+}
+
 export default function SptjmDapodikDetailPage() {
   const { role, sekolahId } = useParams();
   const navigate = useNavigate();
@@ -93,10 +117,16 @@ export default function SptjmDapodikDetailPage() {
         }
         setSchool(matchedSchool);
 
-        // 2. Fetch active Tahun Pelajaran
-        const tpRes = await dapodikService.getTahunPelajaran().catch(() => ({ data: [] }));
-        const tpList = tpRes.data || [];
-        const matchedTp = tpList.find((t: any) => t.status === "Aktif") || tpList[0];
+        // 2. Fetch active semester directly from the semester_id API
+        const semRes = await dapodikService.getSemesterAktif().catch(() => null);
+        const activeSem = semRes?.data || semRes || {};
+        
+        const matchedTp = {
+          semester_id: activeSem.semester_id || "20252",
+          tahun_pelajaran: activeSem.tahun_ajaran || activeSem.tahun_pelajaran || "2025/2026",
+          semester: activeSem.semester || "Genap",
+          status: "Aktif"
+        };
         setActiveTp(matchedTp);
 
         let cutOffYear = new Date().getFullYear() - 1;
@@ -151,7 +181,7 @@ export default function SptjmDapodikDetailPage() {
         }
 
         // 6. Fetch Active Students
-        const firstPagePd = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, sekolahId);
+        const firstPagePd = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, sekolahId, matchedTp?.semester_id);
         let activeStudents = [];
         let totalCount = 0;
         if (firstPagePd) {
@@ -171,7 +201,7 @@ export default function SptjmDapodikDetailPage() {
         if (totalPagesPd > 1) {
           const pagePromises = [];
           for (let p = 2; p <= totalPagesPd; p++) {
-            pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "aktif", undefined, sekolahId));
+            pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "aktif", undefined, sekolahId, matchedTp?.semester_id));
           }
           const otherPages = await Promise.all(pagePromises);
           otherPages.forEach((pageRes) => {
@@ -240,19 +270,27 @@ export default function SptjmDapodikDetailPage() {
 
           if (isLulus) return false;
 
-          const studentSemesterId = student.akademik?.semester_id ?? student.semester_id;
-          if (studentSemesterId) {
-            if (studentSemesterId !== matchedTp?.semester_id) return false;
-          } else {
-            const exitTime = student.updated_at || student.identitas?.updated_at;
-            if (exitTime) {
-              const exitDate = new Date(exitTime);
-              if (exitDate < startOfSchoolYear || exitDate >= endOfSchoolYear) return false;
-            } else {
-              return false; // exclude if no exit time/semester is present
-            }
+          // Exit date check
+          const exitDateStr = 
+            student.akademik?.tanggal_keluar ?? 
+            student.tanggal_keluar ?? 
+            student.identitas?.tanggal_keluar ?? 
+            student.akademik?.tanggal_meninggalkan_sekolah ?? 
+            student.tanggal_meninggalkan_sekolah ?? 
+            student.identitas?.tanggal_meninggalkan_sekolah ?? 
+            student.updated_at;
+
+          if (exitDateStr && matchedTp?.semester_id) {
+            return isDateInSemester(exitDateStr, matchedTp.semester_id);
           }
-          return true;
+
+          // Fallback to semester_id check
+          const studentSemesterId = student.akademik?.semester_id ?? student.semester_id;
+          if (studentSemesterId && matchedTp?.semester_id) {
+            return studentSemesterId === matchedTp?.semester_id;
+          }
+
+          return false;
         });
 
         // Entries list: active, other than "Siswa Baru" (matched with RekapPDTable isPindahan)
@@ -272,7 +310,29 @@ export default function SptjmDapodikDetailPage() {
             pendaftaranVal.toLowerCase().includes("pindahan") || 
             pendaftaranVal.toLowerCase().includes("transfer");
 
-          return isPindahan;
+          if (!isPindahan) return false;
+
+          // Entry date check
+          const entryDateStr = 
+            student.akademik?.tanggal_masuk ?? 
+            student.tanggal_masuk ?? 
+            student.identitas?.tanggal_masuk ?? 
+            student.akademik?.tanggal_masuk_sekolah ?? 
+            student.tanggal_masuk_sekolah ?? 
+            student.identitas?.tanggal_masuk_sekolah ?? 
+            student.created_at;
+
+          if (entryDateStr && matchedTp?.semester_id) {
+            return isDateInSemester(entryDateStr, matchedTp.semester_id);
+          }
+
+          // Fallback to semester_id check
+          const studentSemesterId = student.akademik?.semester_id ?? student.semester_id;
+          if (studentSemesterId && matchedTp?.semester_id) {
+            return studentSemesterId === matchedTp?.semester_id;
+          }
+
+          return false;
         });
 
         setPdMasukList(filteredEntries);
@@ -529,6 +589,7 @@ export default function SptjmDapodikDetailPage() {
                       <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 w-32">NISN</TableCell>
                       <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400 w-24">Tingkat</TableCell>
                       <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400">Rombel/Kelas</TableCell>
+                      <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400">Tanggal Masuk</TableCell>
                       <TableCell isHeader className="px-5 py-3 font-semibold text-gray-500 text-start text-theme-xs dark:text-gray-400">Jenis Pendaftaran</TableCell>
                     </TableRow>
                   </TableHeader>
@@ -539,6 +600,15 @@ export default function SptjmDapodikDetailPage() {
                         if (!regName || regName === "2" || String(regName) === "2") {
                           regName = "Pindahan";
                         }
+                        const entryDateVal = 
+                          student.identitas?.tanggal_masuk_sekolah ?? 
+                          student.akademik?.tanggal_masuk ?? 
+                          student.tanggal_masuk ?? 
+                          student.identitas?.tanggal_masuk ?? 
+                          student.akademik?.tanggal_masuk_sekolah ?? 
+                          student.tanggal_masuk_sekolah ?? 
+                          student.identitas?.tanggal_masuk_sekolah ?? 
+                          student.created_at;
                         return (
                           <TableRow key={student.identitas?.id || idx}>
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{idx + 1}</TableCell>
@@ -547,6 +617,9 @@ export default function SptjmDapodikDetailPage() {
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{student.identitas?.nisn || "-"}</TableCell>
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{student.akademik?.tingkat || "-"}</TableCell>
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{student.akademik?.nama_rombel || "-"}</TableCell>
+                            <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">
+                              {entryDateVal ? new Date(entryDateVal).toLocaleDateString("id-ID") : "-"}
+                            </TableCell>
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-600 dark:text-gray-400">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                 {regName}
@@ -557,7 +630,7 @@ export default function SptjmDapodikDetailPage() {
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                        <TableCell colSpan={8} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                           Tidak ada data rincian siswa masuk ditemukan.
                         </TableCell>
                       </TableRow>
@@ -580,7 +653,15 @@ export default function SptjmDapodikDetailPage() {
                   <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                     {filteredPdKeluar.length > 0 ? (
                       filteredPdKeluar.map((student, idx) => {
-                        const exitDateVal = student.updated_at || student.identitas?.updated_at;
+                        const exitDateVal = 
+                          student.identitas?.tanggal_keluar ?? 
+                          student.akademik?.tanggal_keluar ?? 
+                          student.tanggal_keluar ?? 
+                          student.akademik?.tanggal_meninggalkan_sekolah ?? 
+                          student.tanggal_meninggalkan_sekolah ?? 
+                          student.identitas?.tanggal_meninggalkan_sekolah ?? 
+                          student.updated_at ?? 
+                          student.identitas?.updated_at;
                         return (
                           <TableRow key={student.identitas?.id || idx}>
                             <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{idx + 1}</TableCell>
