@@ -15,6 +15,7 @@ import { SearchIcon, PrinterIcon, ChevronLeftIcon } from "../../icons";
 import { dapodikService } from "../../services/dapodikService";
 import { mandalaService } from "../../services/mandalaService";
 import Swal from "sweetalert2";
+import { useAuth } from "../../context/AuthContext";
 
 // Helper to convert numbers to Indonesian spelled-out words (terbilang)
 function terbilangAngka(n: number): string {
@@ -87,6 +88,7 @@ function isDateInSemester(dateInput: any, semesterId: string): boolean {
 export default function SptjmDapodikDetailPage() {
   const { role, sekolahId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [school, setSchool] = useState<any | null>(null);
@@ -178,6 +180,14 @@ export default function SptjmDapodikDetailPage() {
         let instansiKcdName = matchedCadisdik?.nama_instansi || "Cabang Dinas Pendidikan Wilayah VI";
         if (instansiKcdName.toLowerCase().startsWith("kepala ")) {
           instansiKcdName = instansiKcdName.substring(7);
+        }
+
+        const matchedLoginCadisdik = cadisdikList.find((c: any) => 
+          user?.cadisdik_id && (c.id === user.cadisdik_id || c.cadisdik_id === user.cadisdik_id)
+        ) || matchedCadisdik;
+        let instansiLoginName = matchedLoginCadisdik?.nama_instansi || instansiKcdName;
+        if (instansiLoginName.toLowerCase().startsWith("kepala ")) {
+          instansiLoginName = instansiLoginName.substring(7);
         }
 
         // 6. Fetch Active Students
@@ -412,6 +422,7 @@ export default function SptjmDapodikDetailPage() {
           kcdName,
           kcdNip,
           instansiKcdName,
+          instansiLoginName,
           spelledDateText,
           cutOffText,
           counts,
@@ -772,6 +783,7 @@ export default function SptjmDapodikDetailPage() {
             <h2 className="text-[12.5pt] font-bold uppercase tracking-wide leading-snug">BERITA ACARA</h2>
             <h2 className="text-[11.5pt] font-bold uppercase tracking-wide leading-snug">VERIFIKASI DAN VALIDASI DATA FAKTUAL SISWA</h2>
             <h2 className="text-[11.5pt] font-bold uppercase tracking-wide leading-snug">JENJANG SMK NEGERI DAN SWASTA</h2>
+            <h2 className="text-[11.5pt] font-bold uppercase tracking-wide leading-snug">{printData.instansiLoginName.toUpperCase()}</h2>
             <h2 className="text-[11.5pt] font-bold uppercase tracking-wide leading-snug">DILINGKUNGAN DINAS PENDIDIKAN PROVINSI JAWA BARAT</h2>
             <div className="w-full border-b-[2.5px] border-double border-black mt-1.5 mb-2"></div>
           </div>
