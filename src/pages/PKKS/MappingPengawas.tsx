@@ -58,6 +58,7 @@ interface Pegawai {
   pegawai_id: string;
   nama_lengkap: string;
   jabatan: number;
+  nip?: string;
 }
 
 export default function MappingPengawasPage() {
@@ -92,7 +93,7 @@ export default function MappingPengawasPage() {
         pegawai_id: p.pegawai_id,
         pegawai: {
           nama_lengkap: p.nama_lengkap,
-          nip: "", // Akan ditimpa jika ada data mapping
+          nip: p.nip || "",
         },
         schools: [],
       };

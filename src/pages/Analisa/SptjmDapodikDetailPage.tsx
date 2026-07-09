@@ -507,7 +507,9 @@ export default function SptjmDapodikDetailPage() {
           cutOffText,
           counts,
           activeStudents,
-          activeTp: matchedTp
+          activeTp: matchedTp,
+          pdMasukList: filteredEntries,
+          pdKeluarList: filteredExits
         });
 
       } catch (err) {
@@ -855,6 +857,10 @@ export default function SptjmDapodikDetailPage() {
                 font-weight: bold !important;
                 text-align: center !important;
               }
+
+              table.student-list-table td.nowrap {
+                white-space: nowrap !important;
+              }
             }
           `}} />
 
@@ -1010,6 +1016,146 @@ export default function SptjmDapodikDetailPage() {
             </div>
           </div>
 
+          {/* Daftar Peserta Didik Masuk & Keluar */}
+          {(() => {
+            let tpYearFallback = "-";
+            if (printData.cutOffText) {
+              const match = printData.cutOffText.match(/(\d{4})/);
+              if (match && match[1]) {
+                const year = parseInt(match[1]);
+                tpYearFallback = `${year}/${year + 1}`;
+              }
+            }
+
+            return (
+              <>
+                {printData.pdMasukList && printData.pdMasukList.length > 0 && (
+                  <div className="print-page-break-before">
+                    <div className="text-center mb-3">
+                      <h2 className="text-[11.5pt] font-bold uppercase tracking-wide leading-tight">DAFTAR PESERTA DIDIK MASUK (MUTASI MASUK)</h2>
+                      <h3 className="text-[11pt] font-bold uppercase tracking-wide leading-tight">{printData.school.nama}</h3>
+                      <p className="text-[9.5pt] font-semibold mt-0.5">Tahun Pelajaran: {printData.activeTp?.tahun_pelajaran || tpYearFallback}</p>
+                      <div className="w-full border-b border-black mt-1 mb-2"></div>
+                    </div>
+
+                    <div className="flex justify-between mb-2 text-[9.5pt] font-semibold px-1">
+                      <div>Jenis Pendaftaran: Pindahan</div>
+                      <div>Semester: {formatSemester(printData.activeTp)}</div>
+                    </div>
+
+                    <table className="student-list-table">
+                      <thead>
+                        <tr>
+                          <th className="w-12 text-center" style={{ width: '5%' }}>No</th>
+                          <th className="text-left" style={{ width: '40%' }}>Nama</th>
+                          <th className="w-12 text-center" style={{ width: '5%' }}>JK</th>
+                          <th className="w-32 text-center" style={{ width: '15%' }}>NISN</th>
+                          <th className="text-center" style={{ width: '15%' }}>Kelas/Rombel</th>
+                          <th className="w-32 text-center" style={{ width: '10%' }}>Tanggal Masuk</th>
+                          <th className="w-32 text-center" style={{ width: '10%' }}>Keterangan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {printData.pdMasukList.map((student: any, idx: number) => {
+                          const entryDateVal = 
+                            student.identitas?.tanggal_masuk_sekolah ?? 
+                            student.akademik?.tanggal_masuk ?? 
+                            student.tanggal_masuk ?? 
+                            student.identitas?.tanggal_masuk ?? 
+                            student.akademik?.tanggal_masuk_sekolah ?? 
+                            student.tanggal_masuk_sekolah ?? 
+                            student.identitas?.tanggal_masuk_sekolah ?? 
+                            student.created_at;
+                          return (
+                            <tr key={student.identitas?.id || idx}>
+                              <td className="text-center">{idx + 1}</td>
+                              <td className="nowrap">{student.identitas?.nama || "-"}</td>
+                              <td className="text-center">{student.identitas?.jenis_kelamin || "-"}</td>
+                              <td className="text-center font-mono">{student.identitas?.nisn || "-"}</td>
+                              <td className="text-center">{student.akademik?.nama_rombel || "-"}</td>
+                              <td className="text-center">
+                                {entryDateVal ? new Date(entryDateVal).toLocaleDateString("id-ID") : "-"}
+                              </td>
+                              <td className="text-center">Pindahan</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {printData.pdKeluarList && printData.pdKeluarList.length > 0 && (
+                  <div className="print-page-break-before">
+                    <div className="text-center mb-3">
+                      <h2 className="text-[11.5pt] font-bold uppercase tracking-wide leading-tight">DAFTAR PESERTA DIDIK KELUAR (MUTASI KELUAR)</h2>
+                      <h3 className="text-[11pt] font-bold uppercase tracking-wide leading-tight">{printData.school.nama}</h3>
+                      <p className="text-[9.5pt] font-semibold mt-0.5">Tahun Pelajaran: {printData.activeTp?.tahun_pelajaran || tpYearFallback}</p>
+                      <div className="w-full border-b border-black mt-1 mb-2"></div>
+                    </div>
+
+                    <div className="flex justify-between mb-2 text-[9.5pt] font-semibold px-1">
+                      <div>Status: Non-Aktif</div>
+                      <div>Semester: {formatSemester(printData.activeTp)}</div>
+                    </div>
+
+                    <table className="student-list-table">
+                      <thead>
+                        <tr>
+                          <th className="w-12 text-center" style={{ width: '5%' }}>No</th>
+                          <th className="text-left" style={{ width: '40%' }}>Nama</th>
+                          <th className="w-12 text-center" style={{ width: '5%' }}>JK</th>
+                          <th className="w-32 text-center" style={{ width: '15%' }}>NISN</th>
+                          <th className="text-center" style={{ width: '15%' }}>Kelas/Rombel Terakhir</th>
+                          <th className="w-32 text-center" style={{ width: '10%' }}>Tanggal Keluar</th>
+                          <th className="w-32 text-center" style={{ width: '10%' }}>Alasan Keluar</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {printData.pdKeluarList.map((student: any, idx: number) => {
+                          const exitDateVal = 
+                            student.akademik?.tanggal_keluar ?? 
+                            student.tanggal_keluar ?? 
+                            student.identitas?.tanggal_keluar ?? 
+                            student.akademik?.tanggal_meninggalkan_sekolah ?? 
+                            student.tanggal_meninggalkan_sekolah ?? 
+                            student.identitas?.tanggal_meninggalkan_sekolah;
+                          const jenisKeluarId = student.akademik?.jenis_keluar_id ?? student.jenis_keluar_id ?? student.identitas?.jenis_keluar_id;
+                          const mapping: Record<string, string> = {
+                            "1": "Lulus",
+                            "2": "Mutasi",
+                            "3": "Dikeluarkan",
+                            "4": "Mengundurkan diri",
+                            "5": "Putus Sekolah",
+                            "6": "Wafat",
+                            "7": "Hilang",
+                            "8": "Alih Fungsi",
+                            "9": "Pensiun",
+                            "Z": "Lainnya"
+                          };
+                          const alasan = mapping[String(jenisKeluarId)] || "Mutasi";
+                          return (
+                            <tr key={student.identitas?.id || idx}>
+                              <td className="text-center">{idx + 1}</td>
+                              <td className="nowrap">{student.identitas?.nama || "-"}</td>
+                              <td className="text-center">{student.identitas?.jenis_kelamin || "-"}</td>
+                              <td className="text-center font-mono">{student.identitas?.nisn || "-"}</td>
+                              <td className="text-center">{student.akademik?.nama_rombel || "-"}</td>
+                              <td className="text-center">
+                                {exitDateVal ? new Date(exitDateVal).toLocaleDateString("id-ID") : "-"}
+                              </td>
+                              <td className="text-center">{alasan}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
           {/* Student Lists grouped by Rombel */}
           {(() => {
             const grouped: Record<string, any[]> = {};
@@ -1053,19 +1199,19 @@ export default function SptjmDapodikDetailPage() {
                   <table className="student-list-table">
                     <thead>
                       <tr>
-                        <th className="w-12 text-center">No</th>
-                        <th>Nama</th>
-                        <th className="w-12 text-center">JK</th>
-                        <th className="w-32 text-center">NISN</th>
-                        <th className="text-center">Kelas</th>
-                        <th className="w-20 text-center">Ket</th>
+                        <th className="w-12 text-center" style={{ width: '5%' }}>No</th>
+                        <th className="text-left" style={{ width: '55%' }}>Nama</th>
+                        <th className="w-12 text-center" style={{ width: '5%' }}>JK</th>
+                        <th className="w-32 text-center" style={{ width: '15%' }}>NISN</th>
+                        <th className="text-center" style={{ width: '15%' }}>Kelas</th>
+                        <th className="w-20 text-center" style={{ width: '5%' }}>Ket</th>
                       </tr>
                     </thead>
                     <tbody>
                       {students.map((student, idx) => (
                         <tr key={student.identitas?.id || idx}>
                           <td className="text-center">{idx + 1}</td>
-                          <td>{student.identitas?.nama || "-"}</td>
+                          <td className="nowrap">{student.identitas?.nama || "-"}</td>
                           <td className="text-center">{student.identitas?.jenis_kelamin || "-"}</td>
                           <td className="text-center font-mono">{student.identitas?.nisn || "-"}</td>
                           <td className="text-center">{student.akademik?.nama_rombel || "-"}</td>

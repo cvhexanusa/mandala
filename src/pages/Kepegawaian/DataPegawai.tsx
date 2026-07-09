@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
@@ -6,10 +6,12 @@ import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
-import { PencilIcon, PlusIcon, EyeIcon, CopyIcon, ArrowRightIcon } from "../../icons";
+import { PencilIcon, PlusIcon, EyeIcon, CopyIcon, ArrowRightIcon, SearchIcon, DownloadIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
+import Pagination from "../../components/common/Pagination";
+import { exportToExcel } from "../../utils/exportUtils";
 
 interface Cadisdik {
   cadisdik_id: string;
@@ -71,6 +73,32 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   // Detail Modal State
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [viewingData, setViewingData] = useState<Pegawai | null>(null);
+
+  // Search & Pagination State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset page when search or active filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, showOnlyInactive]);
+
+  // Client-side filtering & search
+  const filteredPegawai = useMemo(() => {
+    if (!searchQuery) return data;
+    const lowerQuery = searchQuery.toLowerCase();
+    return data.filter(item => 
+      item.nama_lengkap.toLowerCase().includes(lowerQuery) ||
+      (item.nip && item.nip.toLowerCase().includes(lowerQuery)) ||
+      (item.email && item.email.toLowerCase().includes(lowerQuery))
+    );
+  }, [data, searchQuery]);
+
+  const totalPages = Math.ceil(filteredPegawai.length / itemsPerPage) || 1;
+  const currentData = useMemo(() => {
+    return filteredPegawai.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredPegawai, currentPage]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -344,6 +372,60 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     });
   };
 
+  const handleExport = () => {
+    if (filteredPegawai.length === 0) {
+      Swal.fire({
+        title: "Tidak Ada Data",
+        text: "Tidak ada data pegawai yang dapat diekspor.",
+        icon: "warning",
+        confirmButtonColor: "#3b82f6"
+      });
+      return;
+    }
+
+    const labelTab = showOnlyInactive ? "Pegawai_Non-Aktif" : "Pegawai_Aktif";
+    const excelTitle = showOnlyInactive ? "DATA PEGAWAI NON-AKTIF" : "DATA PEGAWAI AKTIF";
+
+    Swal.fire({
+      title: `Export Data ${showOnlyInactive ? 'Pegawai Non-Aktif' : 'Pegawai Aktif'}?`,
+      text: `Sebanyak ${filteredPegawai.length} data akan diunduh dalam format Excel.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, Export!",
+      cancelButtonText: "Batal"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const headers = [
+          "No",
+          "Nama Lengkap",
+          "NIP",
+          "Email",
+          "Jabatan",
+          "Instansi/Cadisdik",
+          "Status"
+        ];
+
+        const rows = filteredPegawai.map((item, index) => {
+          const no = (index + 1).toString();
+          const nama = item.nama_lengkap || "-";
+          const nip = item.nip || "-";
+          const email = item.email || "-";
+          const jabatan = JABATAN_MAP[item.jabatan] || "Tidak Diketahui";
+          const instansiObj = instansiList.find(i => i.cadisdik_id === item.cadisdik_id);
+          const instansi = instansiObj ? instansiObj.nama_instansi : "Instansi Tidak Ditemukan";
+          const status = item.aktif ? "Aktif" : "Non-Aktif";
+
+          return [no, nama, nip, email, jabatan, instansi, status];
+        });
+
+        const filename = `Data_${labelTab}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportToExcel(filename, labelTab, excelTitle, headers, rows);
+      }
+    });
+  };
+
   // Convert map to options for select
   const jabatanOptions = Object.entries(JABATAN_MAP).map(([val, label]) => ({ value: val, label }));
   const jkOptions = Object.entries(JK_MAP).map(([val, label]) => ({ value: val, label }));
@@ -375,11 +457,20 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               {showOnlyInactive ? "Kelola data pegawai Cadisdik yang non-aktif." : "Kelola data pegawai Cadisdik."}
             </p>
           </div>
-          {!showOnlyInactive && (
-            <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
-              Tambah Pegawai
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="success-outline" 
+              startIcon={<DownloadIcon />} 
+              onClick={handleExport}
+            >
+              Export Excel
             </Button>
-          )}
+            {!showOnlyInactive && (
+              <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
+                Tambah Pegawai
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800 overflow-hidden relative">
@@ -388,6 +479,26 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
             </div>
           )}
+
+          {/* Search bar row */}
+          <div className="p-5 border-b border-gray-100 dark:border-white/[0.05] flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+            <div className="relative max-w-xs w-full">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <SearchIcon className="size-4" />
+              </span>
+              <Input
+                type="text"
+                placeholder="Cari nama, NIP, atau email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+              Menampilkan {filteredPegawai.length} data pegawai
+            </div>
+          </div>
+
           <div className="overflow-x-auto custom-scrollbar">
             <Table className="min-w-[1000px]">
               <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
@@ -401,8 +512,8 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                {data.length > 0 ? (
-                  data.map((item) => (
+                {currentData.length > 0 ? (
+                  currentData.map((item) => (
                     <TableRow key={item.pegawai_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
                       <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">
                         <div className="flex flex-col">
@@ -466,15 +577,24 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
-                      {showOnlyInactive 
-                        ? "Belum ada data pegawai non-aktif." 
-                        : "Belum ada data pegawai yang terdaftar."}
+                      {searchQuery ? (
+                        <>Tidak ada data ditemukan untuk "{searchQuery}"</>
+                      ) : showOnlyInactive ? (
+                        <>Belum ada data pegawai non-aktif.</>
+                      ) : (
+                        <>Belum ada data pegawai yang terdaftar.</>
+                      )}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </div>
 
