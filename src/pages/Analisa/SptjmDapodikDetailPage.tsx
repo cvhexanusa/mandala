@@ -61,28 +61,20 @@ function formatSemester(tp: any): string {
   return tp.semester || "1 (Ganjil)";
 }
 
-// Helper to check if a date falls within a specific semester (e.g. '20252')
-// keynya itu dari bulan 7 - 12 ganjil (1), 1 - 6 genap (2)
-function isDateInSemester(dateInput: any, semesterId: string): boolean {
+// Helper to check if a date falls within a specific school year based on semesterId (e.g. '20252')
+// The school year starts on July 1 of baseYear and ends on August 31 of baseYear + 1 (the cut-off date)
+function isDateInSchoolYear(dateInput: any, semesterId: string): boolean {
   if (!dateInput) return false;
   const date = new Date(dateInput);
   if (isNaN(date.getTime())) return false;
 
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // 1-12
-
-  // Extract baseYear and semester type from semesterId (e.g., '20252')
+  // Extract baseYear from semesterId (e.g., '20252' -> 2025)
   const baseYear = parseInt(semesterId.substring(0, 4));
-  const semType = semesterId.charAt(4); // '1' or '2'
 
-  if (semType === '1') {
-    // Ganjil: months 7 - 12 (July to December) of baseYear
-    return year === baseYear && month >= 7 && month <= 12;
-  } else if (semType === '2') {
-    // Genap: months 1 - 6 (January to June) of baseYear + 1
-    return year === (baseYear + 1) && month >= 1 && month <= 6;
-  }
-  return false;
+  const startDate = new Date(baseYear, 6, 1); // July 1, baseYear
+  const endDate = new Date(baseYear + 1, 7, 31, 23, 59, 59); // August 31, baseYear + 1
+
+  return date >= startDate && date <= endDate;
 }
 
 export default function SptjmDapodikDetailPage() {
@@ -191,7 +183,7 @@ export default function SptjmDapodikDetailPage() {
         }
 
         // 6. Fetch Active Students
-        const firstPagePd = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, sekolahId, matchedTp?.semester_id);
+        const firstPagePd = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, sekolahId, undefined);
         let activeStudents = [];
         let totalCount = 0;
         if (firstPagePd) {
@@ -211,7 +203,7 @@ export default function SptjmDapodikDetailPage() {
         if (totalPagesPd > 1) {
           const pagePromises = [];
           for (let p = 2; p <= totalPagesPd; p++) {
-            pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "aktif", undefined, sekolahId, matchedTp?.semester_id));
+            pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "aktif", undefined, sekolahId, undefined));
           }
           const otherPages = await Promise.all(pagePromises);
           otherPages.forEach((pageRes) => {
@@ -230,7 +222,7 @@ export default function SptjmDapodikDetailPage() {
         }
 
         // 7. Fetch Inactive Students
-        const firstPagePdKeluar = await dapodikService.getPesertaDidik(100, "", 1, undefined, "non-aktif", undefined, sekolahId, matchedTp?.semester_id);
+        const firstPagePdKeluar = await dapodikService.getPesertaDidik(100, "", 1, undefined, "non-aktif", undefined, sekolahId, undefined);
         let inactiveStudents = [];
         let totalCountKeluar = 0;
         if (firstPagePdKeluar) {
@@ -250,7 +242,7 @@ export default function SptjmDapodikDetailPage() {
         if (totalPagesPdKeluar > 1) {
           const pagePromises = [];
           for (let p = 2; p <= totalPagesPdKeluar; p++) {
-            pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "non-aktif", undefined, sekolahId, matchedTp?.semester_id));
+            pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "non-aktif", undefined, sekolahId, undefined));
           }
           const otherPages = await Promise.all(pagePromises);
           otherPages.forEach((pageRes) => {
@@ -269,42 +261,128 @@ export default function SptjmDapodikDetailPage() {
         }
 
         // 8. Calculations & Filter Lists
-        // Exits list: inactive, within active semester, NOT graduated
+        // Debug: Log all inactive students to help trace filtering
+        console.log(`[SPTJM Debug] Total inactive students fetched: ${inactiveStudents.length}`);
+        console.log(`[SPTJM Debug] Active semester_id: ${matchedTp?.semester_id}`);
+        const activeBaseYear = matchedTp?.semester_id ? String(matchedTp.semester_id).substring(0, 4) : "";
+
+        // Debug: Dump raw data of first 5 inactive students
+        inactiveStudents.slice(0, 5).forEach((s: any, i: number) => {
+          console.log(`[SPTJM Raw Inactive #${i}]`, JSON.stringify({
+            nama: s.identitas?.nama,
+            jenis_keluar_id: s.identitas?.jenis_keluar_id,
+            jenis_keluar_id_str: s.identitas?.jenis_keluar_id_str,
+            tanggal_keluar_identitas: s.identitas?.tanggal_keluar,
+            tanggal_keluar_root: s.tanggal_keluar,
+            tanggal_keluar_akademik: s.akademik?.tanggal_keluar,
+            tanggal_meninggalkan_sekolah: s.identitas?.tanggal_meninggalkan_sekolah,
+            last_update_identitas: s.identitas?.last_update,
+            updated_at_root: s.updated_at,
+            semester_id_akademik: s.akademik?.semester_id,
+            semester_id_root: s.semester_id,
+            semester_id_identitas: s.identitas?.semester_id,
+            root_keys: Object.keys(s),
+            identitas_keys: s.identitas ? Object.keys(s.identitas) : [],
+            akademik_keys: s.akademik ? Object.keys(s.akademik) : [],
+          }, null, 2));
+        });
+
+        // Exits list: inactive, within active school year, NOT graduated
         const filteredExits = inactiveStudents.filter((student: any) => {
+          const nama = student.identitas?.nama || "-";
           const jenisKeluarId = student.akademik?.jenis_keluar_id ?? student.jenis_keluar_id ?? student.identitas?.jenis_keluar_id;
           const jenisKeluarIdStr = student.akademik?.jenis_keluar_id_str ?? student.jenis_keluar_id_str ?? student.identitas?.jenis_keluar_id_str;
-          const isLulus = 
+          
+          // Only exclude if jenis_keluar_id is EXPLICITLY "1" (Lulus)
+          // If jenis_keluar_id is undefined/null/empty, do NOT treat as Lulus
+          const hasExplicitKeluarId = jenisKeluarId !== undefined && jenisKeluarId !== null && String(jenisKeluarId).trim() !== "";
+          const isLulus = hasExplicitKeluarId && (
             jenisKeluarId === 1 || 
             String(jenisKeluarId) === "1" || 
-            String(jenisKeluarIdStr).toLowerCase().includes("lulus");
+            String(jenisKeluarIdStr).toLowerCase().includes("lulus")
+          );
 
-          if (isLulus) return false;
+          if (isLulus) {
+            console.log(`[SPTJM Keluar ✗] ${nama} - excluded: Lulus (jenis_keluar_id=${jenisKeluarId})`);
+            return false;
+          }
 
-          // Exit date check
+          // Try ALL possible exit date fields
           const exitDateStr = 
             student.akademik?.tanggal_keluar ?? 
             student.tanggal_keluar ?? 
             student.identitas?.tanggal_keluar ?? 
             student.akademik?.tanggal_meninggalkan_sekolah ?? 
             student.tanggal_meninggalkan_sekolah ?? 
-            student.identitas?.tanggal_meninggalkan_sekolah ?? 
-            student.updated_at;
+            student.identitas?.tanggal_meninggalkan_sekolah;
 
-          if (exitDateStr && matchedTp?.semester_id) {
-            return isDateInSemester(exitDateStr, matchedTp.semester_id);
+          // If exit date exists, it MUST be within the school year. No fallback.
+          if (exitDateStr) {
+            if (matchedTp?.semester_id && isDateInSchoolYear(exitDateStr, matchedTp.semester_id)) {
+              console.log(`[SPTJM Keluar ✓] ${nama} - matched by tanggal_keluar: ${exitDateStr}`);
+              return true;
+            } else {
+              console.log(`[SPTJM Keluar ✗] ${nama} - excluded: tanggal_keluar ${exitDateStr} is outside active school year`);
+              return false;
+            }
           }
 
-          // Fallback to semester_id check
-          const studentSemesterId = student.akademik?.semester_id ?? student.semester_id;
-          if (studentSemesterId && matchedTp?.semester_id) {
-            return studentSemesterId === matchedTp?.semester_id;
+          // Fallback 1: Check semester_id match (same school year) - only if no exit date is recorded
+          const studentSemesterId = student.akademik?.semester_id ?? student.semester_id ?? student.identitas?.semester_id;
+          if (studentSemesterId && activeBaseYear) {
+            const studentBaseYear = String(studentSemesterId).substring(0, 4);
+            if (studentBaseYear === activeBaseYear) {
+              console.log(`[SPTJM Keluar ✓] ${nama} - matched by semester_id: ${studentSemesterId}`);
+              return true;
+            }
           }
 
+          // Fallback 2: Check last_update / updated_at as proxy for recent exit - only if no exit date is recorded
+          const lastUpdateStr = 
+            student.updated_at ?? 
+            student.identitas?.last_update ?? 
+            student.identitas?.updated_at ?? 
+            student.last_update;
+          if (lastUpdateStr && matchedTp?.semester_id && isDateInSchoolYear(lastUpdateStr, matchedTp.semester_id)) {
+            console.log(`[SPTJM Keluar ✓] ${nama} - matched by last_update: ${lastUpdateStr}, jenis_keluar: ${jenisKeluarId ?? "N/A"}`);
+            return true;
+          }
+
+          // Log why this student was rejected
+          console.log(`[SPTJM Keluar ✗] ${nama} - NOT matched. exitDate=${exitDateStr || "none"}, semesterId=${studentSemesterId || "none"}, lastUpdate=${lastUpdateStr || "none"}, jenisKeluarId=${jenisKeluarId || "none"}`);
           return false;
         });
 
-        // Entries list: active, other than "Siswa Baru" (matched with RekapPDTable isPindahan)
+        console.log(`[SPTJM Debug] Filtered exits (keluar): ${filteredExits.length}`);
+
+        // Debug: Log active students info
+        console.log(`[SPTJM Debug] Total active students fetched: ${activeStudents.length}`);
+        activeStudents.slice(0, 3).forEach((s: any, i: number) => {
+          console.log(`[SPTJM Raw Active #${i}]`, JSON.stringify({
+            nama: s.identitas?.nama,
+            jenis_pendaftaran_id_str: s.identitas?.jenis_pendaftaran_id_str,
+            jenis_pendaftaran_id: s.identitas?.jenis_pendaftaran_id,
+            tanggal_masuk_sekolah: s.identitas?.tanggal_masuk_sekolah,
+            tanggal_masuk_root: s.tanggal_masuk,
+            tanggal_masuk_akademik: s.akademik?.tanggal_masuk,
+            semester_id_akademik: s.akademik?.semester_id,
+            semester_id_root: s.semester_id,
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+            last_update: s.identitas?.last_update,
+            root_keys: Object.keys(s),
+          }, null, 2));
+        });
+
+        // Count jenis_pendaftaran_id_str distribution among active students
+        const pendaftaranDistribution: Record<string, number> = {};
+        activeStudents.forEach((s: any) => {
+          const val = String(s.identitas?.jenis_pendaftaran_id_str ?? s.jenis_pendaftaran_id_str ?? s.identitas?.jenis_pendaftaran_id ?? "").trim();
+          pendaftaranDistribution[val] = (pendaftaranDistribution[val] || 0) + 1;
+        });
+        console.log(`[SPTJM Debug] jenis_pendaftaran_id_str distribution:`, pendaftaranDistribution);
         const filteredEntries = activeStudents.filter((student: any) => {
+          const nama = student.identitas?.nama || "-";
           const pendaftaranVal = String(
             student.identitas?.jenis_pendaftaran_id_str ?? 
             student.jenis_pendaftaran_id_str ?? 
@@ -322,28 +400,30 @@ export default function SptjmDapodikDetailPage() {
 
           if (!isPindahan) return false;
 
-          // Entry date check
+          // Try ALL possible entry date fields
           const entryDateStr = 
             student.akademik?.tanggal_masuk ?? 
             student.tanggal_masuk ?? 
             student.identitas?.tanggal_masuk ?? 
             student.akademik?.tanggal_masuk_sekolah ?? 
             student.tanggal_masuk_sekolah ?? 
-            student.identitas?.tanggal_masuk_sekolah ?? 
-            student.created_at;
+            student.identitas?.tanggal_masuk_sekolah;
 
-          if (entryDateStr && matchedTp?.semester_id) {
-            return isDateInSemester(entryDateStr, matchedTp.semester_id);
-          }
-
-          // Fallback to semester_id check
-          const studentSemesterId = student.akademik?.semester_id ?? student.semester_id;
-          if (studentSemesterId && matchedTp?.semester_id) {
-            return studentSemesterId === matchedTp?.semester_id;
+          // If entry date exists, it MUST be within the school year. No fallback.
+          if (entryDateStr) {
+            if (matchedTp?.semester_id && isDateInSchoolYear(entryDateStr, matchedTp.semester_id)) {
+              console.log(`[SPTJM Masuk ✓] ${nama} - matched by tanggal_masuk: ${entryDateStr}`);
+              return true;
+            } else {
+              console.log(`[SPTJM Masuk ✗] ${nama} - excluded: tanggal_masuk ${entryDateStr} is outside active school year`);
+              return false;
+            }
           }
 
           return false;
         });
+
+        console.log(`[SPTJM Debug] Filtered entries (masuk): ${filteredEntries.length}`);
 
         setPdMasukList(filteredEntries);
         setPdKeluarList(filteredExits);

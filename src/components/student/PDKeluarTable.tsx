@@ -194,6 +194,7 @@ export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm,
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tingkat</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Rombel</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Status</TableCell>
+              <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Jenis Keluar</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">Tgl Keluar</TableCell>
               <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 whitespace-nowrap">Aksi</TableCell>
             </TableRow>
@@ -222,6 +223,25 @@ export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm,
                       Non-Aktif
                     </span>
                   </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 whitespace-nowrap">
+                    {(() => {
+                      const id = item.identitas?.jenis_keluar_id || item.jenis_keluar_id;
+                      if (!id) return "-";
+                      const mapping: Record<string, string> = {
+                        "1": "Lulus",
+                        "2": "Mutasi",
+                        "3": "Dikeluarkan",
+                        "4": "Mengundurkan diri",
+                        "5": "Putus Sekolah",
+                        "6": "Wafat",
+                        "7": "Hilang",
+                        "8": "Alih Fungsi",
+                        "9": "Pensiun",
+                        "Z": "Lainnya"
+                      };
+                      return mapping[String(id)] || `Lainnya (${id})`;
+                    })()}
+                  </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {item.updated_at ? new Date(item.updated_at).toLocaleDateString('id-ID') : "-"}
                   </TableCell>
@@ -238,7 +258,7 @@ export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm,
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={11} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                <TableCell colSpan={12} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
                   Tidak ada data ditemukan untuk "{searchTerm}"
                 </TableCell>
               </TableRow>
