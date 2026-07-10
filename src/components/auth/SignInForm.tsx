@@ -89,7 +89,7 @@ export default function SignInForm() {
               Masuk ke {settings?.appShortName || "SAPA VI"}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Silakan masukkan NIP dan kata sandi Anda.
+              Silakan masukkan NIP/Email dan kata sandi Anda.
             </p>
           </div>
 
@@ -102,9 +102,9 @@ export default function SignInForm() {
           <form onSubmit={handleLogin}>
             <div className="space-y-5">
               <div>
-                <Label>NIP (Nomor Induk Pegawai)</Label>
+                <Label>NIP / Email</Label>
                 <Input
-                  placeholder="Masukkan NIP Anda"
+                  placeholder="Masukkan NIP atau Email Anda"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
