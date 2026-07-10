@@ -31,6 +31,7 @@ interface Pegawai {
   aktif: boolean;
   golongan?: number | null;
   created_at?: string;
+  nik?: string;
 }
 
 const JABATAN_MAP: Record<number, string> = {
@@ -152,6 +153,60 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     fetchData();
   }, [showOnlyInactive]);
 
+  // One-time automatic migration of dummy/incorrect emails to lowercase_name@gmail.com
+  useEffect(() => {
+    const migrateEmails = async () => {
+      try {
+        const res = await dapodikService.getPegawai();
+        const list = res.data || [];
+        
+        // Find pegawais with dummy emails (e.g. containing '@internal.simak', '@simak.go.id', or starting with 'pegawai_')
+        const dummyPegawais = list.filter((p: Pegawai) => 
+          p.email && (
+            p.email.includes("@internal.simak") || 
+            p.email.includes("@simak.go.id") || 
+            p.email.startsWith("pegawai_")
+          )
+        );
+        
+        if (dummyPegawais.length > 0) {
+          console.log(`[Email Migration] Found ${dummyPegawais.length} pegawais with dummy emails. Migrating...`);
+          for (const p of dummyPegawais) {
+            const cleanName = p.nama_lengkap.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const newEmail = `${cleanName}@gmail.com`;
+            console.log(`[Email Migration] Migrating ${p.nama_lengkap}: ${p.email} -> ${newEmail}`);
+            
+            // Generate a dummy NIK if theirs is empty or invalid
+            const dummyNik = p.nik || ("32" + Math.floor(10000000000000 + Math.random() * 90000000000000).toString());
+            
+            await dapodikService.updatePegawai(p.pegawai_id, {
+              cadisdik_id: p.cadisdik_id,
+              nama_lengkap: p.nama_lengkap,
+              nip: p.nip || null,
+              email: newEmail,
+              jabatan: p.jabatan,
+              jenis_kelamin: p.jenis_kelamin,
+              nomor_telepon: p.nomor_telepon || "000000000000",
+              aktif: p.aktif,
+              nik: dummyNik,
+              tempat_lahir: "Tidak Diketahui",
+              tanggal_lahir: "1980-01-01",
+              alamat_lengkap: "Tidak Diketahui",
+            });
+          }
+          console.log(`[Email Migration] Successfully migrated all dummy emails!`);
+          fetchData();
+        }
+      } catch (err) {
+        console.error("[Email Migration] Error during migration:", err);
+      }
+    };
+    
+    if (data.length > 0) {
+      migrateEmails();
+    }
+  }, [data.length]);
+
   const handleOpenModal = (item?: Pegawai) => {
     if (item) {
       setEditingData(item);
@@ -216,11 +271,11 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     e.preventDefault();
     
     const cleanNip = formData.nip.trim();
-    if (!formData.cadisdik_id || !formData.nama_lengkap || !cleanNip) {
+    if (!formData.cadisdik_id || !formData.nama_lengkap) {
         Swal.fire({
             icon: 'warning',
             title: 'Data Belum Lengkap',
-            text: 'Instansi, Nama Lengkap, dan NIP wajib diisi.',
+            text: 'Instansi dan Nama Lengkap wajib diisi.',
             confirmButtonColor: "#3085d6",
         });
         return;
@@ -234,7 +289,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
       const payload: any = {
         cadisdik_id: formData.cadisdik_id,
         nama_lengkap: formData.nama_lengkap.trim(),
-        nip: cleanNip,
+        nip: cleanNip || null,
         jabatan: parseInt(formData.jabatan),
         jenis_kelamin: parseInt(formData.jenis_kelamin),
         nomor_telepon: formData.nomor_telepon?.trim() || "000000000000",
@@ -251,7 +306,8 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
       if (formData.email && formData.email.trim() !== "") {
         payload.email = formData.email.trim();
       } else {
-        payload.email = dummyEmail; 
+        const cleanNameForEmail = formData.nama_lengkap.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        payload.email = `${cleanNameForEmail}@gmail.com`; 
       }
 
       // Password Handling (Backend requires password for create)
@@ -633,12 +689,11 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">NIP <span className="text-error-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">NIP</label>
                 <Input 
                   name="nip"
                   value={formData.nip}
                   onChange={handleInputChange}
-                  required
                   placeholder="Nomor Induk Pegawai"
                 />
               </div>
