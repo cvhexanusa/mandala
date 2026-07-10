@@ -4,7 +4,7 @@ const url = 'https://centralsimak.smakniscjr.sch.id/api/mandala/dapodik/peserta-
 
 const options = {
   headers: {
-    'x-mandala-key': 'simak_mandala_9c94d2bcfde2996c3bdaaca56f39226e4cfc51a64185e45b',
+    'x-mandala-key': 'simak_mandala_fc9e4029674120d25bf08b59bf545ead2c02f2f73d7a461e',
     'Accept': 'application/json'
   }
 };

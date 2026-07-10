@@ -32,6 +32,9 @@ interface Pegawai {
   golongan?: number | null;
   created_at?: string;
   nik?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string;
+  alamat_lengkap?: string;
 }
 
 const JABATAN_MAP: Record<number, string> = {
@@ -284,7 +287,6 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     try {
       // Membuat NIK palsu 16 digit yang unik (dimulai dengan 32 kode Jabar)
       const dummyNik = "32" + Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
-      const dummyEmail = `pegawai_${Date.now()}@internal.simak`;
 
       const payload: any = {
         cadisdik_id: formData.cadisdik_id,
@@ -295,11 +297,11 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         nomor_telepon: formData.nomor_telepon?.trim() || "000000000000",
         aktif: formData.aktif,
         golongan: formData.golongan !== "" ? parseInt(formData.golongan) : null,
-        // Nilai default untuk field yang diwajibkan backend namun belum ditampilkan di form
-        nik: dummyNik, 
-        tempat_lahir: "Tidak Diketahui",
-        tanggal_lahir: "1980-01-01",
-        alamat_lengkap: "Tidak Diketahui",
+        // Gunakan data yang sudah ada jika edit, atau buat default jika tambah baru
+        nik: editingData?.nik || dummyNik, 
+        tempat_lahir: editingData?.tempat_lahir || "Tidak Diketahui",
+        tanggal_lahir: editingData?.tanggal_lahir ? editingData.tanggal_lahir.split('T')[0] : "1980-01-01",
+        alamat_lengkap: editingData?.alamat_lengkap || "Tidak Diketahui",
       };
 
       // Email Handling (Backend requires email and it must be unique)
