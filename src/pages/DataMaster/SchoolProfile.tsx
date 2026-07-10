@@ -9,8 +9,10 @@ import Swal from "sweetalert2";
 import { DownloadIcon, PrinterIcon, PlusIcon, TrashBinIcon } from "../../icons";
 import { dapodikService } from "../../services/dapodikService";
 import { exportToCSV } from "../../utils/exportUtils";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SchoolProfile() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "profil" | "administrasi" | "alamat" | "kontak" | "map"
   >("profil");
@@ -75,48 +77,56 @@ export default function SchoolProfile() {
       try {
         const result = await dapodikService.getSekolah();
         console.log("API School Data:", result);
-        if (result.status === "success" && result.data) {
-          const s = result.data;
-          
-          setProfileData(prev => ({
-            ...prev,
-            namaSekolah: s.nama || prev.namaSekolah,
-            npsn: s.npsn || prev.npsn,
-            nss: s.nss || prev.nss,
-            kodeWilayah: s.kode_wilayah || prev.kodeWilayah,
-            lintang: s.lintang ? String(s.lintang) : prev.lintang,
-            bujur: s.bujur ? String(s.bujur) : prev.bujur,
-            statusSekolah: s.status_sekolah_str || prev.statusSekolah,
-            bentukPendidikan: s.bentuk_pendidikan_id_str || prev.bentukPendidikan,
-            namaKepalaSekolah: s.nama_kepala_sekolah || prev.namaKepalaSekolah,
-            skPendirian: s.spmb || prev.skPendirian,
-            logo: s.logo || prev.logo
-          }));
-
-          if (s.logo) {
-            setLogoPreview(s.logo);
+        if ((result.status === "success" || result.success === true) && result.data) {
+          let s = null;
+          if (Array.isArray(result.data)) {
+            const targetId = user?.instansi_id;
+            s = result.data.find((item: any) => (item.sekolah_id === targetId || item.id === targetId)) || result.data[0];
+          } else {
+            s = result.data;
           }
+          
+          if (s) {
+            setProfileData(prev => ({
+              ...prev,
+              namaSekolah: s.nama || prev.namaSekolah,
+              npsn: s.npsn || prev.npsn,
+              nss: s.nss || prev.nss,
+              kodeWilayah: s.kode_wilayah || prev.kodeWilayah,
+              lintang: s.lintang ? String(s.lintang) : prev.lintang,
+              bujur: s.bujur ? String(s.bujur) : prev.bujur,
+              statusSekolah: s.status_sekolah_str || s.status_sekolah || prev.statusSekolah,
+              bentukPendidikan: s.bentuk_pendidikan_id_str || s.bentuk_pendidikan || prev.bentukPendidikan,
+              namaKepalaSekolah: s.nama_kepala_sekolah || prev.namaKepalaSekolah,
+              skPendirian: s.spmb || s.sk_pendirian || prev.skPendirian,
+              logo: s.logo || prev.logo
+            }));
 
-          setAlamatData(prev => ({
-            ...prev,
-            jalan: s.alamat_jalan || prev.jalan,
-            desa: s.desa_kelurahan || prev.desa,
-            kecamatan: s.kecamatan || prev.kecamatan,
-            kabupaten: s.kabupaten_kota || prev.kabupaten,
-            propinsi: s.provinsi || prev.propinsi,
-            rt: s.rt || prev.rt,
-            rw: s.rw || prev.rw,
-            kodePos: s.kode_pos || prev.kodePos,
-          }));
+            if (s.logo) {
+              setLogoPreview(s.logo);
+            }
 
-          setKontakData(prev => ({
-            ...prev,
-            email: s.email || prev.email,
-            telepon: s.nomor_telepon || prev.telepon,
-            website: s.website || prev.website,
-            nomorFax: s.nomor_fax || prev.nomorFax,
-            socialMedia: Array.isArray(s.social_media) ? s.social_media : prev.socialMedia
-          }));
+            setAlamatData(prev => ({
+              ...prev,
+              jalan: s.alamat_jalan || prev.jalan,
+              desa: s.desa_kelurahan || prev.desa,
+              kecamatan: s.kecamatan || prev.kecamatan,
+              kabupaten: s.kabupaten_kota || prev.kabupaten,
+              propinsi: s.provinsi || prev.propinsi,
+              rt: s.rt || prev.rt,
+              rw: s.rw || prev.rw,
+              kodePos: s.kode_pos || prev.kodePos,
+            }));
+
+            setKontakData(prev => ({
+              ...prev,
+              email: s.email || prev.email,
+              telepon: s.nomor_telepon || prev.telepon,
+              website: s.website || prev.website,
+              nomorFax: s.nomor_fax || prev.nomorFax,
+              socialMedia: Array.isArray(s.social_media) ? s.social_media : prev.socialMedia
+            }));
+          }
         }
       } catch (err) {
         console.error("Gagal mengambil data profil sekolah:", err);
@@ -126,7 +136,7 @@ export default function SchoolProfile() {
     };
 
     fetchSchoolData();
-  }, []);
+  }, [user]);
 
   const [dataRinci] = useState({
     waktuPenyelenggaraan: "Pagi/6 Hari",

@@ -11,8 +11,10 @@ import { SearchIcon, PlusIcon, BoltIcon } from "../../icons";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import Pagination from "../../components/common/Pagination";
 import { mandalaService, Pelaporan } from "../../services/mandalaService";
+import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
 import { getRoleSlug } from "../../services/roleUtils";
+import Swal from "sweetalert2";
 
 export default function PelaporanPage() {
   const { user } = useAuth();
@@ -27,15 +29,27 @@ export default function PelaporanPage() {
 
   const fetchPelaporan = useCallback(async () => {
     console.log("fetchPelaporan dipanggil, user:", user);
-    if (!user?.cadisdik_id) {
-      console.warn("Fetch pelaporan dibatalkan: user.cadisdik_id tidak ditemukan");
+    let cadisdikId = user?.cadisdik_id;
+    if (!cadisdikId) {
+      try {
+        const instansiRes = await dapodikService.getCadisdik();
+        if (instansiRes?.data && instansiRes.data.length > 0) {
+          cadisdikId = instansiRes.data[0].cadisdik_id;
+        }
+      } catch (err) {
+        console.warn("Gagal fetch fallback cadisdik list:", err);
+      }
+    }
+
+    if (!cadisdikId) {
+      console.warn("Fetch pelaporan dibatalkan: cadisdik_id tidak ditemukan");
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      console.log("Requesting pelaporan for cadisdik_id:", user.cadisdik_id);
-      const response = await mandalaService.getPelaporan(user.cadisdik_id, currentPage, itemsPerPage);
+      console.log("Requesting pelaporan for cadisdik_id:", cadisdikId);
+      const response = await mandalaService.getPelaporan(cadisdikId, currentPage, itemsPerPage);
       console.log("API Response getPelaporan raw:", response);
       
       let pelaporanData: Pelaporan[] = [];
@@ -80,6 +94,51 @@ export default function PelaporanPage() {
   useEffect(() => {
     fetchPelaporan();
   }, [fetchPelaporan]);
+
+  const handleDelete = async (pelaporanId: string) => {
+    const result = await Swal.fire({
+      title: "Apakah Anda yakin?",
+      text: "Data permintaan pelaporan ini akan dihapus permanen!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal"
+    });
+
+    if (result.isConfirmed) {
+      let cadisdikId = user?.cadisdik_id;
+      if (!cadisdikId) {
+        try {
+          const instansiRes = await dapodikService.getCadisdik();
+          if (instansiRes?.data && instansiRes.data.length > 0) {
+            cadisdikId = instansiRes.data[0].cadisdik_id;
+          }
+        } catch (err) {
+          console.warn("Gagal fetch fallback cadisdik list:", err);
+        }
+      }
+
+      if (!cadisdikId) {
+        Swal.fire("Gagal", "ID Cadisdik tidak ditemukan.", "error");
+        return;
+      }
+
+      try {
+        const response = await mandalaService.deletePelaporan(pelaporanId, cadisdikId);
+        if (response.status === "success" || response.success === true) {
+          Swal.fire("Berhasil", "Permintaan pelaporan berhasil dihapus.", "success");
+          fetchPelaporan();
+        } else {
+          Swal.fire("Gagal", response.message || "Gagal menghapus data", "error");
+        }
+      } catch (error: any) {
+        console.error("Gagal menghapus pelaporan:", error);
+        Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan saat menghapus", "error");
+      }
+    }
+  };
 
   const filteredData = data.filter((item) =>
     item.judul.toLowerCase().includes(searchTerm.toLowerCase())
@@ -179,11 +238,20 @@ export default function PelaporanPage() {
                           )}
                         </TableCell>
                         <TableCell className="px-5 py-4 text-center">
-                          <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}>
-                            <button className="text-brand-500 hover:text-brand-600 font-semibold text-theme-sm transition-colors cursor-pointer">
-                              Detail
+                          <div className="flex items-center justify-center gap-3">
+                            <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}>
+                              <button className="text-brand-500 hover:text-brand-600 font-semibold text-theme-sm transition-colors cursor-pointer">
+                                Detail
+                              </button>
+                            </Link>
+                            <span className="text-gray-300 dark:text-gray-700">|</span>
+                            <button
+                              onClick={() => handleDelete(item.pelaporan_id)}
+                              className="text-error-500 hover:text-error-600 font-semibold text-theme-sm transition-colors cursor-pointer"
+                            >
+                              Hapus
                             </button>
-                          </Link>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

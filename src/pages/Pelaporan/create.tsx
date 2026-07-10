@@ -7,6 +7,7 @@ import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import { mandalaService, MandalaSchool } from "../../services/mandalaService";
+import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
 import { getRoleSlug } from "../../services/roleUtils";
 import Swal from "sweetalert2";
@@ -33,8 +34,20 @@ export default function CreatePelaporanPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user?.cadisdik_id) {
-      Swal.fire("Peringatan", "ID Cadisdik tidak ditemukan pada profil Anda. Silakan Logout dan Login kembali untuk memperbarui sesi.", "warning");
+    let cadisdikId = user?.cadisdik_id;
+    if (!cadisdikId) {
+      try {
+        const instansiRes = await dapodikService.getCadisdik();
+        if (instansiRes?.data && instansiRes.data.length > 0) {
+          cadisdikId = instansiRes.data[0].cadisdik_id;
+        }
+      } catch (err) {
+        console.warn("Gagal fetch fallback cadisdik list:", err);
+      }
+    }
+
+    if (!cadisdikId) {
+      Swal.fire("Peringatan", "ID Cadisdik tidak ditemukan pada profil Anda. Silakan hubungi administrator.", "warning");
       return;
     }
 
@@ -42,7 +55,7 @@ export default function CreatePelaporanPage() {
     try {
       const response = await mandalaService.createPelaporan({
         ...formData,
-        cadisdik_id: user.cadisdik_id,
+        cadisdik_id: cadisdikId,
         sekolah_ids: [], // Pass empty array if backend expects the field
       });
 

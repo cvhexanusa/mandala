@@ -16,25 +16,33 @@ import ComponentCard from "../../components/common/ComponentCard";
 import Badge from "../../components/ui/badge/Badge";
 import { formatJenjang } from "../../utils/dapodikUtils";
 
-export default function SchoolDetailPage() {
-  const { id } = useParams<{ id: string }>();
+interface SchoolDetailPageProps {
+  schoolId?: string;
+}
+
+export default function SchoolDetailPage({ schoolId }: SchoolDetailPageProps = {}) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = schoolId || paramId;
   const navigate = useNavigate();
   const [data, setData] = useState<any | null>(null);
   const [principal, setPrincipal] = useState<string>("-");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const fetchDetail = async () => {
+    const fetchDetail = async (isRefresh = false) => {
       if (!id) return;
-      setLoading(true);
+      if (isRefresh) setIsRefreshing(true);
+      else setLoading(true);
       try {
-        // AMBIL DETAIL, SUMMARY, GTK, DAN PD AKTIF SECARA PARALEL
-        const [detailRes, summaryRes, gtkRes, pdRes] = await Promise.all([
-            mandalaService.getSchoolDetail(id),
-            mandalaService.getSchoolSummary(id).catch(() => null),
-            dapodikService.getGTK(50, "", 1, undefined, "aktif", id).catch(() => null),
-            dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, id).catch(() => null)
+        // AMBIL DETAIL, SUMMARY, GTK, PD AKTIF, DAN DAFTAR SEKOLAH SECARA PARALEL
+        const [detailRes, summaryRes, gtkRes, pdRes, schoolListRes] = await Promise.all([
+             mandalaService.getSchoolDetail(id),
+             mandalaService.getSchoolSummary(id).catch(() => null),
+             dapodikService.getGTK(50, "", 1, undefined, "aktif", id).catch(() => null),
+             dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, id).catch(() => null),
+             dapodikService.getSekolah().catch(() => null)
         ]);
         
         console.log("RAW Detail Response:", detailRes);
@@ -49,6 +57,19 @@ export default function SchoolDetailPage() {
         else detailData = detailRes;
 
         if (Array.isArray(detailData)) detailData = detailData[0];
+
+        // Ekstraksi Daftar Sekolah untuk resolusi wilayah (kecamatan & kabupaten)
+        let schoolList = [];
+        if (schoolListRes) {
+          if (schoolListRes.status === 'success' || schoolListRes.success === true) {
+            schoolList = schoolListRes.data || [];
+          } else if (Array.isArray(schoolListRes)) {
+            schoolList = schoolListRes;
+          } else if (schoolListRes.data && Array.isArray(schoolListRes.data)) {
+            schoolList = schoolListRes.data;
+          }
+        }
+        const matchedSchool = schoolList.find((s: any) => (s.sekolah_id || s.id) === id);
 
         // Ekstraksi Summary
         let summaryData = null;
@@ -78,7 +99,11 @@ export default function SchoolDetailPage() {
         if (detailData && typeof detailData === 'object') {
           // GABUNGKAN DATA (Prioritaskan statistik dari summary jika tersedia)
           const mergedData = {
+            ...matchedSchool,
             ...detailData,
+            kecamatan: detailData.kecamatan || matchedSchool?.kecamatan || "-",
+            kabupaten_kota: detailData.kabupaten_kota || detailData.kabupate_kota || matchedSchool?.kabupaten_kota || matchedSchool?.kabupate_kota || "-",
+            desa_kelurahan: detailData.desa_kelurahan || matchedSchool?.desa_kelurahan || "-",
             // Jika di detail data tidak ada statistik, ambil dari summary
             total_gtk: detailData.total_gtk || summaryData?.jumlah_guru || summaryData?.total_gtk || detailData.jumlah_guru || 0,
             total_siswa: totalActiveStudents || detailData.total_siswa || summaryData?.jumlah_siswa || summaryData?.total_siswa || detailData.jumlah_siswa || 0,
@@ -97,6 +122,7 @@ export default function SchoolDetailPage() {
         setError("Terjadi kesalahan saat memuat data sekolah.");
       } finally {
         setLoading(false);
+        setIsRefreshing(false);
       }
     };
 
@@ -152,12 +178,14 @@ export default function SchoolDetailPage() {
       <div className="space-y-6 pb-10">
         {/* Header Action */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={handleBack}
-            className="flex items-center justify-center w-10 h-10 text-gray-500 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5"
-          >
-            <ChevronLeftIcon className="size-5" />
-          </button>
+          {!schoolId && (
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center w-10 h-10 text-gray-500 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5"
+            >
+              <ChevronLeftIcon className="size-5" />
+            </button>
+          )}
           <div>
             <h3 className="text-xl font-bold text-gray-800 dark:text-white/90 leading-tight">
               {data.nama}

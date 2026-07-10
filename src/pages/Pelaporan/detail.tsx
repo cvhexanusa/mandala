@@ -8,6 +8,7 @@ import Badge from "../../components/ui/badge/Badge";
 import { Modal } from "../../components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import { mandalaService, PelaporanDetail, PelaporanDokumen } from "../../services/mandalaService";
+import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
 
 export default function DetailPelaporanPage() {
@@ -24,10 +25,19 @@ export default function DetailPelaporanPage() {
   const [docLoading, setDocLoading] = useState(false);
 
   const fetchDetail = useCallback(async () => {
-    if (!id || !user?.cadisdik_id) return;
+    if (!id) return;
     setLoading(true);
     try {
-      const response = await mandalaService.getPelaporanDetail(id, user.cadisdik_id);
+      let cadisdikId = user?.cadisdik_id;
+      if (!cadisdikId) {
+        const instansiRes = await dapodikService.getCadisdik().catch(() => null);
+        if (instansiRes?.data && instansiRes.data.length > 0) {
+          cadisdikId = instansiRes.data[0].cadisdik_id;
+        }
+      }
+      if (!cadisdikId) return;
+
+      const response = await mandalaService.getPelaporanDetail(id, cadisdikId);
       if (response.status === "success") {
         setDetail(response.data);
       }
@@ -43,12 +53,21 @@ export default function DetailPelaporanPage() {
   }, [fetchDetail]);
 
   const handleLihatDokumen = async (sekolahId: string, namaSekolah: string) => {
-    if (!id || !user?.cadisdik_id) return;
+    if (!id) return;
     setSelectedSekolah({ id: sekolahId, nama: namaSekolah });
     setIsDocModalOpen(true);
     setDocLoading(true);
     try {
-      const response = await mandalaService.getPelaporanDokumenSekolah(id, sekolahId, user.cadisdik_id);
+      let cadisdikId = user?.cadisdik_id;
+      if (!cadisdikId) {
+        const instansiRes = await dapodikService.getCadisdik().catch(() => null);
+        if (instansiRes?.data && instansiRes.data.length > 0) {
+          cadisdikId = instansiRes.data[0].cadisdik_id;
+        }
+      }
+      if (!cadisdikId) return;
+
+      const response = await mandalaService.getPelaporanDokumenSekolah(id, sekolahId, cadisdikId);
       if (response.status === "success") {
         setDocuments(response.data.dokumen);
       }

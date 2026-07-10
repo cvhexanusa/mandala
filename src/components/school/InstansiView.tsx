@@ -9,6 +9,8 @@ import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, CopyIcon } from "../../ico
 import Swal from "sweetalert2";
 import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
+import SchoolDetailPage from "../../pages/DataMaster/SchoolDetailPage";
+import { useSekolah } from "../../context/SekolahContext";
 
 interface Cadisdik {
   cadisdik_id: string;
@@ -22,6 +24,14 @@ interface Cadisdik {
 
 export default function InstansiView() {
   const { user } = useAuth();
+  const { sekolah } = useSekolah();
+  const isOperator = user?.role?.toLowerCase().includes("operator");
+  const mySchoolId = user?.instansi_id || (isOperator ? sekolah?.sekolah_id : null);
+
+  if (isOperator && mySchoolId) {
+    return <SchoolDetailPage schoolId={mySchoolId} />;
+  }
+
   const [data, setData] = useState<Cadisdik[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -6,6 +6,7 @@ import PageMeta from '../../components/common/PageMeta';
 import { mandalaService, MandalaSchool, Pelaporan, Antrian, AntrianRekap } from '../../services/mandalaService';
 import { dapodikService } from '../../services/dapodikService';
 import { useAuth } from '../../context/AuthContext';
+import { useSekolah } from '../../context/SekolahContext';
 import { 
   SchoolIcon, 
   GroupIcon, 
@@ -62,7 +63,9 @@ export default function MandalaDashboard() {
   const navigate = useNavigate();
   const { role } = useParams();
   const { user } = useAuth();
+  const { sekolah } = useSekolah();
   const roleSlug = role || 'admin';
+  const isOperator = user?.role?.toLowerCase().includes("operator");
 
   // Global School List
   const [schools, setSchools] = useState<MandalaSchool[]>([]);
@@ -82,9 +85,14 @@ export default function MandalaDashboard() {
   const [globalGuru, setGlobalGuru] = useState<number | null>(null);
   const [globalTendik, setGlobalTendik] = useState<number | null>(null);
   const [globalSiswa, setGlobalSiswa] = useState<number | null>(null);
+  const [globalRombel, setGlobalRombel] = useState<number | null>(null);
 
   // Real-time Clock State
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Operator School Summary State
+  const [operatorSummary, setOperatorSummary] = useState<any | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   const getCountHelper = (res: unknown) => {
     if (!res) return 0;
@@ -98,19 +106,24 @@ export default function MandalaDashboard() {
 
   const fetchGlobalActiveStats = useCallback(async () => {
     try {
-      const [resSiswa, resGuru, resTendik] = await Promise.all([
-        dapodikService.getPesertaDidik(1, '', 1, undefined, 'aktif'),
-        dapodikService.getGTK(1, '', 1, 'guru', 'aktif'),
-        dapodikService.getGTK(1, '', 1, 'tendik', 'aktif')
+      const isOperator = user?.role?.toLowerCase().includes("operator");
+      const targetSekolahId = isOperator ? (sekolah?.sekolah_id || user?.instansi_id) : user?.instansi_id;
+
+      const [resSiswa, resGuru, resTendik, resRombel] = await Promise.all([
+        dapodikService.getPesertaDidik(1, '', 1, undefined, 'aktif', undefined, targetSekolahId),
+        dapodikService.getGTK(1, '', 1, 'guru', 'aktif', targetSekolahId),
+        dapodikService.getGTK(1, '', 1, 'tendik', 'aktif', targetSekolahId),
+        dapodikService.getRombonganBelajar('reguler', 1, 1).catch(() => null)
       ]);
 
       setGlobalSiswa(getCountHelper(resSiswa));
       setGlobalGuru(getCountHelper(resGuru));
       setGlobalTendik(getCountHelper(resTendik));
+      setGlobalRombel(getCountHelper(resRombel));
     } catch (err) {
       console.error("Gagal menarik metadata global statistik aktif:", err);
     }
-  }, []);
+  }, [user, sekolah]);
 
   const fetchSchools = useCallback(async () => {
     try {
@@ -123,6 +136,12 @@ export default function MandalaDashboard() {
         fetchedSchools = response.data || [];
       } else if (Array.isArray(response)) {
         fetchedSchools = response;
+      }
+
+      const isOperator = user?.role?.toLowerCase().includes("operator");
+      const targetSekolahId = isOperator ? (sekolah?.sekolah_id || user?.instansi_id) : user?.instansi_id;
+      if (isOperator && targetSekolahId) {
+        fetchedSchools = fetchedSchools.filter(s => s.sekolah_id === targetSekolahId);
       }
 
       // Fetch accurate real-time active student & GTK counts for each school
@@ -156,7 +175,7 @@ export default function MandalaDashboard() {
     } finally {
       setLoadingSchools(false);
     }
-  }, []);
+  }, [user, sekolah]);
 
   const fetchAntrianData = useCallback(async (cId: string) => {
     try {
@@ -213,6 +232,25 @@ export default function MandalaDashboard() {
 
     return () => clearInterval(timer);
   }, [fetchSchools, fetchGlobalActiveStats]);
+
+  // Fetch Operator School Summary
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const targetSekolahId = isOperator ? (sekolah?.sekolah_id || user?.instansi_id) : user?.instansi_id;
+      if (isOperator && targetSekolahId) {
+        setLoadingSummary(true);
+        try {
+          const res = await mandalaService.getSchoolSummary(targetSekolahId);
+          setOperatorSummary(res.data || res);
+        } catch (err) {
+          console.error("Gagal memuat ringkasan sekolah operator:", err);
+        } finally {
+          setLoadingSummary(false);
+        }
+      }
+    };
+    fetchSummary();
+  }, [isOperator, user, sekolah]);
 
   // Fetch operational guest queues and document compliance list based on user's branch
   useEffect(() => {
@@ -476,6 +514,26 @@ export default function MandalaDashboard() {
 
   const donutChartSeries = [negeriCount, swastaCount];
 
+  if (isOperator) {
+    return (
+      <OperatorDashboard 
+        user={user} 
+        sekolah={sekolah} 
+        summary={operatorSummary} 
+        loading={loadingSummary || loadingSchools} 
+        timeString={timeString}
+        dateString={dateString}
+        getGreeting={getGreeting}
+        roleSlug={roleSlug}
+        schools={schools}
+        siswaCount={globalSiswa || 0}
+        guruCount={globalGuru || 0}
+        tendikCount={globalTendik || 0}
+        rombelCount={globalRombel || 0}
+      />
+    );
+  }
+
   return (
     <>
       <PageMeta
@@ -488,11 +546,14 @@ export default function MandalaDashboard() {
         <div className="relative overflow-hidden rounded-2xl bg-brand-500 p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="relative z-10">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm mb-3">
-              📅 SIMAK Central Command Center
+              {isOperator ? "🏫 SIMAK School Dashboard" : "📅 SIMAK Central Command Center"}
             </span>
             <h1 className="text-2xl font-bold md:text-3xl tracking-tight">{getGreeting()}, {user?.nama || 'Administrator'}</h1>
             <p className="mt-2 max-w-xl text-brand-100 text-sm leading-relaxed">
-              Selamat datang di dashboard pemantauan terpusat. Kelola dan monitor seluruh satuan pendidikan yang terintegrasi di bawah ekosistem Mandala secara real-time.
+              {isOperator 
+                ? `Selamat datang di dashboard pemantauan sekolah ${sekolah?.nama || ''}. Kelola dan monitor data profil, GTK, dan peserta didik Anda secara real-time.`
+                : "Selamat datang di dashboard pemantauan terpusat. Kelola dan monitor seluruh satuan pendidikan yang terintegrasi di bawah ekosistem Mandala secara real-time."
+              }
             </p>
           </div>
 
@@ -820,5 +881,382 @@ function OverviewCard({ title, value, icon, color }: { title: string; value: str
         <h4 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{value}</h4>
       </div>
     </div>
+  );
+}
+
+interface OperatorDashboardProps {
+  user: any;
+  sekolah: any;
+  summary: any;
+  loading: boolean;
+  timeString: string;
+  dateString: string;
+  getGreeting: () => string;
+  roleSlug: string;
+  schools: any[];
+  siswaCount: number;
+  guruCount: number;
+  tendikCount: number;
+  rombelCount: number;
+}
+
+function OperatorDashboard({
+  user,
+  sekolah,
+  summary,
+  loading,
+  timeString,
+  dateString,
+  getGreeting,
+  roleSlug,
+  schools,
+  siswaCount,
+  guruCount,
+  tendikCount,
+  rombelCount,
+}: OperatorDashboardProps) {
+  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  // 1. Guru vs Tendik Donut Chart Configuration
+  const jumlahGuru = guruCount || summary?.statistik?.jumlah_guru || 0;
+  const jumlahTendik = tendikCount || summary?.statistik?.jumlah_tendik || 0;
+  const totalGtk = jumlahGuru + jumlahTendik;
+
+  const donutOptions: ApexOptions = {
+    colors: ["#10b981", "#f79009"],
+    chart: {
+      fontFamily: "Outfit, sans-serif",
+      type: "donut",
+      height: 260,
+    },
+    labels: ["Guru", "Tendik"],
+    plotOptions: {
+      pie: {
+        donut: {
+          size: "68%",
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: "Total GTK",
+              fontSize: "12px",
+              fontFamily: "Outfit",
+              fontWeight: 600,
+              color: "#667085",
+              formatter: () => totalGtk.toString(),
+            },
+          },
+        },
+      },
+    },
+    dataLabels: {
+      enabled: false,
+    },
+    legend: {
+      show: true,
+      position: "bottom",
+      fontFamily: "Outfit",
+    },
+    tooltip: {
+      y: {
+        formatter: (val: number) => val + " Orang",
+      },
+    },
+  };
+  const donutSeries = [jumlahGuru, jumlahTendik];
+
+  // 2. Student vs GTK Bar Chart Configuration
+  const totalSiswa = siswaCount || summary?.statistik?.jumlah_siswa || 0;
+
+  const barOptions: ApexOptions = {
+    colors: ["#3b82f6"],
+    chart: {
+      fontFamily: "Outfit, sans-serif",
+      type: "bar",
+      height: 240,
+      toolbar: {
+        show: false,
+      },
+    },
+    plotOptions: {
+      bar: {
+        horizontal: true,
+        barHeight: "50%",
+        borderRadius: 8,
+      },
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val: number) => val.toLocaleString(),
+      style: {
+        fontSize: "12px",
+        fontFamily: "Outfit, sans-serif",
+        fontWeight: "600",
+        colors: ["#ffffff"],
+      },
+    },
+    xaxis: {
+      categories: ["Siswa", "GTK"],
+      labels: {
+        style: {
+          fontFamily: "Outfit",
+        },
+      },
+    },
+    yaxis: {
+      labels: {
+        style: {
+          fontSize: "12px",
+          fontFamily: "Outfit",
+          fontWeight: 600,
+        },
+      },
+    },
+    grid: {
+      borderColor: "#f2f4f7",
+      strokeDashArray: 4,
+    }
+  };
+  const barSeries = [
+    {
+      name: "Total",
+      data: [totalSiswa, totalGtk],
+    },
+  ];
+
+  const targetSekolahId = sekolah?.sekolah_id || user?.instansi_id;
+  const mySchoolObj = schools.find((s: any) => s.sekolah_id === targetSekolahId);
+  const lastSyncTime = mySchoolObj?.last_update ? getRelativeTimeString(mySchoolObj.last_update) : "1 hari yang lalu";
+
+  return (
+    <>
+      <PageMeta
+        title={`Dashboard Operator | ${sekolah?.nama || "SIMAK"}`}
+        description="Bespoke School Operator Command Center"
+      />
+
+      <div className="space-y-6 pb-10">
+        {/* Welcome Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-brand-500 p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="relative z-10">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm mb-3">
+              🏫 SIMAK School Dashboard
+            </span>
+            <h1 className="text-2xl font-bold md:text-3xl tracking-tight">
+              {getGreeting()}, {user?.nama || "Operator"}
+            </h1>
+            <p className="mt-2 max-w-xl text-brand-100 text-sm leading-relaxed">
+              Anda login sebagai Operator Sekolah untuk <strong>{sekolah?.nama || "Sekolah Anda"}</strong>. Kelola dan monitor data profil, GTK, serta peserta didik Anda secara real-time.
+            </p>
+          </div>
+
+          <div className="relative z-10 flex flex-col items-start md:items-end text-left md:text-right min-w-[220px]">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-3xl md:text-4xl font-mono font-bold tracking-tighter">
+                {timeString}
+              </span>
+              <div className="h-10 w-[1px] bg-white/20 hidden md:block"></div>
+              <div className="flex flex-col items-start text-left leading-none">
+                <span className="text-[10px] uppercase opacity-70 font-bold tracking-widest mb-1">
+                  WIB
+                </span>
+                <span className="text-lg font-bold">29°C</span>
+              </div>
+            </div>
+            <p className="text-xs md:text-sm text-brand-100 font-medium capitalize">
+              {dateString}
+            </p>
+            <div className="flex items-center gap-2 mt-3 px-3 py-1 bg-white/10 rounded-full border border-white/10 backdrop-blur-sm">
+              <svg className="size-4 text-yellow-300 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
+              </svg>
+              <span className="text-[10px] uppercase font-bold tracking-wider">
+                Cerah Berawan
+              </span>
+            </div>
+          </div>
+
+          <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
+          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-brand-400/20 blur-2xl"></div>
+        </div>
+
+        {/* Scoped Overview Stats */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <OverviewCard
+            title="Total Siswa Aktif"
+            value={totalSiswa.toLocaleString()}
+            icon={<UserIcon className="size-6" />}
+            color="blue"
+          />
+          <OverviewCard
+            title="Total Guru Aktif"
+            value={jumlahGuru.toLocaleString()}
+            icon={<GroupIcon className="size-6" />}
+            color="emerald"
+          />
+          <OverviewCard
+            title="Total Tendik Aktif"
+            value={jumlahTendik.toLocaleString()}
+            icon={<BoxIcon className="size-6" />}
+            color="orange"
+          />
+          <OverviewCard
+            title="Rombongan Belajar"
+            value={(rombelCount || summary?.statistik?.jumlah_rombel || 0).toLocaleString()}
+            icon={<SchoolIcon className="size-6" />}
+            color="purple"
+          />
+        </div>
+
+        {/* Visual Charts & Facility Information Grid */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* Column Left: Facility & Quick Links (7/12) */}
+          <div className="col-span-12 lg:col-span-7 space-y-6">
+            {/* Siswa & GTK Chart */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-2">
+                <BoxIcon className="size-4.5 text-blue-500" />
+                Grafik Jumlah Siswa & GTK
+              </h3>
+              <p className="text-xs text-gray-400">
+                Data sebaran jumlah total siswa aktif dan tenaga pendidik/kependidikan.
+              </p>
+              <div className="h-[240px] w-full mt-4">
+                <Chart options={barOptions} series={barSeries} type="bar" height={240} />
+              </div>
+            </div>
+
+            {/* Quick Links Menu */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+                <GridIcon className="size-4.5 text-brand-500" />
+                Pintasan Pintar (Quick Shortcuts)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <QuickLinkButton
+                  title="Kelola Guru"
+                  description="Akses daftar, edit, dan tambah guru aktif."
+                  onClick={() => navigate(`/${roleSlug}/gtk/guru?tab=guru`)}
+                  color="emerald"
+                />
+                <QuickLinkButton
+                  title="Kelola Tendik"
+                  description="Kelola tenaga administrasi sekolah."
+                  onClick={() => navigate(`/${roleSlug}/gtk/tendik?tab=tendik`)}
+                  color="orange"
+                />
+                <QuickLinkButton
+                  title="Peserta Didik"
+                  description="Akses registrasi dan data induk siswa."
+                  onClick={() => navigate(`/${roleSlug}/peserta-didik/data?tab=aktif`)}
+                  color="blue"
+                />
+                <QuickLinkButton
+                  title="Profil Instansi"
+                  description="Lihat & cetak detail identitas satuan pendidikan."
+                  onClick={() => navigate(`/${roleSlug}/profil-instansi`)}
+                  color="purple"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Column Right: Donut Chart & Connection Summary (5/12) */}
+          <div className="col-span-12 lg:col-span-5 space-y-6">
+            {/* Donut Chart: Guru & Tendik */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+                <GroupIcon className="size-4.5 text-brand-500" />
+                Rasio Kepegawaian (Guru & Tendik)
+              </h3>
+              <div className="h-[260px] flex items-center justify-center">
+                <Chart options={donutOptions} series={donutSeries} type="donut" height={260} />
+              </div>
+            </div>
+
+            {/* Terakhir Sinkron Sekolah Ini */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <TimeIcon className="size-4.5 text-brand-500" />
+                Terakhir Sinkron Sekolah Ini
+              </h3>
+
+              <div className="p-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-xl border border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-bold block">Waktu Sinkronisasi</span>
+                  <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
+                    {lastSyncTime}
+                  </span>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  Sinkron
+                </span>
+              </div>
+
+              <div className="p-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-xl border border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-bold block">Status Integrasi</span>
+                  <span className="text-sm font-bold text-success-600 dark:text-success-400">
+                    Koneksi Aktif
+                  </span>
+                </div>
+                <span className="h-2.5 w-2.5 rounded-full bg-success-500 animate-pulse"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function QuickLinkButton({
+  title,
+  description,
+  onClick,
+  color,
+}: {
+  title: string;
+  description: string;
+  onClick: () => void;
+  color: "blue" | "emerald" | "orange" | "purple";
+}) {
+  const borderColors = {
+    blue: "hover:border-blue-500/30 hover:bg-blue-50/10 dark:hover:bg-blue-500/5",
+    emerald: "hover:border-emerald-500/30 hover:bg-emerald-50/10 dark:hover:bg-emerald-500/5",
+    orange: "hover:border-orange-500/30 hover:bg-orange-50/10 dark:hover:bg-orange-500/5",
+    purple: "hover:border-purple-500/30 hover:bg-purple-50/10 dark:hover:bg-purple-500/5",
+  };
+
+  const badgeColors = {
+    blue: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+    emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+    orange: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
+    purple: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`p-4 rounded-xl border border-gray-100 dark:border-gray-800 text-left transition-all duration-200 flex flex-col justify-between h-28 cursor-pointer ${borderColors[color]}`}
+    >
+      <div className="flex justify-between items-start w-full">
+        <span className="font-bold text-sm text-gray-800 dark:text-white">{title}</span>
+        <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${badgeColors[color]}`}>
+          Akses
+        </span>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 truncate w-full">
+        {description}
+      </p>
+    </button>
   );
 }

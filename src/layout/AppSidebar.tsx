@@ -342,9 +342,50 @@ const AppSidebar: React.FC = () => {
     return `${rolePrefix}${path}`;
   };
 
-  const filteredNavItems = sekolah 
-    ? navItems 
-    : navItems.filter(item => item.name === "Dashboard" || item.name === "Pengaturan");
+  const isOperator = user?.role?.toLowerCase().includes("operator");
+
+  const getFilteredNavItems = () => {
+    if (!sekolah) {
+      return navItems.filter(item => item.name === "Dashboard" || item.name === "Pengaturan");
+    }
+
+    if (isOperator) {
+      // Operator Sekolah only gets Dashboard, Profil Instansi, and Data Master
+      return navItems
+        .filter(item => ["Dashboard", "Profil Instansi", "Data Master"].includes(item.name))
+        .map(item => {
+          if (item.name === "Data Master") {
+            // Filter Data Master subItems: only keep GTK and Peserta Didik
+            const filteredSub = (item.subItems || [])
+              .filter(sub => ["GTK", "Peserta Didik"].includes(sub.name))
+              .map(sub => {
+                if (sub.name === "GTK") {
+                  return {
+                    ...sub,
+                    subItems: (sub.subItems || []).filter(s => s.name !== "Rekapitulasi GTK")
+                  };
+                }
+                if (sub.name === "Peserta Didik") {
+                  return {
+                    ...sub,
+                    subItems: (sub.subItems || []).filter(s => s.name !== "Rekapitulasi Siswa")
+                  };
+                }
+                return sub;
+              });
+            return {
+              ...item,
+              subItems: filteredSub
+            };
+          }
+          return item;
+        });
+    }
+
+    return navItems;
+  };
+
+  const filteredNavItems = getFilteredNavItems();
 
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});

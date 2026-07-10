@@ -182,6 +182,13 @@ export const mandalaService = {
     return response.data;
   },
 
+  deletePelaporan: async (id: string, cadisdik_id: string) => {
+    const response = await api.delete(`/mandala/pelaporan/${id}`, {
+      params: { cadisdik_id }
+    });
+    return response.data;
+  },
+
   // J. Pengaturan Sistem (System Settings)
   getSystemSettings: async (cadisdikId?: string) => {
     const url = cadisdikId

@@ -16,6 +16,8 @@ import { exportToExcel } from "../../utils/exportUtils";
 import { dapodikService } from "../../services/dapodikService";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 import { formatJenjang } from "../../utils/dapodikUtils";
+import { useAuth } from "../../context/AuthContext";
+import { useSekolah } from "../../context/SekolahContext";
 
 export default function StudentData() {
   const [searchParams] = useSearchParams();
@@ -24,13 +26,18 @@ export default function StudentData() {
   const tabParam = searchParams.get("tab");
   const isRekapRoute = window.location.pathname.includes("/rekapitulasi");
 
+  const { user } = useAuth();
+  const { sekolah } = useSekolah();
+  const isOperator = user?.role?.toLowerCase().includes("operator");
+  const mySchoolId = isOperator ? (sekolah?.sekolah_id || user?.instansi_id) : user?.instansi_id;
+  
   // Initialize active tab safely
   const [activeTab, setActiveTab] = useState<"aktif" | "rekap" | "keluar">(
     (tabParam as any) || (isRekapRoute ? "rekap" : "aktif")
   );
 
   // Drill-down selected school state
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(isOperator ? mySchoolId : null);
   const [studentCounts, setStudentCounts] = useState<Record<string, { aktif: number; keluar: number }>>({});
   const [loadingCounts, setLoadingCounts] = useState(false);
 
@@ -47,10 +54,20 @@ export default function StudentData() {
 
   // Reset drill-down selected school on tab changes
   useEffect(() => {
-    setSelectedSchoolId(null);
-    setSekolahFilter("all");
+    if (!isOperator) {
+      setSelectedSchoolId(null);
+      setSekolahFilter("all");
+    }
     setSearchQuery("");
-  }, [activeTab]);
+  }, [activeTab, isOperator]);
+
+  // Sync selectedSchoolId with operator's school ID on load or profile resolution
+  useEffect(() => {
+    if (isOperator && mySchoolId) {
+      setSelectedSchoolId(mySchoolId);
+      setSekolahFilter(mySchoolId);
+    }
+  }, [isOperator, mySchoolId]);
 
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
@@ -571,43 +588,45 @@ export default function StudentData() {
         </div>
 
         {/* Global Filters Section */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <Select
-                    options={kabKotaOptions}
-                    defaultValue={kabKotaFilter}
-                    onChange={(value) => setKabKotaFilter(value)}
-                />
-                <Select
-                    options={kecamatanOptions}
-                    defaultValue={kecamatanFilter}
-                    onChange={(value) => setKecamatanFilter(value)}
-                    disabled={kabKotaFilter === "all"}
-                />
-                <Select
-                    options={statusOptions}
-                    defaultValue={statusFilter}
-                    onChange={(value) => setStatusFilter(value)}
-                />
-                <Select
-                    options={jenjangOptions}
-                    defaultValue={jenjangFilter}
-                    onChange={(value) => setJenjangFilter(value)}
-                />
-                <Select
-                    options={sekolahOptions}
-                    defaultValue={selectedSchoolId || sekolahFilter}
-                    onChange={(value) => {
-                      if (value === "all") {
-                        setSelectedSchoolId(null);
-                      } else {
-                        setSelectedSchoolId(value);
-                      }
-                      setSekolahFilter(value);
-                    }}
-                />
-            </div>
-        </div>
+        {!isOperator && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <Select
+                      options={kabKotaOptions}
+                      defaultValue={kabKotaFilter}
+                      onChange={(value) => setKabKotaFilter(value)}
+                  />
+                  <Select
+                      options={kecamatanOptions}
+                      defaultValue={kecamatanFilter}
+                      onChange={(value) => setKecamatanFilter(value)}
+                      disabled={kabKotaFilter === "all"}
+                  />
+                  <Select
+                      options={statusOptions}
+                      defaultValue={statusFilter}
+                      onChange={(value) => setStatusFilter(value)}
+                  />
+                  <Select
+                      options={jenjangOptions}
+                      defaultValue={jenjangFilter}
+                      onChange={(value) => setJenjangFilter(value)}
+                  />
+                  <Select
+                      options={sekolahOptions}
+                      defaultValue={selectedSchoolId || sekolahFilter}
+                      onChange={(value) => {
+                        if (value === "all") {
+                          setSelectedSchoolId(null);
+                        } else {
+                          setSelectedSchoolId(value);
+                        }
+                        setSekolahFilter(value);
+                      }}
+                  />
+              </div>
+          </div>
+        )}
 
         {/* Tab Content */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 print-area">
@@ -615,19 +634,23 @@ export default function StudentData() {
           {/* Selected School Banner & Back Button */}
           {activeTab !== "rekap" && selectedSchoolId !== null && (
             <div className="mb-6 flex items-center justify-between no-print border-b border-gray-100 dark:border-white/[0.05] pb-4">
-              <button
-                onClick={() => {
-                  setSelectedSchoolId(null);
-                  setSekolahFilter("all");
-                  setSearchQuery("");
-                }}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors cursor-pointer"
-              >
-                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                </svg>
-                Kembali ke Daftar Sekolah
-              </button>
+              {!isOperator ? (
+                <button
+                  onClick={() => {
+                    setSelectedSchoolId(null);
+                    setSekolahFilter("all");
+                    setSearchQuery("");
+                  }}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors cursor-pointer"
+                >
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Kembali ke Daftar Sekolah
+                </button>
+              ) : (
+                <div />
+              )}
               <div className="text-right">
                 <span className="text-[10px] text-gray-400 uppercase tracking-widest block font-bold">Sekolah Terpilih</span>
                 <span className="text-sm font-bold text-gray-800 dark:text-white/90">
