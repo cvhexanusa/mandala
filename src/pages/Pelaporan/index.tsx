@@ -26,30 +26,34 @@ export default function PelaporanPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-
   const fetchPelaporan = useCallback(async () => {
     console.log("fetchPelaporan dipanggil, user:", user);
-    let cadisdikId = user?.cadisdik_id;
-    if (!cadisdikId) {
-      try {
-        const instansiRes = await dapodikService.getCadisdik();
-        if (instansiRes?.data && instansiRes.data.length > 0) {
-          cadisdikId = instansiRes.data[0].cadisdik_id;
-        }
-      } catch (err) {
-        console.warn("Gagal fetch fallback cadisdik list:", err);
-      }
-    }
-
-    if (!cadisdikId) {
-      console.warn("Fetch pelaporan dibatalkan: cadisdik_id tidak ditemukan");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
-      console.log("Requesting pelaporan for cadisdik_id:", cadisdikId);
-      const response = await mandalaService.getPelaporan(cadisdikId, currentPage, itemsPerPage);
+      let response;
+      if (roleSlug === "operator-sekolah") {
+        response = await mandalaService.getSimakListPelaporan(currentPage, itemsPerPage);
+      } else {
+        let cadisdikId = user?.cadisdik_id;
+        if (!cadisdikId) {
+          try {
+            const instansiRes = await dapodikService.getCadisdik();
+            if (instansiRes?.data && instansiRes.data.length > 0) {
+              cadisdikId = instansiRes.data[0].cadisdik_id;
+            }
+          } catch (err) {
+            console.warn("Gagal fetch fallback cadisdik list:", err);
+          }
+        }
+
+        if (!cadisdikId) {
+          console.warn("Fetch pelaporan dibatalkan: cadisdik_id tidak ditemukan");
+          setLoading(false);
+          return;
+        }
+        console.log("Requesting pelaporan for cadisdik_id:", cadisdikId);
+        response = await mandalaService.getPelaporan(cadisdikId, currentPage, itemsPerPage);
+      }
       console.log("API Response getPelaporan raw:", response);
       
       let pelaporanData: Pelaporan[] = [];
@@ -161,13 +165,15 @@ export default function PelaporanPage() {
       <PageBreadcrumb pageTitle="Pelaporan Dokumen" />
 
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <Link to={`/${roleSlug}/pelaporan-dokumen/create`}>
-            <Button size="sm" startIcon={<PlusIcon />}>
-              Buat Permintaan Pelaporan
-            </Button>
-          </Link>
-        </div>
+        {roleSlug !== "operator-sekolah" && (
+          <div className="flex justify-end">
+            <Link to={`/${roleSlug}/pelaporan-dokumen/create`}>
+              <Button size="sm" startIcon={<PlusIcon />}>
+                Buat Permintaan Pelaporan
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <ComponentCard title="Daftar Permintaan Pelaporan">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between no-print">
@@ -244,13 +250,17 @@ export default function PelaporanPage() {
                                 Detail
                               </button>
                             </Link>
-                            <span className="text-gray-300 dark:text-gray-700">|</span>
-                            <button
-                              onClick={() => handleDelete(item.pelaporan_id)}
-                              className="text-error-500 hover:text-error-600 font-semibold text-theme-sm transition-colors cursor-pointer"
-                            >
-                              Hapus
-                            </button>
+                            {roleSlug !== "operator-sekolah" && (
+                              <>
+                                <span className="text-gray-300 dark:text-gray-700">|</span>
+                                <button
+                                  onClick={() => handleDelete(item.pelaporan_id)}
+                                  className="text-error-500 hover:text-error-600 font-semibold text-theme-sm transition-colors cursor-pointer"
+                                >
+                                  Hapus
+                                </button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

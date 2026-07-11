@@ -160,6 +160,7 @@ export const mandalaService = {
     cadisdik_id: string;
     judul: string;
     deskripsi?: string;
+    template_konten?: string;
     tanggal_mulai?: string;
     tanggal_selesai?: string;
     sekolah_ids?: string[];
@@ -189,6 +190,33 @@ export const mandalaService = {
     return response.data;
   },
 
+  // --- SIMAK (SEKOLAH) METHODS ---
+  getSimakListPelaporan: async (page: number = 1, limit: number = 10) => {
+    const response = await api.get('/simak/pelaporan', {
+      params: { page, limit }
+    });
+    return response.data;
+  },
+
+  getSimakDetailPelaporan: async (id: string) => {
+    const response = await api.get(`/simak/pelaporan/${id}`);
+    return response.data;
+  },
+
+  uploadDokumenSimak: async (id: string, formData: FormData) => {
+    const response = await api.post(`/simak/pelaporan/${id}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  },
+
+  deleteDokumenSimak: async (dokumenId: string) => {
+    const response = await api.delete(`/simak/pelaporan/dokumen/${dokumenId}`);
+    return response.data;
+  },
+
   // J. Pengaturan Sistem (System Settings)
   getSystemSettings: async (cadisdikId?: string) => {
     const url = cadisdikId
@@ -211,6 +239,7 @@ export const mandalaService = {
 export interface Pelaporan {
   pelaporan_id: string;
   judul: string;
+  template_konten?: string | null;
   tanggal_mulai: string | null;
   tanggal_selesai: string | null;
   jumlah_sekolah: number;
@@ -223,6 +252,7 @@ export interface PelaporanDetail {
   pelaporan_id: string;
   judul: string;
   deskripsi: string | null;
+  template_konten?: string | null;
   tanggal_mulai: string | null;
   tanggal_selesai: string | null;
   aktif: boolean;
