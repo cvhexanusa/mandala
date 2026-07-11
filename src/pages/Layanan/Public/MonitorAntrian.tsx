@@ -1259,47 +1259,7 @@ export default function MonitorAntrian() {
 
     } catch (error) {
       console.error("Gagal memuat antrian monitor:", error);
-      // Fallback mock data for visual demonstration if the API is offline/failing
-      const mockData: Antrian[] = [
-        {
-          id: "mock_1",
-          nomor_antrian: 125,
-          nama_lengkap: "Budi Santoso, M.Pd.",
-          status: 1, // Dipanggil
-          keperluan: "Koordinasi Ujian Sekolah",
-          created_at: new Date().toISOString(),
-          cadisdik_id: cadisdik_id,
-          kategori: {
-            nama: "Layanan Legalisir Ijazah",
-            cadisdik_id: cadisdik_id,
-            created_at: new Date().toISOString()
-          }
-        },
-        {
-          id: "mock_2",
-          nomor_antrian: 126,
-          nama_lengkap: "Siti Rahmawati",
-          status: 0, // Menunggu
-          keperluan: "Pengaduan Layanan Pendidik",
-          created_at: new Date().toISOString(),
-          cadisdik_id: cadisdik_id,
-          kategori: {
-            nama: "Layanan Pengaduan & Informasi",
-            cadisdik_id: cadisdik_id,
-            created_at: new Date().toISOString()
-          }
-        }
-      ];
-      setAntrian(mockData);
-      
-      const activeQueue = mockData.find(a => a.status === 1 || a.status === 2);
-      if (activeQueue) {
-        const id = activeQueue.id || activeQueue.antrian_id as string;
-        if (id !== lastAnnouncedId.current && !isSpeakingRef.current) {
-          playAnnouncement(activeQueue);
-          lastAnnouncedId.current = id;
-        }
-      }
+      // Di produksi, kita pertahankan data antrean yang sudah ada agar layar tidak kedap-kedip
     } finally {
       setLoading(false);
     }
@@ -1656,8 +1616,7 @@ export default function MonitorAntrian() {
                 </div>
               </div>
             </div>
-            {/* Right Column: Active Call Ticket Panel or Welcome Screen or SEDANG ISTIRAHAT */}
-            <div className="flex-[7] flex flex-col bg-white/80 backdrop-blur-md rounded-[2.5rem] border border-white/60 p-6 justify-between items-center relative overflow-hidden shadow-xl h-full min-h-[450px] sm:min-h-[500px] portrait:order-1 portrait:flex-none border-t-4 border-t-indigo-500 text-gray-800 shadow-[0_15px_40px_rgba(70,95,255,0.06)]">
+            {/* Right Column: Active Call Ticket Panel or Welcome Screen or SEDANG ISTIRAHAT */}            <div className="flex-[7] flex flex-col bg-white/80 backdrop-blur-md rounded-[2.5rem] border border-white/60 p-6 justify-between items-center relative overflow-hidden shadow-xl h-full min-h-[450px] sm:min-h-[500px] portrait:min-h-[350px] portrait:p-4 portrait:rounded-[1.5rem] portrait:order-1 portrait:flex-none border-t-4 border-t-indigo-500 text-gray-800 shadow-[0_15px_40px_rgba(70,95,255,0.06)]">
               {monitorStatus === "istirahat" ? (
                 <div className="relative z-10 flex flex-col items-center w-full h-full animate-in fade-in zoom-in duration-500 justify-between py-6">
                   {/* Pulsing decorative background blobs */}
@@ -1694,7 +1653,7 @@ export default function MonitorAntrian() {
                 <div className="relative z-10 flex flex-col items-center w-full h-full animate-in fade-in zoom-in duration-500 justify-between">
                   
                   {/* Sleek Header inside the Card */}
-                  <div className="w-full flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
+                  <div className="w-full flex items-center justify-between pb-4 border-b border-gray-100 mb-4 portrait:mb-2">
                     <div className="flex items-center gap-3">
                       <span className="w-2.5 h-5 bg-brand-600 rounded-full"></span>
                       <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Panggilan Aktif</h3>
@@ -1706,9 +1665,9 @@ export default function MonitorAntrian() {
                   </div>
                   
                   {/* Ticket Box */}
-                  <div className="w-full flex flex-col items-center justify-center bg-gradient-to-br from-brand-50 to-indigo-50/40 border border-brand-100 rounded-2xl p-4 shadow-inner relative overflow-hidden h-64 sm:h-72 md:h-80 lg:h-96 xl:h-[26rem] animate-pulse">
-                    <span className="text-[10px] font-black text-brand-600/80 uppercase tracking-widest mb-1">Nomor Antrean</span>
-                    <div className="text-[8rem] sm:text-[10rem] md:text-[12rem] lg:text-[15rem] xl:text-[18rem] font-black tracking-tight text-brand-600 leading-none drop-shadow-md font-mono">
+                  <div className="w-full flex flex-col items-center justify-center bg-gradient-to-br from-brand-50 to-indigo-50/40 border border-brand-100 rounded-2xl p-4 shadow-inner relative overflow-hidden h-64 sm:h-72 md:h-80 lg:h-96 xl:h-[26rem] portrait:h-36 portrait:py-2 animate-pulse">
+                    <span className="text-[10px] font-black text-brand-600/80 uppercase tracking-widest mb-1 portrait:text-[8px] portrait:mb-0">Nomor Antrean</span>
+                    <div className="text-[8rem] sm:text-[10rem] md:text-[12rem] lg:text-[15rem] xl:text-[18rem] portrait:text-[5rem] font-black tracking-tight text-brand-600 leading-none drop-shadow-md font-mono">
                       {dipanggil.nomor_antrian}
                     </div>
                     
@@ -1716,22 +1675,22 @@ export default function MonitorAntrian() {
                     <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-r border-gray-200 rounded-full"></div>
                     <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-l border-gray-200 rounded-full"></div>
                   </div>
-                   {/* Loket & Name */}
-                  <div className="w-full text-center space-y-4 py-3">
+                   {/* Loket & Name */}
+                  <div className="w-full text-center space-y-4 py-3 portrait:space-y-2 portrait:py-1">
                     <div>
-                      <span className="inline-block text-[10px] font-black text-brand-600 bg-brand-50 px-3 py-1 rounded border border-brand-100 uppercase tracking-widest">
+                      <span className="inline-block text-[10px] font-black text-brand-600 bg-brand-50 px-3 py-1 rounded border border-brand-100 uppercase tracking-widest portrait:text-[8px] portrait:px-2 portrait:py-0.5">
                         LOKET TUJUAN
                       </span>
-                      <h4 className="text-2xl font-black text-gray-900 mt-2 tracking-tight leading-tight">
+                      <h4 className="text-2xl font-black text-gray-900 mt-2 tracking-tight leading-tight portrait:text-lg portrait:mt-1">
                         {dipanggil.kategori?.nama || dipanggil.kategori_keperluan?.nama || "Pelayanan Umum"}
                       </h4>
                     </div>
                     
-                    <div className="pt-3 border-t border-gray-100">
-                      <span className="text-[10px] font-black text-gray-450 uppercase tracking-widest block">
+                    <div className="pt-3 border-t border-gray-100 portrait:pt-1">
+                      <span className="text-[10px] font-black text-gray-455 uppercase tracking-widest block portrait:text-[8px]">
                         NAMA TAMU / VISITOR NAME
                       </span>
-                      <h3 className="text-4xl sm:text-5xl font-black text-gray-800 capitalize leading-tight mt-2 truncate px-2">
+                      <h3 className="text-4xl sm:text-5xl font-black text-gray-800 capitalize leading-tight mt-2 truncate px-2 portrait:text-2xl portrait:mt-1">
                         {dipanggil.nama_lengkap || dipanggil.nama_tamu}
                       </h3>
                     </div>
@@ -1739,24 +1698,24 @@ export default function MonitorAntrian() {
  
                   {/* BISINDO Visual Sign spelling */}
                   {showSignAssistant && (
-                    <div className="flex flex-col items-center mt-3 pt-3 border-t border-gray-100 w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-                      <p className="text-gray-455 text-[9px] font-extrabold tracking-widest uppercase mb-2 flex items-center gap-1.5">
+                    <div className="flex flex-col items-center mt-3 pt-3 border-t border-gray-100 w-full animate-in fade-in slide-in-from-bottom-5 duration-700 portrait:mt-2 portrait:pt-2">
+                      <p className="text-gray-455 text-[9px] font-extrabold tracking-widest uppercase mb-2 flex items-center gap-1.5 portrait:mb-1">
                         <span className="w-1 h-1 bg-brand-500 rounded-full animate-ping"></span>
                         Ejaan Isyarat (BISINDO)
                       </p>
-                      <div className="flex flex-wrap justify-center gap-2">
+                      <div className="flex flex-wrap justify-center gap-2 portrait:gap-1">
                         {String(dipanggil.nomor_antrian || "").toUpperCase().split("").map((char, idx) => {
                           if (char === "-") {
                             return (
-                              <div key={idx} className="flex items-center justify-center w-6 text-2xl font-black text-gray-300">
+                              <div key={idx} className="flex items-center justify-center w-6 text-2xl font-black text-gray-300 portrait:text-lg">
                                 -
                               </div>
                             );
                           }
                           return (
-                            <div key={idx} className="bg-white border border-gray-200 rounded-xl p-1.5 flex flex-col items-center shadow-xs w-14">
-                              <span className="text-xs font-black text-brand-600 mb-1">{char}</span>
-                              <div className="bg-gray-50 rounded-lg p-1 border border-gray-100 flex items-center justify-center w-10 h-10 shadow-inner">
+                            <div key={idx} className="bg-white border border-gray-200 rounded-xl p-1.5 flex flex-col items-center shadow-xs w-14 portrait:w-11 portrait:p-1">
+                              <span className="text-xs font-black text-brand-600 mb-1 portrait:text-[10px]">{char}</span>
+                              <div className="bg-gray-50 rounded-lg p-1 border border-gray-100 flex items-center justify-center w-10 h-10 shadow-inner portrait:w-8 portrait:h-8">
                                 {renderHandSign(char)}
                               </div>
                             </div>
@@ -1786,14 +1745,13 @@ export default function MonitorAntrian() {
               )}
             </div>
           </div>
- 
-          {/* Sidebar Panel (Right) */}
+           {/* Sidebar Panel (Right) */}
           <div className="flex-[3] flex flex-col gap-8 portrait:contents">
             
             {showSignAssistant && isPlayingSignVideo && dipanggil ? (
               /* Penerjemah Isyarat SIBI Video Widget */
-              <div className="bg-white/80 backdrop-blur-md rounded-[2rem] border border-white/60 p-4 flex flex-col shadow-xl min-h-[320px] transition-all duration-500 animate-in fade-in zoom-in-95 relative overflow-hidden portrait:order-2 border-t-4 border-t-brand-500 shadow-[0_15px_40px_rgba(70,95,255,0.06)] relative z-10">
-                <div className="w-full flex-1 rounded-2xl overflow-hidden aspect-video relative min-h-[220px]">
+              <div className="bg-white/80 backdrop-blur-md rounded-[2rem] border border-white/60 p-4 flex flex-col shadow-xl min-h-[320px] portrait:min-h-[200px] portrait:p-3 transition-all duration-500 animate-in fade-in zoom-in-95 relative overflow-hidden portrait:order-2 border-t-4 border-t-brand-500 shadow-[0_15px_40px_rgba(70,95,255,0.06)] relative z-10">
+                <div className="w-full flex-1 rounded-2xl overflow-hidden aspect-video relative min-h-[220px] portrait:min-h-[130px]">
                   <SIBIVideoPlayer 
                     queueNumber={String(dipanggil.nomor_antrian)} 
                     isPlaying={isPlayingSignVideo} 
@@ -1801,57 +1759,57 @@ export default function MonitorAntrian() {
                   />
                 </div>
                 
-                <div className="text-left mt-3 pt-2 border-t border-gray-100">
-                  <p className="text-xs font-black text-gray-850 uppercase tracking-wide">Penerjemah Isyarat SIBI</p>
-                  <p className="text-[9px] font-black text-gray-455 uppercase tracking-widest mt-0.5">Sistem Isyarat Bahasa Indonesia Resmi Kemendikdasmen</p>
+                <div className="text-left mt-3 pt-2 border-t border-gray-100 portrait:mt-2 portrait:pt-1">
+                  <p className="text-xs font-black text-gray-850 uppercase tracking-wide portrait:text-[10px]">Penerjemah Isyarat SIBI</p>
+                  <p className="text-[9px] font-black text-gray-455 uppercase tracking-widest mt-0.5 portrait:text-[7px]">Sistem Isyarat Bahasa Indonesia Resmi Kemendikdasmen</p>
                 </div>
               </div>
             ) : (
               /* Alur Pelayanan Card */
-              <div className="bg-white/80 backdrop-blur-md rounded-[2rem] border border-white/60 p-6 flex flex-col justify-center shadow-xl transition-all duration-500 animate-in fade-in portrait:order-2 border-t-4 border-t-indigo-500 shadow-[0_15px_40px_rgba(70,95,255,0.06)] relative z-10">
-                <h3 className="text-sm font-extrabold text-gray-400 mb-6 pb-3 border-b border-gray-50 flex items-center gap-2 uppercase tracking-widest">
+              <div className="bg-white/80 backdrop-blur-md rounded-[2rem] border border-white/60 p-6 portrait:p-4 portrait:py-3 flex flex-col justify-center shadow-xl transition-all duration-500 animate-in fade-in portrait:order-2 border-t-4 border-t-indigo-500 shadow-[0_15px_40px_rgba(70,95,255,0.06)] relative z-10">
+                <h3 className="text-sm font-extrabold text-gray-400 mb-6 pb-3 border-b border-gray-50 flex items-center gap-2 uppercase tracking-widest portrait:mb-2.5 portrait:pb-1">
                   <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   Alur Pelayanan
                 </h3>
-                                <div className="flex flex-col lg:flex-row gap-6 items-center">
-                  <div className="flex-1 relative pl-12 space-y-6 w-full">
+                <div className="flex flex-col lg:flex-row gap-6 items-center portrait:gap-2">
+                  <div className="flex-1 relative pl-12 space-y-6 w-full portrait:pl-10 portrait:space-y-3">
                     {/* Stepper vertical line indicator */}
-                    <div className="absolute left-5 top-2.5 bottom-2.5 w-[1px] bg-gray-100 border-l border-dashed border-gray-300"></div>
+                    <div className="absolute left-5 top-2.5 bottom-2.5 w-[1px] bg-gray-100 border-l border-dashed border-gray-300 portrait:left-4"></div>
  
                     <div className="relative flex flex-col">
-                      <div className="absolute -left-12 top-0.5 w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-sm border border-brand-400/20">
+                      <div className="absolute -left-12 top-0.5 w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-sm border border-brand-400/20 portrait:-left-10 portrait:w-8 portrait:h-8 portrait:text-[10px]">
                         01
                       </div>
-                      <h4 className="font-bold text-gray-800 text-base">Ambil Nomor Antrean</h4>
-                      <p className="text-xs text-gray-550 mt-0.5 leading-relaxed">Isi buku tamu melalui perangkat yang tersedia atau scan QR Code.</p>
+                      <h4 className="font-bold text-gray-800 text-base portrait:text-sm">Ambil Nomor Antrean</h4>
+                      <p className="text-xs text-gray-555 mt-0.5 leading-relaxed portrait:text-[11px] portrait:leading-tight">Isi buku tamu melalui perangkat yang tersedia atau scan QR Code.</p>
                     </div>
                     
                     <div className="relative flex flex-col">
-                      <div className="absolute -left-12 top-0.5 w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-sm border border-brand-400/20">
+                      <div className="absolute -left-12 top-0.5 w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-sm border border-brand-400/20 portrait:-left-10 portrait:w-8 portrait:h-8 portrait:text-[10px]">
                         02
                       </div>
-                      <h4 className="font-bold text-gray-800 text-base">Tunggu Panggilan</h4>
-                      <p className="text-xs text-gray-550 mt-0.5 leading-relaxed">Silakan duduk di ruang tunggu dengan nyaman.</p>
+                      <h4 className="font-bold text-gray-800 text-base portrait:text-sm">Tunggu Panggilan</h4>
+                      <p className="text-xs text-gray-555 mt-0.5 leading-relaxed portrait:text-[11px] portrait:leading-tight">Silakan duduk di ruang tunggu dengan nyaman.</p>
                     </div>
                     
                     <div className="relative flex flex-col">
-                      <div className="absolute -left-12 top-0.5 w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-sm border border-brand-400/20">
+                      <div className="absolute -left-12 top-0.5 w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-sm border border-brand-400/20 portrait:-left-10 portrait:w-8 portrait:h-8 portrait:text-[10px]">
                         03
                       </div>
-                      <h4 className="font-bold text-gray-800 text-base">Menuju Loket</h4>
-                      <p className="text-xs text-gray-550 mt-0.5 leading-relaxed">Bawa berkas persyaratan saat nomor Anda dipanggil.</p>
+                      <h4 className="font-bold text-gray-800 text-base portrait:text-sm">Menuju Loket</h4>
+                      <p className="text-xs text-gray-555 mt-0.5 leading-relaxed portrait:text-[11px] portrait:leading-tight">Bawa berkas persyaratan saat nomor Anda dipanggil.</p>
                     </div>
                   </div>
 
                   {/* Left-border divider line only on desktop */}
                   <div className="hidden lg:block w-[1px] self-stretch bg-gray-150"></div>
-                  <div className="w-full lg:w-auto shrink-0 flex flex-col items-center justify-center lg:pl-6 gap-3 text-center">
-                    <div className="bg-white p-5 rounded-[2rem] border border-gray-200 shadow-md flex items-center justify-center shrink-0 transition-transform hover:scale-105 duration-300">
-                      <QRCodeSVG value={qrUrl} size={180} />
+                  <div className="w-full lg:w-auto shrink-0 flex flex-col items-center justify-center lg:pl-6 gap-3 text-center portrait:gap-1.5">
+                    <div className="bg-white p-5 rounded-[2rem] border border-gray-200 shadow-md flex items-center justify-center shrink-0 transition-transform hover:scale-105 duration-300 portrait:p-3 portrait:rounded-xl">
+                      <QRCodeSVG value={qrUrl} size={130} />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-black text-brand-600 text-sm uppercase tracking-widest">DAFTAR LEWAT HP</h4>
-                      <p className="text-xs text-gray-500 leading-normal mt-1 max-w-[200px] mx-auto">
+                      <h4 className="font-black text-brand-600 text-sm uppercase tracking-widest portrait:text-xs">DAFTAR LEWAT HP</h4>
+                      <p className="text-xs text-gray-500 leading-normal mt-1 max-w-[200px] mx-auto portrait:text-[11px] portrait:mt-0">
                         Scan QR Code di atas untuk mengisi buku tamu & antrean.
                       </p>
                     </div>
@@ -2119,6 +2077,10 @@ export default function MonitorAntrian() {
           0% { transform: translateY(0); opacity: 0; }
           30% { opacity: 1; }
           100% { transform: translateY(4px); opacity: 0; }
+        }
+        .bg-gray-50 svg {
+          width: 100% !important;
+          height: 100% !important;
         }
       `}</style>
     </div>

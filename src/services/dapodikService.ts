@@ -367,5 +367,15 @@ export const dapodikService = {
       console.error(`Gagal menghapus pegawai ${id}:`, error);
       throw error;
     }
+  },
+
+  getGolongan: async () => {
+    try {
+      const response = await api.get('/mandala/pegawai/golongan');
+      return response.data;
+    } catch (error) {
+      console.error('Gagal mengambil data golongan:', error);
+      throw error;
+    }
   }
 };

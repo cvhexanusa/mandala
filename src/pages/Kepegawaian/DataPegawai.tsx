@@ -29,7 +29,7 @@ interface Pegawai {
   nomor_telepon: string | null;
   foto: string | null;
   aktif: boolean;
-  golongan?: number | null;
+  golongan?: string | number | null;
   created_at?: string;
   nik?: string;
   tempat_lahir?: string;
@@ -73,6 +73,21 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingData, setEditingData] = useState<Pegawai | null>(null);
+  const [golonganOptions, setGolonganOptions] = useState<{ value: string; label: string }[]>([
+    { value: "", label: "Pilih Golongan" },
+    { value: "0", label: "IV.a" },
+    { value: "1", label: "IV.b" },
+    { value: "2", label: "IV.c" },
+    { value: "3", label: "IV.d" },
+    { value: "4", label: "IV.e" }
+  ]);
+  const [dynamicGolonganMap, setDynamicGolonganMap] = useState<Record<number, string>>({
+    0: "IV.a",
+    1: "IV.b",
+    2: "IV.c",
+    3: "IV.d",
+    4: "IV.e",
+  });
 
   // Detail Modal State
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -488,14 +503,6 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const jabatanOptions = Object.entries(JABATAN_MAP).map(([val, label]) => ({ value: val, label }));
   const jkOptions = Object.entries(JK_MAP).map(([val, label]) => ({ value: val, label }));
   const instansiOptions = instansiList.map(inst => ({ value: inst.cadisdik_id, label: inst.nama_instansi }));
-  const golonganOptions = [
-    { value: "", label: "Pilih Golongan" },
-    { value: "0", label: "IV.a" },
-    { value: "1", label: "IV.b" },
-    { value: "2", label: "IV.c" },
-    { value: "3", label: "IV.d" },
-    { value: "4", label: "IV.e" }
-  ];
 
   return (
     <div>
@@ -812,7 +819,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 <DataRow label="Jabatan" value={JABATAN_MAP[viewingData.jabatan] || "Tidak Diketahui"} />
                 <DataRow label="Jenis Kelamin" value={JK_MAP[viewingData.jenis_kelamin] || "-"} />
                 <DataRow label="Nomor Telepon" value={viewingData.nomor_telepon} />
-                <DataRow label="Golongan" value={viewingData.golongan !== undefined && viewingData.golongan !== null ? GOLONGAN_MAP[viewingData.golongan] : "-"} />
+                <DataRow label="Golongan" value={viewingData.golongan !== undefined && viewingData.golongan !== null ? (dynamicGolonganMap[viewingData.golongan] || GOLONGAN_MAP[viewingData.golongan] || viewingData.golongan) : "-"} />
                 <DataRow label="Instansi" value={instansiList.find(i => i.cadisdik_id === viewingData.cadisdik_id)?.nama_instansi || "Instansi Tidak Ditemukan"} />
                 <DataRow label="Status Akun" value={viewingData.aktif ? "Aktif" : "Non-Aktif"} />
               </div>

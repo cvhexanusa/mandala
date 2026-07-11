@@ -224,7 +224,7 @@ export default function DetailPelaporanPage() {
               <div className="space-y-4">
                  <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Judul Pelaporan</label>
-                    <p className="text-lg font-bold text-gray-800 dark:text-white/90">{detail.judul}</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{detail.judul}</p>
                  </div>
                  <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Deskripsi</label>
@@ -360,45 +360,47 @@ export default function DetailPelaporanPage() {
           </ComponentCard>
         ) : (
           <ComponentCard title="Status Pengumpulan per Sekolah">
-            <div className="overflow-x-auto">
-               <Table>
-                  <TableHeader>
-                     <TableRow>
-                        <TableCell isHeader>Nama Sekolah</TableCell>
-                        <TableCell isHeader className="text-center">Jumlah Dokumen</TableCell>
-                        <TableCell isHeader className="text-center">Aksi</TableCell>
-                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                     {detail.daftar_sekolah.map((s) => (
-                        <TableRow key={s.sekolah_id}>
-                           <TableCell className="font-medium text-gray-800 dark:text-white/90">{s.nama_sekolah}</TableCell>
-                           <TableCell className="text-center">
-                              <Badge color={s.jumlah_dokumen > 0 ? "success" : "light"} size="sm">
-                                 {s.jumlah_dokumen} Dokumen
-                              </Badge>
-                           </TableCell>
-                            <TableCell className="text-center">
-                               <div className="flex justify-center items-center gap-3">
-                                  <button 
-                                    onClick={() => handleLihatDokumen(s.sekolah_id, s.nama_sekolah)}
-                                    className="text-brand-500 hover:text-brand-600 font-semibold text-sm cursor-pointer"
-                                  >
-                                     Lihat Dokumen
-                                  </button>
-                                  <span className="text-gray-200 dark:text-gray-800">|</span>
-                                  <button 
-                                    onClick={() => handlePratinjauLaporan(s.sekolah_id, s.nama_sekolah)}
-                                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold text-sm cursor-pointer"
-                                  >
-                                     Pratinjau Laporan
-                                  </button>
-                               </div>
-                            </TableCell>
-                        </TableRow>
-                     ))}
-                  </TableBody>
-               </Table>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+              <div className="max-w-full overflow-x-auto custom-scrollbar relative">
+                 <Table className="min-w-full">
+                    <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                       <TableRow>
+                          <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Nama Sekolah</TableCell>
+                          <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Jumlah Dokumen</TableCell>
+                          <TableCell isHeader className="px-5 py-3.5 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Aksi</TableCell>
+                       </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                       {detail.daftar_sekolah.map((s) => (
+                          <TableRow key={s.sekolah_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                             <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">{s.nama_sekolah}</TableCell>
+                             <TableCell className="px-5 py-4 text-center">
+                                <Badge color={s.jumlah_dokumen > 0 ? "success" : "light"} size="sm">
+                                   {s.jumlah_dokumen} Dokumen
+                                </Badge>
+                             </TableCell>
+                              <TableCell className="px-5 py-4 text-center">
+                                 <div className="flex justify-center items-center gap-3">
+                                    <button 
+                                      onClick={() => handleLihatDokumen(s.sekolah_id, s.nama_sekolah)}
+                                      className="text-brand-500 hover:text-brand-600 font-semibold text-sm cursor-pointer"
+                                    >
+                                       Lihat Dokumen
+                                    </button>
+                                    <span className="text-gray-200 dark:text-gray-800">|</span>
+                                    <button 
+                                      onClick={() => handlePratinjauLaporan(s.sekolah_id, s.nama_sekolah)}
+                                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold text-sm cursor-pointer"
+                                    >
+                                       Pratinjau Laporan
+                                    </button>
+                                 </div>
+                              </TableCell>
+                          </TableRow>
+                       ))}
+                    </TableBody>
+                 </Table>
+              </div>
             </div>
           </ComponentCard>
         )}
