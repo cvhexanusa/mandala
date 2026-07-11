@@ -285,21 +285,19 @@ export default function DetailPelaporanPage() {
           <div className="flex border-b border-gray-200 dark:border-gray-800">
             <button
               onClick={() => setActiveTab("laporan")}
-              className={`pb-3 px-6 text-sm font-semibold transition-all border-b-2 ${
-                activeTab === "laporan"
+              className={`pb-3 px-6 text-sm font-semibold transition-all border-b-2 ${activeTab === "laporan"
                   ? "border-brand-600 text-brand-600 dark:text-brand-400"
                   : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
+                }`}
             >
               Informasi & Format Laporan
             </button>
             <button
               onClick={() => setActiveTab("sekolah")}
-              className={`pb-3 px-6 text-sm font-semibold transition-all border-b-2 ${
-                activeTab === "sekolah"
+              className={`pb-3 px-6 text-sm font-semibold transition-all border-b-2 ${activeTab === "sekolah"
                   ? "border-brand-600 text-brand-600 dark:text-brand-400"
                   : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
+                }`}
             >
               Daftar Pengumpulan Sekolah
             </button>
@@ -311,139 +309,153 @@ export default function DetailPelaporanPage() {
           <>
             <ComponentCard title="Informasi Pelaporan">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Judul Pelaporan</label>
-                <p className="text-lg font-bold text-gray-800 dark:text-white/90">{detail.judul}</p>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Deskripsi</label>
-                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{detail.deskripsi || "-"}</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex gap-12">
-                <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tanggal Mulai</label>
-                  <p className="text-sm font-semibold">{detail.tanggal_mulai ? new Date(detail.tanggal_mulai).toLocaleDateString("id-ID") : "-"}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tanggal Selesai</label>
-                  <p className="text-sm font-semibold">{detail.tanggal_selesai ? new Date(detail.tanggal_selesai).toLocaleDateString("id-ID") : "-"}</p>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Status</label>
-                <div className="mt-1">
-                  {detail.aktif ? (
-                    <Badge color="success">Aktif</Badge>
-                  ) : (
-                    <Badge color="error">Non-aktif</Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </ComponentCard>
-
-        {/* Pratinjau Template & Panduan Visual */}
-        {(excelHeaders || pdfGuideHtml) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {excelHeaders && (
-              <ComponentCard title="Format Excel yang Dipersyaratkan">
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between p-3.5 bg-brand-50/50 dark:bg-brand-950/10 border border-brand-100 dark:border-brand-900/50 rounded-xl">
-                    <p className="text-xs text-brand-700 dark:text-brand-300 font-medium max-w-prose">
-                      Sekolah harus mengunggah file Excel dengan susunan kolom di bawah ini. Kolom berlabel <span className="bg-brand-200 dark:bg-brand-900 text-brand-800 dark:text-brand-200 px-1 py-0.5 rounded font-bold">DB</span> akan diisi otomatis dari database Dapodik.
-                    </p>
-                    <Button
-                      onClick={handleDownloadTemplate}
-                      size="sm"
-                      variant="primary"
-                      className="whitespace-nowrap flex items-center gap-1.5 shadow-sm text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer bg-brand-600 hover:bg-brand-700 text-white transition-colors"
-                    >
-                      <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Unduh Template
-                    </Button>
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Judul Pelaporan</label>
+                    <p className="text-lg font-bold text-gray-800 dark:text-white/90">{detail.judul}</p>
                   </div>
-
-                  <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-white/[0.01]">
-                    <div className="overflow-x-auto custom-scrollbar">
-                      <table className="w-full text-xs font-medium text-left border-collapse">
-                        <thead>
-                          <tr className="bg-gray-150 dark:bg-white/[0.02] border-b border-gray-200 dark:border-gray-800">
-                            <th className="w-10 px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-800 text-gray-455 bg-gray-100 dark:bg-white/[0.02]"></th>
-                            <th className="px-4 py-1.5 text-center border-r border-gray-200 dark:border-gray-800 text-gray-455 bg-gray-100 dark:bg-white/[0.02]">A</th>
-                            {excelHeaders.map((_, i) => (
-                              <th key={i} className="px-4 py-1.5 text-center border-r border-gray-200 dark:border-gray-800 text-gray-455 bg-gray-100 dark:bg-white/[0.02]">
-                                {String.fromCharCode(66 + i)}
-                              </th>
-                            ))}
-                          </tr>
-                          <tr className="bg-gray-50 dark:bg-white/[0.01] border-b border-gray-200 dark:border-gray-800">
-                            <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-800 bg-gray-100/50 dark:bg-white/[0.02] text-gray-450 font-bold select-none">1</td>
-                            <td className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 font-bold text-gray-850 dark:text-white bg-gray-50/50">No</td>
-                            {excelHeaders.map((h, i) => (
-                              <td key={i} className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 font-bold text-gray-850 dark:text-white bg-gray-50/50">
-                                {h}
-                              </td>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b border-gray-100 dark:border-gray-900/50 hover:bg-gray-50/40 dark:hover:bg-white/[0.005]">
-                            <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-800 bg-gray-100/30 dark:bg-white/[0.01] text-gray-400 font-bold select-none">2</td>
-                            <td className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 text-gray-400 italic">1</td>
-                            {excelHeaders.map((h, i) => {
-                              const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
-                              const autoFields = [
-                                "cadisdikwilayah", "cadisdik", "provinsi", "kabupatenkota", "kabupaten", "kota", "kecamatan",
-                                "desakelurahan", "desa", "kelurahan", "npsn", "npsnsekolah", "namasekolah", "sekolah", "nama",
-                                "bentukpendidikan", "statussekolah", "alamatjalan", "alamat", "emailsekolah", "email",
-                                "nomortelepon", "telepon", "website", "totalsiswa", "siswa", "totalgurugtk", "gtk", "guru"
-                              ];
-                              const isAuto = autoFields.includes(norm);
-                              return (
-                                <td key={i} className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 text-xs">
-                                  {isAuto ? (
-                                    <span className="text-brand-600 dark:text-brand-400 font-semibold">[DB: Otomatis]</span>
-                                  ) : (
-                                    <span className="text-gray-400 italic">[Wajib Diisi]</span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        </tbody>
-                      </table>
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Deskripsi</label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{detail.deskripsi || "-"}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex gap-12">
+                    <div>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tanggal Mulai</label>
+                      <p className="text-sm font-semibold">{detail.tanggal_mulai ? new Date(detail.tanggal_mulai).toLocaleDateString("id-ID") : "-"}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tanggal Selesai</label>
+                      <p className="text-sm font-semibold">{detail.tanggal_selesai ? new Date(detail.tanggal_selesai).toLocaleDateString("id-ID") : "-"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Status</label>
+                    <div className="mt-1">
+                      {detail.aktif ? (
+                        <Badge color="success">Aktif</Badge>
+                      ) : (
+                        <Badge color="error">Non-aktif</Badge>
+                      )}
                     </div>
                   </div>
                 </div>
-              </ComponentCard>
+              </div>
+            </ComponentCard>
+
+            {/* Pratinjau Template & Panduan Visual */}
+            {(excelHeaders || pdfGuideHtml) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {excelHeaders && (
+                  <ComponentCard title="Format Excel yang Dipersyaratkan">
+                    <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between p-3.5 bg-brand-50/50 dark:bg-brand-950/10 border border-brand-100 dark:border-brand-900/50 rounded-xl">
+                        <p className="text-xs text-brand-700 dark:text-brand-300 font-medium max-w-prose">
+                          Sekolah harus mengunggah file Excel dengan susunan kolom di bawah ini. Kolom berlabel <span className="bg-brand-200 dark:bg-brand-900 text-brand-800 dark:text-brand-200 px-1 py-0.5 rounded font-bold">DB</span> akan diisi otomatis dari database Dapodik.
+                        </p>
+                        <Button
+                          onClick={handleDownloadTemplate}
+                          size="sm"
+                          variant="primary"
+                          className="whitespace-nowrap flex items-center gap-1.5 shadow-sm text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer bg-brand-600 hover:bg-brand-700 text-white transition-colors"
+                        >
+                          <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Unduh Template
+                        </Button>
+                      </div>
+
+                      <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-white/[0.01]">
+                        <div className="overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-xs font-medium text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-150 dark:bg-white/[0.02] border-b border-gray-200 dark:border-gray-800">
+                                <th className="w-10 px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-800 text-gray-455 bg-gray-100 dark:bg-white/[0.02]"></th>
+                                <th className="px-4 py-1.5 text-center border-r border-gray-200 dark:border-gray-800 text-gray-455 bg-gray-100 dark:bg-white/[0.02]">A</th>
+                                {excelHeaders.map((_, i) => (
+                                  <th key={i} className="px-4 py-1.5 text-center border-r border-gray-200 dark:border-gray-800 text-gray-455 bg-gray-100 dark:bg-white/[0.02]">
+                                    {String.fromCharCode(66 + i)}
+                                  </th>
+                                ))}
+                              </tr>
+                              <tr className="bg-gray-50 dark:bg-white/[0.01] border-b border-gray-200 dark:border-gray-800">
+                                <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-800 bg-gray-100/50 dark:bg-white/[0.02] text-gray-450 font-bold select-none">1</td>
+                                <td className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 font-bold text-gray-850 dark:text-white bg-gray-50/50">No</td>
+                                {excelHeaders.map((h, i) => (
+                                  <td key={i} className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 font-bold text-gray-850 dark:text-white bg-gray-50/50">
+                                    {h}
+                                  </td>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b border-gray-100 dark:border-gray-900/50 hover:bg-gray-50/40 dark:hover:bg-white/[0.005]">
+                                <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-800 bg-gray-100/30 dark:bg-white/[0.01] text-gray-400 font-bold select-none">2</td>
+                                <td className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 text-gray-400 italic">1</td>
+                                {excelHeaders.map((h, i) => {
+                                  const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
+                                  const autoFields = [
+                                    "cadisdikwilayah", "cadisdik", "provinsi", "kabupatenkota", "kabupaten", "kota", "kecamatan",
+                                    "desakelurahan", "desa", "kelurahan", "npsn", "npsnsekolah", "namasekolah", "sekolah", "nama",
+                                    "bentukpendidikan", "statussekolah", "alamatjalan", "alamat", "emailsekolah", "email",
+                                    "nomortelepon", "telepon", "website", "totalsiswa", "siswa", "totalgurugtk", "gtk", "guru"
+                                  ];
+                                  const isAuto = autoFields.includes(norm);
+                                  return (
+                                    <td key={i} className="px-4 py-2 border-r border-gray-200 dark:border-gray-800 text-xs">
+                                      {isAuto ? (
+                                        <span className="text-brand-600 dark:text-brand-400 font-semibold">[DB: Otomatis]</span>
+                                      ) : (
+                                        <span className="text-gray-400 italic">[Wajib Diisi]</span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </ComponentCard>
+                )}
+
+                {pdfGuideHtml && (
+                  <ComponentCard title="File Pengantar / Panduan Visual Laporan">
+                    <div className="max-h-[360px] overflow-y-auto p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-black/10 custom-scrollbar">
+                      <div dangerouslySetInnerHTML={{ __html: pdfGuideHtml }} />
+                    </div>
+                  </ComponentCard>
+                )}
+              </div>
             )}
 
-            {pdfGuideHtml && (
-              <ComponentCard title="File Pengantar / Panduan Visual Laporan">
-                <div className="max-h-[360px] overflow-y-auto p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50/50 dark:bg-black/10 custom-scrollbar">
-                  <div dangerouslySetInnerHTML={{ __html: pdfGuideHtml }} />
-                </div>
-              </ComponentCard>
-            )}
-          </div>
-        )}
-
-        {roleSlug === "operator-sekolah" ? (
-          <ComponentCard title="Unggah Berkas Laporan Sekolah Anda">
-            <div className="space-y-6">
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl space-y-2">
-                <h4 className="text-sm font-bold text-amber-800 dark:text-amber-400">Petunjuk Pengumpulan Berkas:</h4>
-                <ul className="list-disc list-inside text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                  <li>Unggah file Excel laporan (.xlsx) atau dokumen pendukung lain (.pdf).</li>
-                  {excelHeaders ? (
-                    <li>
-                      Pastikan file Excel yang diunggah memiliki kolom wajib berikut: <code className="bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded font-mono text-xs text-amber-900 dark:text-amber-200">{excelHeaders.filter(h => {
+            {roleSlug === "operator-sekolah" ? (
+              <ComponentCard title="Unggah Berkas Laporan Sekolah Anda">
+                <div className="space-y-6">
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl space-y-2">
+                    <h4 className="text-sm font-bold text-amber-800 dark:text-amber-400">Petunjuk Pengumpulan Berkas:</h4>
+                    <ul className="list-disc list-inside text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                      <li>Unggah file Excel laporan (.xlsx) atau dokumen pendukung lain (.pdf).</li>
+                      {excelHeaders ? (
+                        <li>
+                          Pastikan file Excel yang diunggah memiliki kolom wajib berikut: <code className="bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded font-mono text-xs text-amber-900 dark:text-amber-200">{excelHeaders.filter(h => {
+                            const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
+                            const autoFields = [
+                              "cadisdikwilayah", "cadisdik", "provinsi", "kabupatenkota", "kabupaten", "kota", "kecamatan",
+                              "desakelurahan", "desa", "kelurahan", "npsn", "npsnsekolah", "namasekolah", "sekolah", "nama",
+                              "bentukpendidikan", "statussekolah", "alamatjalan", "alamat", "emailsekolah", "email",
+                              "nomortelepon", "telepon", "website", "totalsiswa", "siswa", "totalgurugtk", "gtk", "guru"
+                            ];
+                            return !autoFields.includes(norm);
+                          }).join(", ")}</code>.
+                        </li>
+                      ) : (
+                        <li>Jika Anda mengunggah <strong>Excel (.xlsx)</strong>, pastikan struktur kolom A1 adalah <code className="bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded font-mono text-amber-900 dark:text-amber-200">nisn</code> dan B1 adalah <code className="bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded font-mono text-amber-900 dark:text-amber-200">nama siswa</code>.</li>
+                      )}
+                      {excelHeaders && excelHeaders.some(h => {
                         const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
                         const autoFields = [
                           "cadisdikwilayah", "cadisdik", "provinsi", "kabupatenkota", "kabupaten", "kota", "kecamatan",
@@ -451,125 +463,111 @@ export default function DetailPelaporanPage() {
                           "bentukpendidikan", "statussekolah", "alamatjalan", "alamat", "emailsekolah", "email",
                           "nomortelepon", "telepon", "website", "totalsiswa", "siswa", "totalgurugtk", "gtk", "guru"
                         ];
-                        return !autoFields.includes(norm);
-                      }).join(", ")}</code>.
-                    </li>
-                  ) : (
-                    <li>Jika Anda mengunggah <strong>Excel (.xlsx)</strong>, pastikan struktur kolom A1 adalah <code className="bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded font-mono text-amber-900 dark:text-amber-200">nisn</code> dan B1 adalah <code className="bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded font-mono text-amber-900 dark:text-amber-200">nama siswa</code>.</li>
-                  )}
-                  {excelHeaders && excelHeaders.some(h => {
-                    const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
-                    const autoFields = [
-                      "cadisdikwilayah", "cadisdik", "provinsi", "kabupatenkota", "kabupaten", "kota", "kecamatan",
-                      "desakelurahan", "desa", "kelurahan", "npsn", "npsnsekolah", "namasekolah", "sekolah", "nama",
-                      "bentukpendidikan", "statussekolah", "alamatjalan", "alamat", "emailsekolah", "email",
-                      "nomortelepon", "telepon", "website", "totalsiswa", "siswa", "totalgurugtk", "gtk", "guru"
-                    ];
-                    return autoFields.includes(norm);
-                  }) && (
-                      <li>Kolom otomatis database (seperti Nama Sekolah, NPSN, Kabupaten/Kota, dll.) boleh dikosongkan atau diabaikan karena akan terisi otomatis oleh sistem.</li>
-                    )}
-                  <li>Sistem akan mendeteksi berkas Excel secara otomatis untuk mengisi pratinjau format laporan di Pusat/Cadisdik.</li>
-                </ul>
-              </div>
-
-              {/* Upload Input */}
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl hover:border-brand-500 transition-colors bg-white dark:bg-transparent">
-                <input
-                  type="file"
-                  id="file-upload-input"
-                  multiple
-                  onChange={handleUploadFile}
-                  disabled={uploadLoading}
-                  className="hidden"
-                />
-                <label htmlFor="file-upload-input" className="flex flex-col items-center justify-center cursor-pointer space-y-2">
-                  <div className="p-3 bg-brand-50 dark:bg-brand-950/20 rounded-full text-brand-600 dark:text-brand-400">
-                    {uploadLoading ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-500" />
-                    ) : (
-                      <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                    )}
+                        return autoFields.includes(norm);
+                      }) && (
+                          <li>Kolom otomatis database (seperti Nama Sekolah, NPSN, Kabupaten/Kota, dll.) boleh dikosongkan atau diabaikan karena akan terisi otomatis oleh sistem.</li>
+                        )}
+                      <li>Sistem akan mendeteksi berkas Excel secara otomatis untuk mengisi pratinjau format laporan di Pusat/Cadisdik.</li>
+                    </ul>
                   </div>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    {uploadLoading ? "Mengunggah Berkas..." : "Klik untuk Pilih Berkas Laporan"}
-                  </span>
-                  <span className="text-xs text-gray-400">Dukung berkas .xlsx, .pdf, .docx, .png, .jpg (Maks 10MB)</span>
-                </label>
-              </div>
 
-              {/* Uploaded Documents List */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-bold text-gray-700 dark:text-white/90">Berkas yang Sudah Diunggah ({documents.length}):</h4>
-                {documents.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
-                    {documents.map((doc) => {
-                      const isExcel = doc.nama_file.toLowerCase().endsWith(".xlsx");
-                      return (
-                        <div key={doc.pelaporan_dokumen_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-xl">
-                          <div className="flex items-center gap-4 min-w-0">
-                            <div className={`p-2.5 rounded-lg shadow-sm ${isExcel ? "bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400" : "bg-white dark:bg-gray-800 text-gray-400"}`}>
-                              {isExcel ? (
-                                <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              ) : (
-                                <FileIcon className="size-6" />
-                              )}
-                            </div>
-                            <div className="flex flex-col min-w-0">
+                  {/* Upload Input */}
+                  <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl hover:border-brand-500 transition-colors bg-white dark:bg-transparent">
+                    <input
+                      type="file"
+                      id="file-upload-input"
+                      multiple
+                      onChange={handleUploadFile}
+                      disabled={uploadLoading}
+                      className="hidden"
+                    />
+                    <label htmlFor="file-upload-input" className="flex flex-col items-center justify-center cursor-pointer space-y-2">
+                      <div className="p-3 bg-brand-50 dark:bg-brand-950/20 rounded-full text-brand-600 dark:text-brand-400">
+                        {uploadLoading ? (
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-500" />
+                        ) : (
+                          <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {uploadLoading ? "Mengunggah Berkas..." : "Klik untuk Pilih Berkas Laporan"}
+                      </span>
+                      <span className="text-xs text-gray-400">Dukung berkas .xlsx, .pdf, .docx, .png, .jpg (Maks 10MB)</span>
+                    </label>
+                  </div>
+
+                  {/* Uploaded Documents List */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-gray-700 dark:text-white/90">Berkas yang Sudah Diunggah ({documents.length}):</h4>
+                    {documents.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3">
+                        {documents.map((doc) => {
+                          const isExcel = doc.nama_file.toLowerCase().endsWith(".xlsx");
+                          return (
+                            <div key={doc.pelaporan_dokumen_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-xl">
+                              <div className="flex items-center gap-4 min-w-0">
+                                <div className={`p-2.5 rounded-lg shadow-sm ${isExcel ? "bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400" : "bg-white dark:bg-gray-800 text-gray-400"}`}>
+                                  {isExcel ? (
+                                    <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  ) : (
+                                    <FileIcon className="size-6" />
+                                  )}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-gray-800 dark:text-white/90 truncate">{doc.nama_file}</span>
+                                    {isExcel && <Badge color="success" size="sm">Valid Excel</Badge>}
+                                  </div>
+                                  <div className="flex gap-3 text-[10px] text-gray-500">
+                                    <span>{formatFileSize(doc.ukuran_file)}</span>
+                                    <span>•</span>
+                                    <span>{new Date(doc.created_at).toLocaleString("id-ID")}</span>
+                                  </div>
+                                </div>
+                              </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-800 dark:text-white/90 truncate">{doc.nama_file}</span>
-                                {isExcel && <Badge color="success" size="sm">Valid Excel</Badge>}
-                              </div>
-                              <div className="flex gap-3 text-[10px] text-gray-500">
-                                <span>{formatFileSize(doc.ukuran_file)}</span>
-                                <span>•</span>
-                                <span>{new Date(doc.created_at).toLocaleString("id-ID")}</span>
+                                <a
+                                  href={doc.file_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
+                                  title="Download"
+                                >
+                                  <DownloadIcon className="size-5" />
+                                </a>
+                                <button
+                                  onClick={() => handleDeleteDokumen(doc.pelaporan_dokumen_id)}
+                                  className="p-2 text-gray-400 hover:text-error-500 transition-colors cursor-pointer"
+                                  title="Hapus"
+                                >
+                                  <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={doc.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
-                              title="Download"
-                            >
-                              <DownloadIcon className="size-5" />
-                            </a>
-                            <button
-                              onClick={() => handleDeleteDokumen(doc.pelaporan_dokumen_id)}
-                              className="p-2 text-gray-400 hover:text-error-500 transition-colors cursor-pointer"
-                              title="Hapus"
-                            >
-                              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center text-gray-500 italic text-sm border border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
+                        Belum ada dokumen yang diunggah. Silakan pilih dokumen di atas untuk mengunggah.
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="py-8 text-center text-gray-500 italic text-sm border border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
-                    Belum ada dokumen yang diunggah. Silakan pilih dokumen di atas untuk mengunggah.
-                  </div>
-                )}
-              </div>
-            </div>
-          </ComponentCard>
-        ) : null}
-      </>
-    )}
+                </div>
+              </ComponentCard>
+            ) : null}
+          </>
+        )}
 
         {/* Tab 2: Daftar Sekolah */}
         {roleSlug !== "operator-sekolah" && activeTab === "sekolah" && (
-          <ComponentCard 
+          <ComponentCard
             title="Status Pengumpulan per Sekolah"
             action={
               <Button
@@ -591,7 +589,7 @@ export default function DetailPelaporanPage() {
                       params: { cadisdik_id: cadisdikId },
                       responseType: 'blob'
                     });
-                    
+
                     const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
