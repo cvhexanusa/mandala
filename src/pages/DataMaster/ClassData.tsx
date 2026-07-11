@@ -35,6 +35,7 @@ export default function ClassData() {
   const [printData, setPrintData] = useState<any[] | null>(null);
   const [gradeFilter, setGradeFilter] = useState("all");
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isViewingSiswa, setIsViewingSiswa] = useState(false);
 
   const gradeOptions = [
     { value: "all", label: "Semua Tingkat" },
@@ -305,67 +306,69 @@ export default function ClassData() {
 
       <div className="space-y-6 no-print">
         {/* Header Section */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Rombongan Belajar (Rombel)
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Kelola informasi rombongan belajar, praktik, dan wali kelas di sini.
-            </p>
+        {!isViewingSiswa && (
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                Rombongan Belajar (Rombel)
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Kelola informasi rombongan belajar, praktik, dan wali kelas di sini.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {selectedIds.length > 0 && (
+                <>
+                  <Button
+                    variant="error-outline"
+                    size="sm"
+                    className="min-w-[110px]"
+                    startIcon={<CheckCircleIcon className="size-4" />}
+                    onClick={handleRegister}
+                  >
+                    Register
+                  </Button>
+                  <Button
+                    variant="primary-outline"
+                    size="sm"
+                    className="min-w-[110px]"
+                    startIcon={<UserCircleIcon className="size-4" />}
+                    onClick={handleShowProfile}
+                  >
+                    Profil
+                  </Button>
+                  <Button
+                    variant="warning-outline"
+                    size="sm"
+                    className="min-w-[110px]"
+                    startIcon={<PencilIcon className="size-4" />}
+                    onClick={handleEditData}
+                  >
+                    Ubah
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="success-outline"
+                size="sm"
+                className="min-w-[110px]"
+                startIcon={<DownloadIcon className="size-4" />}
+                onClick={handleExport}
+              >
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-w-[110px]"
+                startIcon={<PrinterIcon className="size-4" />}
+                onClick={handlePrint}
+              >
+                Cetak
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {selectedIds.length > 0 && (
-              <>
-                <Button
-                  variant="error-outline"
-                  size="sm"
-                  className="min-w-[110px]"
-                  startIcon={<CheckCircleIcon className="size-4" />}
-                  onClick={handleRegister}
-                >
-                  Register
-                </Button>
-                <Button
-                  variant="primary-outline"
-                  size="sm"
-                  className="min-w-[110px]"
-                  startIcon={<UserCircleIcon className="size-4" />}
-                  onClick={handleShowProfile}
-                >
-                  Profil
-                </Button>
-                <Button
-                  variant="warning-outline"
-                  size="sm"
-                  className="min-w-[110px]"
-                  startIcon={<PencilIcon className="size-4" />}
-                  onClick={handleEditData}
-                >
-                  Ubah
-                </Button>
-              </>
-            )}
-            <Button
-              variant="success-outline"
-              size="sm"
-              className="min-w-[110px]"
-              startIcon={<DownloadIcon className="size-4" />}
-              onClick={handleExport}
-            >
-              Export
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="min-w-[110px]"
-              startIcon={<PrinterIcon className="size-4" />}
-              onClick={handlePrint}
-            >
-              Cetak
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* Tab Content */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 print-area">
@@ -411,6 +414,7 @@ export default function ClassData() {
               searchTerm={searchQuery} 
               gradeFilter={gradeFilter}
               itemsPerPage={itemsPerPage}
+              onViewingStateChange={setIsViewingSiswa}
             />
           )}
 
