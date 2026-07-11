@@ -7,7 +7,7 @@ import Button from "../../components/ui/button/Button";
 import Select from "../../components/form/Select";
 import Input from "../../components/form/input/InputField";
 import Badge from "../../components/ui/badge/Badge";
-import { SearchIcon, PlusIcon, BoltIcon } from "../../icons";
+import { SearchIcon, PlusIcon, BoltIcon, EyeIcon, TrashBinIcon, PencilIcon } from "../../icons";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import Pagination from "../../components/common/Pagination";
 import { mandalaService, Pelaporan } from "../../services/mandalaService";
@@ -244,22 +244,27 @@ export default function PelaporanPage() {
                           )}
                         </TableCell>
                         <TableCell className="px-5 py-4 text-center">
-                          <div className="flex items-center justify-center gap-3">
-                            <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`}>
-                              <button className="text-brand-500 hover:text-brand-600 font-semibold text-theme-sm transition-colors cursor-pointer">
-                                Detail
+                          <div className="flex items-center justify-center gap-1">
+                            <Link to={`/${roleSlug}/pelaporan-dokumen/detail/${item.pelaporan_id}`} title="Lihat Detail">
+                              <button className="p-2 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors cursor-pointer">
+                                <EyeIcon className="size-5" />
                               </button>
                             </Link>
-                            {roleSlug !== "operator-sekolah" && (
-                              <>
-                                <span className="text-gray-300 dark:text-gray-700">|</span>
-                                <button
-                                  onClick={() => handleDelete(item.pelaporan_id)}
-                                  className="text-error-500 hover:text-error-600 font-semibold text-theme-sm transition-colors cursor-pointer"
-                                >
-                                  Hapus
+                            {roleSlug !== "operator-sekolah" && item.jumlah_dokumen === 0 && (
+                              <Link to={`/${roleSlug}/pelaporan-dokumen/edit/${item.pelaporan_id}`} title="Ubah Laporan">
+                                <button className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors cursor-pointer">
+                                  <PencilIcon className="size-5" />
                                 </button>
-                              </>
+                              </Link>
+                            )}
+                            {roleSlug !== "operator-sekolah" && (
+                              <button
+                                onClick={() => handleDelete(item.pelaporan_id)}
+                                className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Laporan"
+                              >
+                                <TrashBinIcon className="size-5" />
+                              </button>
                             )}
                           </div>
                         </TableCell>

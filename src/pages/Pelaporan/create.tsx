@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import ComponentCard from "../../components/common/ComponentCard";
@@ -15,6 +15,7 @@ import Swal from "sweetalert2";
 export default function CreatePelaporanPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const roleSlug = user ? getRoleSlug(user.role) : "admin";
 
   const [loading, setLoading] = useState(false);
@@ -87,9 +88,11 @@ export default function CreatePelaporanPage() {
     });
   }, [cadisdikSchools, selectedProvinces, selectedKabupaten]);
 
+  const isLoadedRef = React.useRef(false);
   React.useEffect(() => {
+    if (id && !isLoadedRef.current) return;
     setSelectedSekolahIds(filteredSchools.map(s => s.sekolah_id));
-  }, [filteredSchools]);
+  }, [filteredSchools, id]);
 
   const toggleProvince = (prov: string) => {
     setSelectedProvinces(prev => 
@@ -141,6 +144,63 @@ export default function CreatePelaporanPage() {
 
   const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
   const [uploadedPdfs, setUploadedPdfs] = useState<Array<{ id: string; name: string; html: string }>>([]);
+
+  React.useEffect(() => {
+    if (!id || !resolvedCadisdikId) return;
+    const loadDetail = async () => {
+      try {
+        const res = await mandalaService.getPelaporanDetail(id, resolvedCadisdikId);
+        if (res?.data) {
+          const detail = res.data;
+          setFormData({
+            judul: detail.judul || "",
+            deskripsi: detail.deskripsi || "",
+            tanggal_mulai: detail.tanggal_mulai ? new Date(detail.tanggal_mulai).toISOString().split('T')[0] : "",
+            tanggal_selesai: detail.tanggal_selesai ? new Date(detail.tanggal_selesai).toISOString().split('T')[0] : "",
+            ukuranKertas: "A4",
+            marginTop: 20,
+            marginBottom: 20,
+            marginLeft: 25,
+            marginRight: 20,
+          });
+
+          if (Array.isArray(detail.pelaporan_sekolah)) {
+            setSelectedSekolahIds(detail.pelaporan_sekolah.map((ps: any) => ps.sekolah_id));
+          }
+
+          // Parse template_konten to restore excelHeaders and uploadedPdfs
+          const match = detail.template_konten?.match(/data-excel-headers="([^"]+)"/);
+          if (match) {
+            setIsExcelEnabled(true);
+            setExcelHeaders(match[1].split(","));
+          } else {
+            setIsExcelEnabled(false);
+          }
+
+          if (detail.template_konten) {
+            const parts = detail.template_konten.split('<div style="page-break-after: always; break-after: page;"></div>');
+            const pdfs: any[] = [];
+            parts.forEach((part: string, idx: number) => {
+              if (part.includes('class="excel-template-wrapper"')) return;
+              if (part.trim() !== '') {
+                pdfs.push({
+                  id: `restored-${idx}`,
+                  name: `Halaman Panduan ${idx + 1}`,
+                  html: part
+                });
+              }
+            });
+            setUploadedPdfs(pdfs);
+          }
+          
+          isLoadedRef.current = true;
+        }
+      } catch (err) {
+        console.error("Gagal memuat detail pelaporan untuk edit:", err);
+      }
+    };
+    loadDetail();
+  }, [id, resolvedCadisdikId]);
 
   React.useEffect(() => {
     if ((window as any).pdfjsLib) {
@@ -296,7 +356,8 @@ export default function CreatePelaporanPage() {
         templateKonten = templateKonten ? `${templateKonten}<div style="page-break-after: always; break-after: page;"></div>${excelHtml}` : excelHtml;
       }
 
-      const response = await mandalaService.createPelaporan({
+      let response;
+      const payload = {
         judul: formData.judul,
         deskripsi: formData.deskripsi,
         template_konten: templateKonten,
@@ -304,10 +365,16 @@ export default function CreatePelaporanPage() {
         tanggal_selesai: formData.tanggal_selesai || undefined,
         cadisdik_id: cadisdikId,
         sekolah_ids: selectedSekolahIds,
-      });
+      };
+
+      if (id) {
+        response = await mandalaService.updatePelaporan(id, payload);
+      } else {
+        response = await mandalaService.createPelaporan(payload);
+      }
 
       if (response.status === "success") {
-        Swal.fire("Berhasil", "Permintaan pelaporan berhasil dibuat untuk semua sekolah di wilayah Anda", "success");
+        Swal.fire("Berhasil", id ? "Permintaan pelaporan berhasil diperbarui" : "Permintaan pelaporan berhasil dibuat untuk semua sekolah di wilayah Anda", "success");
         navigate(`/${roleSlug}/pelaporan-dokumen`);
       }
     } catch (error: any) {
@@ -320,17 +387,17 @@ export default function CreatePelaporanPage() {
   return (
     <>
       <PageMeta
-        title="Buat Pelaporan | MANDALA"
-        description="Buat permintaan pelaporan dokumen baru dengan template"
+        title={id ? "Ubah Pelaporan | MANDALA" : "Buat Pelaporan | MANDALA"}
+        description={id ? "Ubah detail permintaan pelaporan dokumen" : "Buat permintaan pelaporan dokumen baru dengan template"}
       />
-      <PageBreadcrumb pageTitle="Buat Permintaan Pelaporan" />
+      <PageBreadcrumb pageTitle={id ? "Ubah Permintaan Pelaporan" : "Buat Permintaan Pelaporan"} />
 
       <div className="max-w-7xl mx-auto space-y-6">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           
           {/* LEFT: Main Form & Excel Builder */}
           <div className="xl:col-span-3 space-y-6">
-            <ComponentCard title="Buat Baru Pelaporan">
+            <ComponentCard title={id ? "Ubah Permintaan Pelaporan" : "Buat Baru Pelaporan"}>
               <div className="space-y-6">
                 
                 {/* Judul Laporan */}

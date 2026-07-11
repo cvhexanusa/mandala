@@ -169,6 +169,19 @@ export const mandalaService = {
     return response.data;
   },
 
+  updatePelaporan: async (id: string, data: {
+    cadisdik_id: string;
+    judul: string;
+    deskripsi?: string;
+    template_konten?: string;
+    tanggal_mulai?: string;
+    tanggal_selesai?: string;
+    sekolah_ids?: string[];
+  }) => {
+    const response = await api.patch(`/mandala/pelaporan/${id}`, data);
+    return response.data;
+  },
+
   getPelaporanDetail: async (id: string, cadisdik_id: string) => {
     const response = await api.get(`/mandala/pelaporan/${id}`, {
       params: { cadisdik_id }
