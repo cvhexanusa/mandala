@@ -287,6 +287,29 @@ export const dapodikService = {
     }
   },
 
+  // --- Geography / Wilayah ---
+  getProvinsiList: async () => {
+    try {
+      const response = await api.get('/mandala/wilayah/provinsi');
+      return response.data;
+    } catch (error) {
+      console.error('Gagal mengambil data provinsi:', error);
+      throw error;
+    }
+  },
+
+  getKabupatenList: async (provinsi: string) => {
+    try {
+      const response = await api.get('/mandala/wilayah/kabupaten', {
+        params: { provinsi }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Gagal mengambil data kabupaten:', error);
+      throw error;
+    }
+  },
+
   // --- Cadisdik / Profil Instansi CRUD ---
   getCadisdik: async () => {
     try {

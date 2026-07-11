@@ -172,6 +172,7 @@ export default function App() {
             {/* Pelaporan dan Dokumen */}
             <Route path="pelaporan-dokumen" element={<PelaporanPage />} />
             <Route path="pelaporan-dokumen/create" element={<CreatePelaporanPage />} />
+            <Route path="pelaporan-dokumen/edit/:id" element={<CreatePelaporanPage />} />
             <Route path="pelaporan-dokumen/detail/:id" element={<DetailPelaporanPage />} />
 
             {/* Data Master (Legacy) */}

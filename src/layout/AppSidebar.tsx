@@ -350,9 +350,9 @@ const AppSidebar: React.FC = () => {
     }
 
     if (isOperator) {
-      // Operator Sekolah only gets Dashboard, Profil Instansi, and Data Master
+      // Operator Sekolah gets Dashboard, Profil Instansi, Data Master, and Pelaporan dan Dokumen
       return navItems
-        .filter(item => ["Dashboard", "Profil Instansi", "Data Master"].includes(item.name))
+        .filter(item => ["Dashboard", "Profil Instansi", "Data Master", "Pelaporan dan Dokumen"].includes(item.name))
         .map(item => {
           if (item.name === "Data Master") {
             // Filter Data Master subItems: only keep GTK and Peserta Didik
