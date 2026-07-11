@@ -383,12 +383,6 @@ export default function InstansiView() {
                 <DataRow label="Alamat Lengkap" value={viewingData.alamat} />
                 <DataRow label="Status" value={viewingData.aktif ? "Aktif" : "Non-Aktif"} />
               </div>
-
-              <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Informasi Sistem</h4>
-                <p className="text-[10px] text-gray-400 mb-2 italic">* ID ini digunakan otomatis oleh sistem untuk referensi database.</p>
-                <DataRow label="ID Referensi Sistem" value={viewingData.cadisdik_id} isID />
-              </div>
             </div>
           )}
           <div className="flex justify-end pt-6 mt-6 border-t border-gray-100 dark:border-gray-800">

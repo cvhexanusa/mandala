@@ -7,6 +7,7 @@ import { mandalaService, MandalaSchool, Pelaporan, Antrian, AntrianRekap } from 
 import { dapodikService } from '../../services/dapodikService';
 import { useAuth } from '../../context/AuthContext';
 import { useSekolah } from '../../context/SekolahContext';
+import { useSystemSettings } from '../../context/SystemSettingsContext';
 import { 
   SchoolIcon, 
   GroupIcon, 
@@ -64,6 +65,7 @@ export default function MandalaDashboard() {
   const { role } = useParams();
   const { user } = useAuth();
   const { sekolah } = useSekolah();
+  const { settings } = useSystemSettings();
   const roleSlug = role || 'admin';
   const isOperator = user?.role?.toLowerCase().includes("operator");
 
@@ -89,6 +91,24 @@ export default function MandalaDashboard() {
 
   // Real-time Clock State
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Instansi Name Resolution State
+  const [instansiName, setInstansiName] = useState<string>("Mandala Internal");
+
+  useEffect(() => {
+    if (user) {
+      const userObj = user as any;
+      if (userObj.cadisdik) {
+        setInstansiName(userObj.cadisdik);
+      } else if (userObj.sekolah) {
+        setInstansiName(userObj.sekolah);
+      } else if (sekolah?.nama) {
+        setInstansiName(sekolah.nama);
+      } else {
+        setInstansiName("Mandala Internal");
+      }
+    }
+  }, [user, sekolah]);
 
   // Operator School Summary State
   const [operatorSummary, setOperatorSummary] = useState<any | null>(null);
@@ -530,6 +550,7 @@ export default function MandalaDashboard() {
         guruCount={globalGuru || 0}
         tendikCount={globalTendik || 0}
         rombelCount={globalRombel || 0}
+        instansiName={instansiName}
       />
     );
   }
@@ -546,13 +567,13 @@ export default function MandalaDashboard() {
         <div className="relative overflow-hidden rounded-2xl bg-brand-500 p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="relative z-10">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm mb-3">
-              {isOperator ? "🏫 SIMAK School Dashboard" : "📅 SIMAK Central Command Center"}
+              📅 {instansiName}
             </span>
             <h1 className="text-2xl font-bold md:text-3xl tracking-tight">{getGreeting()}, {user?.nama || 'Administrator'}</h1>
             <p className="mt-2 max-w-xl text-brand-100 text-sm leading-relaxed">
               {isOperator 
                 ? `Selamat datang di dashboard pemantauan sekolah ${sekolah?.nama || ''}. Kelola dan monitor data profil, GTK, dan peserta didik Anda secara real-time.`
-                : "Selamat datang di dashboard pemantauan terpusat. Kelola dan monitor seluruh satuan pendidikan yang terintegrasi di bawah ekosistem Mandala secara real-time."
+                : `Selamat datang di dashboard pemantauan terpusat. Kelola dan monitor seluruh satuan pendidikan yang terintegrasi di bawah ekosistem ${settings?.appShortName || "Mandala"} secara real-time.`
               }
             </p>
           </div>
@@ -898,6 +919,7 @@ interface OperatorDashboardProps {
   guruCount: number;
   tendikCount: number;
   rombelCount: number;
+  instansiName: string;
 }
 
 function OperatorDashboard({
@@ -914,6 +936,7 @@ function OperatorDashboard({
   guruCount,
   tendikCount,
   rombelCount,
+  instansiName,
 }: OperatorDashboardProps) {
   const navigate = useNavigate();
 
@@ -1048,7 +1071,7 @@ function OperatorDashboard({
         <div className="relative overflow-hidden rounded-2xl bg-brand-500 p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="relative z-10">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm mb-3">
-              🏫 SIMAK School Dashboard
+              🏫 {instansiName}
             </span>
             <h1 className="text-2xl font-bold md:text-3xl tracking-tight">
               {getGreeting()}, {user?.nama || "Operator"}
