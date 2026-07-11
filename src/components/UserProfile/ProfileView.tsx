@@ -21,31 +21,21 @@ export default function ProfileView() {
   const { sekolah } = useSekolah();
   
   const [instansiName, setInstansiName] = useState<string>("Mandala Internal");
-  const [loadingInstansi, setLoadingInstansi] = useState(false);
 
   useEffect(() => {
-    const fetchInstansi = async () => {
-      if (user?.cadisdik_id) {
-        setLoadingInstansi(true);
-        try {
-          const response = await dapodikService.getCadisdik();
-          if (response?.data) {
-            const found = (response.data as { cadisdik_id: string; nama_instansi: string }[]).find((item) => item.cadisdik_id === user.cadisdik_id);
-            if (found) {
-              setInstansiName(found.nama_instansi);
-            }
-          }
-        } catch (err) {
-          console.error("Gagal memuat nama instansi cadisdik:", err);
-        } finally {
-          setLoadingInstansi(false);
-        }
+    if (user) {
+      const userObj = user as any;
+      if (userObj.cadisdik) {
+        setInstansiName(userObj.cadisdik);
+      } else if (userObj.sekolah) {
+        setInstansiName(userObj.sekolah);
       } else if (sekolah?.nama) {
         setInstansiName(sekolah.nama);
+      } else {
+        setInstansiName("Mandala Internal");
       }
-    };
-    fetchInstansi();
-  }, [user?.cadisdik_id, sekolah]);
+    }
+  }, [user, sekolah]);
 
   // Cast user to record for safe dynamic access
   const userObj = user as unknown as Record<string, unknown>;
@@ -187,7 +177,7 @@ export default function ProfileView() {
                 <InfoRow label="NIP / NIY Resmi" value={user?.nip || "198901012015011001"} showCopy />
                 <InfoRow 
                   label="Instansi Penugasan" 
-                  value={loadingInstansi ? "Memuat..." : instansiName} 
+                  value={instansiName} 
                 />
                 <InfoRow label="Jabatan Kepegawaian" value={displayJabatan} />
                 <InfoRow label="Status Kerja" value="Pegawai Negeri Sipil (PNS) / Tetap" />

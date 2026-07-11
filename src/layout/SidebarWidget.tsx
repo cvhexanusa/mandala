@@ -1,7 +1,28 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useSekolah } from "../context/SekolahContext";
+import { useSystemSettings } from "../context/SystemSettingsContext";
 
 export default function SidebarWidget() {
   const { user } = useAuth();
+  const { sekolah } = useSekolah();
+  const { settings } = useSystemSettings();
+  const [instansiName, setInstansiName] = useState<string>("Mandala Internal");
+
+  useEffect(() => {
+    if (user) {
+      const userObj = user as any;
+      if (userObj.cadisdik) {
+        setInstansiName(userObj.cadisdik);
+      } else if (userObj.sekolah) {
+        setInstansiName(userObj.sekolah);
+      } else if (sekolah?.nama) {
+        setInstansiName(sekolah.nama);
+      } else {
+        setInstansiName("Mandala Internal");
+      }
+    }
+  }, [user, sekolah]);
   
   if (!user) return null;
 
@@ -26,10 +47,13 @@ export default function SidebarWidget() {
         {user.nama}
       </h3>
       <p className="mb-4 text-gray-500 text-xs dark:text-gray-400 capitalize">
-        Role: {user.role}
+        Role: {user.role?.replace(/mandala/gi, settings?.appShortName || "SAPA VI")}
       </p>
-      <div className="text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-500/20 py-1.5 px-3 rounded-full inline-block font-mono uppercase tracking-wider">
-        SIMAK WILAYAH
+      <div 
+        className="text-[10px] font-medium text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-500/20 py-1.5 px-3 rounded-xl block whitespace-normal break-words font-mono uppercase tracking-wider"
+        title={instansiName}
+      >
+        {instansiName}
       </div>
     </div>
   );

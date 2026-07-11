@@ -4,9 +4,11 @@ import AuthLayout from "./AuthPageLayout";
 import SignInForm from "../../components/auth/SignInForm";
 import { useAuth } from "../../context/AuthContext";
 import { getRoleSlug } from "../../services/roleUtils";
+import { useSystemSettings } from "../../context/SystemSettingsContext";
 
 export default function SignIn() {
   const { user, isAuthenticated, loading } = useAuth();
+  const { settings } = useSystemSettings();
 
   if (loading) {
     return (
@@ -20,11 +22,13 @@ export default function SignIn() {
     return <Navigate to={`/${getRoleSlug(user.role)}`} replace />;
   }
 
+  const appName = settings?.appName || "SAPA VI";
+
   return (
     <>
       <PageMeta
-        title="React.js SignIn Dashboard | SIMAK - Next.js Admin Dashboard Template"
-        description="This is React.js SignIn Tables Dashboard page for SIMAK - React.js Tailwind CSS Admin Dashboard Template"
+        title={`Masuk ke ${appName}`}
+        description={`Halaman Masuk untuk aplikasi ${appName}`}
       />
       <AuthLayout>
         <SignInForm />
