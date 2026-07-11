@@ -189,3 +189,98 @@ export function exportToCSV(filename: string, headers: string[], rows: any[][]) 
 
   exportToExcel(newFilename, sheetName, title, headers, rows);
 }
+
+/**
+ * Exports a clean Excel template with headers on Row 1 (A1, B1, ...)
+ * and helper/example values on Row 2 (A2, B2, ...).
+ */
+export function exportCleanTemplate(
+  filename: string,
+  headers: string[],
+  rows: any[][]
+) {
+  try {
+    const wb = XLSX.utils.book_new();
+    const wsData: any[][] = [];
+
+    // 1. Headers (Row 0)
+    const headerRow = headers.map(h => ({
+      v: h,
+      t: "s",
+      s: {
+        font: { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "4F46E5" } }, // Brand Indigo
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "CBD5E1" } },
+          bottom: { style: "thin", color: { rgb: "94A3B8" } },
+          left: { style: "thin", color: { rgb: "CBD5E1" } },
+          right: { style: "thin", color: { rgb: "CBD5E1" } }
+        }
+      }
+    }));
+    wsData.push(headerRow);
+
+    // 2. Data Rows (Row 1 onwards)
+    rows.forEach((row) => {
+      const dataRow = row.map((val) => {
+        let cleanVal = val === null || val === undefined ? "" : String(val).trim();
+
+        return {
+          v: cleanVal,
+          t: "s",
+          z: "@",
+          s: {
+            font: { name: "Segoe UI", sz: 10, color: { rgb: "1F2937" } },
+            numFmt: "@",
+            alignment: { 
+              vertical: "center", 
+              horizontal: "left"
+            },
+            border: {
+              top: { style: "thin", color: { rgb: "E2E8F0" } },
+              bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+              left: { style: "thin", color: { rgb: "E2E8F0" } },
+              right: { style: "thin", color: { rgb: "E2E8F0" } }
+            }
+          }
+        };
+      });
+      wsData.push(dataRow);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Row heights
+    ws["!rows"] = [
+      { hpt: 26 }, // Header
+      ...rows.map(() => ({ hpt: 20 })) // Data rows
+    ];
+
+    // Column widths
+    const colWidths = headers.map(h => ({ wch: Math.max(h.length + 5, 12) }));
+    ws["!cols"] = colWidths;
+
+    // Enable gridlines display explicitly
+    ws["!views"] = [{ showGridLines: true }];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, filename);
+
+    Swal.fire({
+      title: "Berhasil!",
+      text: "Template Excel berhasil diunduh.",
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  } catch (error) {
+    console.error("Gagal melakukan export template ke Excel:", error);
+    Swal.fire({
+      title: "Error",
+      text: "Gagal mengunduh template.",
+      icon: "error",
+      confirmButtonColor: "#ef4444",
+    });
+  }
+}

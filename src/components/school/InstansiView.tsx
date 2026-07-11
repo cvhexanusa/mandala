@@ -36,6 +36,8 @@ export default function InstansiView() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingData, setEditingData] = useState<Cadisdik | null>(null);
+  const [provinsiList, setProvinsiList] = useState<string[]>([]);
+  const [kabupatenList, setKabupatenList] = useState<string[]>([]);
   
   // Detail Modal State
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -48,6 +50,8 @@ export default function InstansiView() {
     email: "",
     nomor_telepon: "",
     website: "",
+    provinsi: "",
+    kabupaten: [] as string[],
     aktif: true,
   });
 
@@ -64,9 +68,39 @@ export default function InstansiView() {
     }
   };
 
+  const fetchProvinsi = async () => {
+    try {
+      const res = await dapodikService.getProvinsiList();
+      if (res?.data) {
+        setProvinsiList(res.data);
+      }
+    } catch (err) {
+      console.error("Gagal mengambil data provinsi:", err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchProvinsi();
   }, []);
+
+  useEffect(() => {
+    const fetchKabupaten = async () => {
+      if (!formData.provinsi) {
+        setKabupatenList([]);
+        return;
+      }
+      try {
+        const res = await dapodikService.getKabupatenList(formData.provinsi);
+        if (res?.data) {
+          setKabupatenList(res.data);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil data kabupaten:", err);
+      }
+    };
+    fetchKabupaten();
+  }, [formData.provinsi]);
 
   const handleOpenModal = (item?: Cadisdik) => {
     if (item) {
@@ -77,6 +111,8 @@ export default function InstansiView() {
         email: item.email || "",
         nomor_telepon: item.nomor_telepon || "",
         website: item.website || "",
+        provinsi: item.provinsi || "",
+        kabupaten: item.kabupaten || [],
         aktif: item.aktif,
       });
     } else {
@@ -87,6 +123,8 @@ export default function InstansiView() {
         email: "",
         nomor_telepon: "",
         website: "",
+        provinsi: "",
+        kabupaten: [],
         aktif: true,
       });
     }
@@ -216,7 +254,15 @@ export default function InstansiView() {
                   data.map((item) => (
                     <TableRow key={item.cadisdik_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
                       <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">
-                        {item.nama_instansi}
+                        <div>{item.nama_instansi}</div>
+                        {(item.provinsi || (item.kabupaten && item.kabupaten.length > 0)) && (
+                          <div className="text-[10px] text-gray-400 font-normal mt-0.5">
+                            {item.provinsi && <span>{item.provinsi}</span>}
+                            {item.kabupaten && item.kabupaten.length > 0 && (
+                              <span> • {item.kabupaten.join(", ")}</span>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
                         {item.email}
@@ -326,6 +372,56 @@ export default function InstansiView() {
                 />
               </div>
               <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Provinsi <span className="text-error-500">*</span></label>
+                <select
+                  name="provinsi"
+                  value={formData.provinsi}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, provinsi: e.target.value, kabupaten: [] }));
+                  }}
+                  required
+                  className="w-full h-11 px-4 text-sm text-gray-800 dark:text-white/90 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all"
+                >
+                  <option value="">Pilih Provinsi</option>
+                  {provinsiList.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              {formData.provinsi && (
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Pilih Kabupaten / Kota</label>
+                  <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 dark:bg-white/[0.01] rounded-xl border border-gray-150 dark:border-gray-800 max-h-[160px] overflow-y-auto custom-scrollbar">
+                    {kabupatenList.map((k) => {
+                      const isChecked = formData.kabupaten.includes(k);
+                      return (
+                        <label key={k} className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  kabupaten: prev.kabupaten.filter(item => item !== k)
+                                }));
+                              } else {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  kabupaten: [...prev.kabupaten, k]
+                                }));
+                              }
+                            }}
+                            className="rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                          />
+                          {k}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Alamat Lengkap <span className="text-error-500">*</span></label>
                 <Input 
                   name="alamat"
@@ -377,6 +473,8 @@ export default function InstansiView() {
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Profil Instansi</h4>
                 <DataRow label="Nama Instansi" value={viewingData.nama_instansi} />
+                <DataRow label="Provinsi" value={viewingData.provinsi} />
+                <DataRow label="Kabupaten / Kota" value={viewingData.kabupaten && viewingData.kabupaten.length > 0 ? viewingData.kabupaten.join(", ") : "-"} />
                 <DataRow label="Email" value={viewingData.email} />
                 <DataRow label="Nomor Telepon" value={viewingData.nomor_telepon} />
                 <DataRow label="Website" value={viewingData.website} />
