@@ -39,6 +39,8 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
     if (!filename) return "";
     if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
     const baseUrl = (import.meta.env.VITE_API_URL || "https://centralsimak.smakniscjr.sch.id/api").trim().replace(/\/api$/, "");
+    if (filename.startsWith("/storage")) return `${baseUrl}${filename}`;
+    if (filename.startsWith("storage/")) return `${baseUrl}/${filename}`;
     return `${baseUrl}/storage/${filename}`;
   };
 

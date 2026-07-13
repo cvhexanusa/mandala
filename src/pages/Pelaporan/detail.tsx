@@ -14,6 +14,7 @@ import api from "../../services/api";
 import { getRoleSlug } from "../../services/roleUtils";
 import Swal from "sweetalert2";
 import { exportToExcel, exportCleanTemplate } from "../../utils/exportUtils";
+import { getFotoUrl } from "../../utils/image";
 
 export default function DetailPelaporanPage() {
   const { id } = useParams<{ id: string }>();
@@ -531,7 +532,7 @@ export default function DetailPelaporanPage() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <a
-                                  href={doc.file_url}
+                                  href={getFotoUrl(doc.file_url)}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
@@ -690,7 +691,7 @@ export default function DetailPelaporanPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <a
-                      href={doc.file_url}
+                      href={getFotoUrl(doc.file_url)}
                       target="_blank"
                       rel="noreferrer"
                       className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
