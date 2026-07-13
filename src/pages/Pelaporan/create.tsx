@@ -142,6 +142,18 @@ export default function CreatePelaporanPage() {
     });
   }, [cadisdikSchools, selectedProvinces, selectedKabupaten]);
 
+  const [schoolSearchQuery, setSchoolSearchQuery] = useState("");
+
+  const searchedSchools = React.useMemo(() => {
+    if (!schoolSearchQuery.trim()) return filteredSchools;
+    const query = schoolSearchQuery.toLowerCase();
+    return filteredSchools.filter(s => 
+      s.nama.toLowerCase().includes(query) || 
+      (s.npsn && s.npsn.includes(query)) ||
+      (s.kabupaten_kota && s.kabupaten_kota.toLowerCase().includes(query))
+    );
+  }, [filteredSchools, schoolSearchQuery]);
+
   const isLoadedRef = React.useRef(false);
   React.useEffect(() => {
     if (id && !isLoadedRef.current) return;
@@ -166,15 +178,15 @@ export default function CreatePelaporanPage() {
     );
   };
 
-  const allSelected = filteredSchools.length > 0 && filteredSchools.every(s => selectedSekolahIds.includes(s.sekolah_id));
+  const allSelected = searchedSchools.length > 0 && searchedSchools.every(s => selectedSekolahIds.includes(s.sekolah_id));
   
   const toggleSelectAllSchools = () => {
     if (allSelected) {
-      const filteredIds = filteredSchools.map(s => s.sekolah_id);
-      setSelectedSekolahIds(prev => prev.filter(id => !filteredIds.includes(id)));
+      const searchedIds = searchedSchools.map(s => s.sekolah_id);
+      setSelectedSekolahIds(prev => prev.filter(id => !searchedIds.includes(id)));
     } else {
-      const filteredIds = filteredSchools.map(s => s.sekolah_id);
-      setSelectedSekolahIds(prev => Array.from(new Set([...prev, ...filteredIds])));
+      const searchedIds = searchedSchools.map(s => s.sekolah_id);
+      setSelectedSekolahIds(prev => Array.from(new Set([...prev, ...searchedIds])));
     }
   };
 
@@ -830,7 +842,7 @@ export default function CreatePelaporanPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label className="mb-0">DAFTAR SEKOLAH ({selectedSekolahIds.length} terpilih)</Label>
-                    {filteredSchools.length > 0 && (
+                    {searchedSchools.length > 0 && (
                       <button
                         type="button"
                         onClick={toggleSelectAllSchools}
@@ -840,11 +852,28 @@ export default function CreatePelaporanPage() {
                       </button>
                     )}
                   </div>
+
+                  {/* Search Input for Schools */}
+                  <div className="relative mb-2">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                      <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Cari nama sekolah / NPSN..."
+                      value={schoolSearchQuery}
+                      onChange={(e) => setSchoolSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg dark:bg-white/[0.03] dark:border-gray-705 focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white/90"
+                    />
+                  </div>
+
                   <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50/50 dark:bg-white/[0.01] space-y-2 custom-scrollbar">
-                    {filteredSchools.length === 0 ? (
-                      <p className="text-xs text-gray-500 text-center py-4">Tidak ada sekolah yang cocok dengan filter wilayah Anda.</p>
+                    {searchedSchools.length === 0 ? (
+                      <p className="text-xs text-gray-500 text-center py-4">Tidak ada sekolah yang cocok dengan pencarian / filter Anda.</p>
                     ) : (
-                      filteredSchools.map(sch => (
+                      searchedSchools.map(sch => (
                         <label key={sch.sekolah_id} className="flex items-start gap-2 cursor-pointer text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                           <input
                             type="checkbox"
