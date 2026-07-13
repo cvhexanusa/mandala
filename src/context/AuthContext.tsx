@@ -10,6 +10,7 @@ interface User {
   foto?: string;
   cadisdik_id?: string;
   instansi_id?: string;
+  jabatan?: number;
 }
 
 interface LoginResult {
@@ -95,6 +96,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkAuth();
+
+    const interval = setInterval(() => {
+      const token = localStorage.getItem('auth_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (token && isTokenExpired(token)) {
+        if (!refreshToken || isTokenExpired(refreshToken)) {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("user_data");
+          setUser(null);
+        }
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const setAuthData = (userData: User) => {

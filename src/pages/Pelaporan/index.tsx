@@ -27,7 +27,6 @@ export default function PelaporanPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const fetchPelaporan = useCallback(async () => {
-    console.log("fetchPelaporan dipanggil, user:", user);
     setLoading(true);
     try {
       let response;
@@ -51,10 +50,8 @@ export default function PelaporanPage() {
           setLoading(false);
           return;
         }
-        console.log("Requesting pelaporan for cadisdik_id:", cadisdikId);
         response = await mandalaService.getPelaporan(cadisdikId, currentPage, itemsPerPage);
       }
-      console.log("API Response getPelaporan raw:", response);
       
       let pelaporanData: Pelaporan[] = [];
       let total = 0;
@@ -86,8 +83,6 @@ export default function PelaporanPage() {
 
       setData(pelaporanData);
       setTotalItems(total);
-      
-      console.log("Processed Pelaporan Data:", pelaporanData, "Total:", total);
     } catch (error) {
       console.error("Gagal mengambil data pelaporan:", error);
     } finally {
@@ -162,20 +157,26 @@ export default function PelaporanPage() {
         title="Pelaporan Dokumen | MANDALA"
         description="Manajemen permintaan pelaporan dokumen ke sekolah"
       />
-      <PageBreadcrumb pageTitle="Pelaporan Dokumen" />
+      <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-6 mb-6">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Pelaporan Dokumen</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+          Kelola permintaan dan pengumpulan laporan dokumen dari satuan pendidikan di wilayah kerja Anda.
+        </p>
+      </div>
 
       <div className="space-y-6">
-        {roleSlug !== "operator-sekolah" && (
-          <div className="flex justify-end">
-            <Link to={`/${roleSlug}/pelaporan-dokumen/create`}>
-              <Button size="sm" startIcon={<PlusIcon />}>
-                Buat Permintaan Pelaporan
-              </Button>
-            </Link>
-          </div>
-        )}
-
-        <ComponentCard title="Daftar Permintaan Pelaporan">
+        <ComponentCard 
+          title="Daftar Permintaan Pelaporan"
+          action={
+            roleSlug !== "operator-sekolah" && (
+              <Link to={`/${roleSlug}/pelaporan-dokumen/create`}>
+                <Button size="sm" startIcon={<PlusIcon />} variant="outline">
+                  Buat Permintaan Pelaporan
+                </Button>
+              </Link>
+            )
+          }
+        >
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between no-print">
             <div className="w-20">
               <Select
@@ -216,8 +217,10 @@ export default function PelaporanPage() {
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-gray-500">
-                        Memuat data...
+                      <TableCell colSpan={6} className="text-center py-10">
+                        <div className="flex justify-center items-center py-6">
+                          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredData.length > 0 ? (

@@ -34,9 +34,7 @@ export const dapodikService = {
 
   getSekolah: async () => {
     try {
-      console.log('Fetching schools with key:', import.meta.env.VITE_MANDALA_KEY);
       const response = await api.get('/mandala/sekolah');
-      console.log('Schools API Response Detail:', response);
       return response.data;
     } catch (error: any) {
       console.error('Gagal mengambil data sekolah:', error?.response?.data || error.message);

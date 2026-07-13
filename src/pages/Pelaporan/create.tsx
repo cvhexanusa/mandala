@@ -19,6 +19,7 @@ export default function CreatePelaporanPage() {
   const roleSlug = user ? getRoleSlug(user.role) : "admin";
 
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const [sekolahList, setSekolahList] = useState<any[]>([]);
   const [resolvedCadisdikId, setResolvedCadisdikId] = useState<string>("");
@@ -30,39 +31,92 @@ export default function CreatePelaporanPage() {
   const [showKabDropdown, setShowKabDropdown] = useState(false);
 
   React.useEffect(() => {
-    const resolveId = async () => {
-      let cadisdikId = user?.cadisdik_id;
-      if (!cadisdikId) {
-        try {
-          const instansiRes = await dapodikService.getCadisdik();
-          if (instansiRes?.data && instansiRes.data.length > 0) {
-            cadisdikId = instansiRes.data[0].cadisdik_id;
-          }
-        } catch (err) {
-          console.warn("Gagal fetch fallback cadisdik list:", err);
-        }
-      }
-      if (cadisdikId) {
-        setResolvedCadisdikId(cadisdikId);
-      }
-    };
-    resolveId();
-  }, [user]);
-
-  React.useEffect(() => {
-    const loadSekolah = async () => {
+    const initData = async () => {
+      setPageLoading(true);
       try {
+        // 1. Load sekolah list
         const res = await dapodikService.getSekolah();
         const list = res.data || res;
         if (Array.isArray(list)) {
           setSekolahList(list);
         }
+
+        // 2. Resolve cadisdik ID
+        let cadisdikId = user?.cadisdik_id;
+        if (!cadisdikId) {
+          try {
+            const instansiRes = await dapodikService.getCadisdik();
+            if (instansiRes?.data && instansiRes.data.length > 0) {
+              cadisdikId = instansiRes.data[0].cadisdik_id;
+            }
+          } catch (err) {
+            console.warn("Gagal fetch fallback cadisdik list:", err);
+          }
+        }
+        
+        if (cadisdikId) {
+          setResolvedCadisdikId(cadisdikId);
+
+          // 3. Load detail if editing (id is present)
+          if (id) {
+            const detailRes = await mandalaService.getPelaporanDetail(id, cadisdikId);
+            if (detailRes?.data) {
+              const detail = detailRes.data;
+              setFormData({
+                judul: detail.judul || "",
+                deskripsi: detail.deskripsi || "",
+                tanggal_mulai: detail.tanggal_mulai ? new Date(detail.tanggal_mulai).toISOString().split('T')[0] : "",
+                tanggal_selesai: detail.tanggal_selesai ? new Date(detail.tanggal_selesai).toISOString().split('T')[0] : "",
+                ukuranKertas: "A4",
+                marginTop: 20,
+                marginBottom: 20,
+                marginLeft: 25,
+                marginRight: 20,
+              });
+
+              if (Array.isArray(detail.pelaporan_sekolah)) {
+                setSelectedSekolahIds(detail.pelaporan_sekolah.map((ps: any) => ps.sekolah_id));
+              }
+
+              // Parse template_konten to restore excelHeaders and uploadedPdfs
+              const match = detail.template_konten?.match(/data-excel-headers="([^"]+)"/);
+              if (match) {
+                setIsExcelEnabled(true);
+                setExcelHeaders(match[1].split(","));
+              } else {
+                setIsExcelEnabled(false);
+              }
+
+              if (detail.template_konten) {
+                const parts = detail.template_konten.split('<div style="page-break-after: always; break-after: page;"></div>');
+                const pdfs: any[] = [];
+                parts.forEach((part: string, idx: number) => {
+                  if (part.includes('class="excel-template-wrapper"')) return;
+                  if (part.trim() !== '') {
+                    pdfs.push({
+                      id: `restored-${idx}`,
+                      name: `Halaman Panduan ${idx + 1}`,
+                      html: part
+                    });
+                  }
+                });
+                setUploadedPdfs(pdfs);
+              }
+              isLoadedRef.current = true;
+            }
+          }
+        }
       } catch (err) {
-        console.error("Gagal memuat data sekolah:", err);
+        console.error("Gagal memuat data awal:", err);
+      } finally {
+        setPageLoading(false);
       }
     };
-    loadSekolah();
-  }, []);
+
+    if (user !== undefined) {
+      initData();
+    }
+  }, [id, user]);
 
   const cadisdikSchools = React.useMemo(() => {
     if (!resolvedCadisdikId) return sekolahList;
@@ -145,62 +199,7 @@ export default function CreatePelaporanPage() {
   const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
   const [uploadedPdfs, setUploadedPdfs] = useState<Array<{ id: string; name: string; html: string }>>([]);
 
-  React.useEffect(() => {
-    if (!id || !resolvedCadisdikId) return;
-    const loadDetail = async () => {
-      try {
-        const res = await mandalaService.getPelaporanDetail(id, resolvedCadisdikId);
-        if (res?.data) {
-          const detail = res.data;
-          setFormData({
-            judul: detail.judul || "",
-            deskripsi: detail.deskripsi || "",
-            tanggal_mulai: detail.tanggal_mulai ? new Date(detail.tanggal_mulai).toISOString().split('T')[0] : "",
-            tanggal_selesai: detail.tanggal_selesai ? new Date(detail.tanggal_selesai).toISOString().split('T')[0] : "",
-            ukuranKertas: "A4",
-            marginTop: 20,
-            marginBottom: 20,
-            marginLeft: 25,
-            marginRight: 20,
-          });
-
-          if (Array.isArray(detail.pelaporan_sekolah)) {
-            setSelectedSekolahIds(detail.pelaporan_sekolah.map((ps: any) => ps.sekolah_id));
-          }
-
-          // Parse template_konten to restore excelHeaders and uploadedPdfs
-          const match = detail.template_konten?.match(/data-excel-headers="([^"]+)"/);
-          if (match) {
-            setIsExcelEnabled(true);
-            setExcelHeaders(match[1].split(","));
-          } else {
-            setIsExcelEnabled(false);
-          }
-
-          if (detail.template_konten) {
-            const parts = detail.template_konten.split('<div style="page-break-after: always; break-after: page;"></div>');
-            const pdfs: any[] = [];
-            parts.forEach((part: string, idx: number) => {
-              if (part.includes('class="excel-template-wrapper"')) return;
-              if (part.trim() !== '') {
-                pdfs.push({
-                  id: `restored-${idx}`,
-                  name: `Halaman Panduan ${idx + 1}`,
-                  html: part
-                });
-              }
-            });
-            setUploadedPdfs(pdfs);
-          }
-          
-          isLoadedRef.current = true;
-        }
-      } catch (err) {
-        console.error("Gagal memuat detail pelaporan untuk edit:", err);
-      }
-    };
-    loadDetail();
-  }, [id, resolvedCadisdikId]);
+  // Detail is loaded in unified useEffect above
 
   React.useEffect(() => {
     if ((window as any).pdfjsLib) {
@@ -384,15 +383,30 @@ export default function CreatePelaporanPage() {
     }
   };
 
+  if (pageLoading) {
+    return (
+      <div className="flex justify-center items-center py-40">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
     <>
       <PageMeta
         title={id ? "Ubah Pelaporan | MANDALA" : "Buat Pelaporan | MANDALA"}
         description={id ? "Ubah detail permintaan pelaporan dokumen" : "Buat permintaan pelaporan dokumen baru dengan template"}
       />
-      <PageBreadcrumb pageTitle={id ? "Ubah Permintaan Pelaporan" : "Buat Permintaan Pelaporan"} />
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-6">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            {id ? "Ubah Permintaan Pelaporan" : "Buat Permintaan Pelaporan"}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+            {id ? "Ubah detail parameter dan sekolah sasaran untuk permintaan pelaporan." : "Buat formulir pelaporan baru dan distribusikan ke sekolah di wilayah kerja Anda."}
+          </p>
+        </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           
           {/* LEFT: Main Form & Excel Builder */}

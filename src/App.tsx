@@ -51,6 +51,7 @@ import DataPegawai from "./pages/Kepegawaian/DataPegawai";
 import MappingPengawasPage from "./pages/PKKS/MappingPengawas";
 import DaftarAntrian from "./pages/Layanan/DaftarAntrian";
 import SystemSettingsPage from "./pages/Settings/SystemSettings";
+import MenuRolesPage from "./pages/Settings/MenuRoles";
 import PelaporanPage from "./pages/Pelaporan/index";
 import CreatePelaporanPage from "./pages/Pelaporan/create";
 import DetailPelaporanPage from "./pages/Pelaporan/detail";
@@ -202,6 +203,7 @@ export default function App() {
             {/* Other */}
             <Route path="sync-api" element={<ApiSyncPage />} />
             <Route path="pengaturan/sistem" element={<SystemSettingsPage />} />
+            <Route path="pengaturan/menu" element={<MenuRolesPage />} />
           </Route>
         </Route>
 

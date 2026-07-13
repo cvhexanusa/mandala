@@ -15,6 +15,8 @@ import { getRoleSlug } from "../../services/roleUtils";
 import Swal from "sweetalert2";
 import { exportToExcel, exportCleanTemplate } from "../../utils/exportUtils";
 import { getFotoUrl } from "../../utils/image";
+import { SearchIcon } from "../../icons";
+import Pagination from "../../components/common/Pagination";
 
 export default function DetailPelaporanPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +37,24 @@ export default function DetailPelaporanPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"laporan" | "sekolah">("laporan");
+
+  const [schoolSearchTerm, setSchoolSearchTerm] = useState("");
+  const [schoolCurrentPage, setSchoolCurrentPage] = useState(1);
+  const schoolItemsPerPage = 10;
+
+  const filteredSchools = React.useMemo(() => {
+    if (!detail?.daftar_sekolah) return [];
+    return detail.daftar_sekolah.filter((s) =>
+      s.nama_sekolah.toLowerCase().includes(schoolSearchTerm.toLowerCase())
+    );
+  }, [detail?.daftar_sekolah, schoolSearchTerm]);
+
+  const paginatedSchools = React.useMemo(() => {
+    const startIndex = (schoolCurrentPage - 1) * schoolItemsPerPage;
+    return filteredSchools.slice(startIndex, startIndex + schoolItemsPerPage);
+  }, [filteredSchools, schoolCurrentPage]);
+
+  const schoolTotalPages = Math.ceil(filteredSchools.length / schoolItemsPerPage) || 1;
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -200,6 +220,40 @@ export default function DetailPelaporanPage() {
     }
   };
 
+  const handlePratinjauRekap = async () => {
+    if (!id) return;
+    setSelectedSekolah({ id: "all", nama: "Rekapitulasi Semua Sekolah" });
+    setIsPreviewModalOpen(true);
+    setPreviewLoading(true);
+    setPreviewHtml("");
+    try {
+      let cadisdikId = user?.cadisdik_id;
+      if (!cadisdikId) {
+        const instansiRes = await dapodikService.getCadisdik().catch(() => null);
+        if (instansiRes?.data && instansiRes.data.length > 0) {
+          cadisdikId = instansiRes.data[0].cadisdik_id;
+        }
+      }
+      if (!cadisdikId) return;
+
+      const response = await api.get(`/mandala/pelaporan/${id}/preview-rekap`, {
+        params: { cadisdik_id: cadisdikId },
+        responseType: "text"
+      });
+      setPreviewHtml(response.data);
+    } catch (error) {
+      console.error("Gagal mengambil pratinjau rekap:", error);
+      setPreviewHtml(`
+        <div style="padding: 25px; font-family: Arial, sans-serif; color: #b91c1c; background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; text-align: center; max-width: 500px; margin: 40px auto;">
+          <h3 style="margin-top: 0; font-size: 18px;">Gagal Memuat Pratinjau</h3>
+          <p style="font-size: 14px; color: #7f1d1d;">Terjadi kesalahan saat memproses rekapitulasi data sekolah. Pastikan berkas-berkas yang diunggah valid.</p>
+        </div>
+      `);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const [uploadLoading, setUploadLoading] = useState(false);
 
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,9 +261,18 @@ export default function DetailPelaporanPage() {
     if (!files || files.length === 0) return;
     if (!id) return;
 
+    const allowedExtensions = [".xlsx", ".pdf"];
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
-      formData.append("files", files[i]);
+      const file = files[i];
+      const fileName = file.name.toLowerCase();
+      const isValid = allowedExtensions.some(ext => fileName.endsWith(ext));
+      if (!isValid) {
+        Swal.fire("Format Berkas Tidak Valid", `Hanya berkas dengan ekstensi .xlsx dan .pdf yang diperbolehkan. Berkas "${file.name}" tidak sesuai.`, "warning");
+        e.target.value = "";
+        return;
+      }
+      formData.append("files", file);
     }
 
     setUploadLoading(true);
@@ -270,7 +333,13 @@ export default function DetailPelaporanPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  if (loading) return <div className="p-10 text-center">Memuat detail...</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-40">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+      </div>
+    );
+  }
   if (!detail) return <div className="p-10 text-center text-error-500">Data tidak ditemukan.</div>;
 
   return (
@@ -279,9 +348,13 @@ export default function DetailPelaporanPage() {
         title={`Detail Pelaporan - ${detail.judul} | MANDALA`}
         description={`Detail permintaan pelaporan dokumen ${detail.judul}`}
       />
-      <PageBreadcrumb pageTitle="Detail Pelaporan" />
-
       <div className="space-y-6">
+        <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-6">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Detail Pelaporan</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+            Pantau status pengumpulan dokumen dan pratinjau rekap data dari sekolah penerima tugas.
+          </p>
+        </div>
         {roleSlug !== "operator-sekolah" && (
           <div className="flex border-b border-gray-200 dark:border-gray-800">
             <button
@@ -478,6 +551,7 @@ export default function DetailPelaporanPage() {
                       type="file"
                       id="file-upload-input"
                       multiple
+                      accept=".xlsx,.pdf"
                       onChange={handleUploadFile}
                       disabled={uploadLoading}
                       className="hidden"
@@ -488,14 +562,14 @@ export default function DetailPelaporanPage() {
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-500" />
                         ) : (
                           <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-5a2 2 0 00-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                         )}
                       </div>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         {uploadLoading ? "Mengunggah Berkas..." : "Klik untuk Pilih Berkas Laporan"}
                       </span>
-                      <span className="text-xs text-gray-400">Dukung berkas .xlsx, .pdf, .docx, .png, .jpg (Maks 10MB)</span>
+                      <span className="text-xs text-gray-400">Hanya mendukung berkas .xlsx dan .pdf (Maks 10MB)</span>
                     </label>
                   </div>
 
@@ -571,93 +645,149 @@ export default function DetailPelaporanPage() {
           <ComponentCard
             title="Status Pengumpulan per Sekolah"
             action={
-              <Button
-                variant="success-outline"
-                size="sm"
-                onClick={async () => {
-                  if (!id) return;
-                  try {
-                    let cadisdikId = user?.cadisdik_id;
-                    if (!cadisdikId) {
-                      const instansiRes = await dapodikService.getCadisdik().catch(() => null);
-                      if (instansiRes?.data && instansiRes.data.length > 0) {
-                        cadisdikId = instansiRes.data[0].cadisdik_id;
+              <div className="flex gap-2">
+                <Button
+                  variant="primary-outline"
+                  size="sm"
+                  onClick={handlePratinjauRekap}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Preview Rekap
+                </Button>
+                <Button
+                  variant="success-outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!id) return;
+                    try {
+                      let cadisdikId = user?.cadisdik_id;
+                      if (!cadisdikId) {
+                        const instansiRes = await dapodikService.getCadisdik().catch(() => null);
+                        if (instansiRes?.data && instansiRes.data.length > 0) {
+                          cadisdikId = instansiRes.data[0].cadisdik_id;
+                        }
                       }
+                      if (!cadisdikId) return;
+
+                      const response = await api.get(`/mandala/pelaporan/${id}/export`, {
+                        params: { cadisdik_id: cadisdikId },
+                        responseType: 'blob'
+                      });
+
+                      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `rekap_laporan_${detail?.judul.toLowerCase().replace(/[^a-z0-9]/g, "_") || id}.xlsx`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.parentNode?.removeChild(link);
+                    } catch (error) {
+                      console.error("Gagal mendownload rekap excel:", error);
+                      Swal.fire("Gagal", "Terjadi kesalahan saat mengekspor rekapitulasi data sekolah.", "error");
                     }
-                    if (!cadisdikId) return;
-
-                    const response = await api.get(`/mandala/pelaporan/${id}/export`, {
-                      params: { cadisdik_id: cadisdikId },
-                      responseType: 'blob'
-                    });
-
-                    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.setAttribute('download', `rekap_laporan_${detail?.judul.toLowerCase().replace(/[^a-z0-9]/g, "_") || id}.xlsx`);
-                    document.body.appendChild(link);
-                    link.click();
-                    link.parentNode?.removeChild(link);
-                  } catch (error) {
-                    console.error("Gagal mendownload rekap excel:", error);
-                    Swal.fire("Gagal", "Terjadi kesalahan saat mengekspor rekapitulasi data sekolah.", "error");
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export Rekap Excel
-              </Button>
+                  }}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export Rekap Excel
+                </Button>
+              </div>
             }
           >
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableCell isHeader>Nama Sekolah</TableCell>
-                    <TableCell isHeader className="text-center">Jumlah Dokumen</TableCell>
-                    <TableCell isHeader className="text-center">Aksi</TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detail.daftar_sekolah.map((s) => (
-                    <TableRow key={s.sekolah_id}>
-                      <TableCell className="font-medium text-gray-800 dark:text-white/90">{s.nama_sekolah}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge color={s.jumlah_dokumen > 0 ? "success" : "light"} size="sm">
-                          {s.jumlah_dokumen} Dokumen
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center items-center gap-1">
-                          <button
-                            onClick={() => handleLihatDokumen(s.sekolah_id, s.nama_sekolah)}
-                            className="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-50 dark:hover:bg-white/[0.02] rounded-lg transition-all cursor-pointer"
-                            title="Lihat Berkas Dokumen"
-                          >
-                            <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handlePratinjauLaporan(s.sekolah_id, s.nama_sekolah)}
-                            className="p-2 text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-white/[0.02] rounded-lg transition-all cursor-pointer"
-                            title="Pratinjau Cetak Laporan"
-                          >
-                            <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                        </div>
-                      </TableCell>
+            <div className="space-y-4">
+              {detail.daftar_sekolah.length > 10 && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-4 no-print">
+                  <div className="relative w-full max-w-xs">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <SearchIcon className="size-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Cari nama sekolah..."
+                      value={schoolSearchTerm}
+                      onChange={(e) => {
+                        setSchoolSearchTerm(e.target.value);
+                        setSchoolCurrentPage(1);
+                      }}
+                      className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-gray-300 rounded-lg dark:bg-white/[0.03] dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white/90"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableCell isHeader>Nama Sekolah</TableCell>
+                      <TableCell isHeader className="text-center">Jumlah Dokumen</TableCell>
+                      <TableCell isHeader className="text-center">Aksi</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {(detail.daftar_sekolah.length > 10 ? paginatedSchools : detail.daftar_sekolah).map((s) => (
+                      <TableRow key={s.sekolah_id}>
+                        <TableCell className="font-medium text-gray-800 dark:text-white/90">{s.nama_sekolah}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge color={s.jumlah_dokumen > 0 ? "success" : "light"} size="sm">
+                            {s.jumlah_dokumen} Dokumen
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center items-center gap-1">
+                            <button
+                              onClick={() => handleLihatDokumen(s.sekolah_id, s.nama_sekolah)}
+                              className="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-50 dark:hover:bg-white/[0.02] rounded-lg transition-all cursor-pointer"
+                              title="Lihat Berkas Dokumen"
+                            >
+                              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handlePratinjauLaporan(s.sekolah_id, s.nama_sekolah)}
+                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-gray-50 dark:hover:bg-white/[0.02] rounded-lg transition-all cursor-pointer"
+                              title="Pratinjau Cetak Laporan"
+                            >
+                              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(detail.daftar_sekolah.length > 10 ? paginatedSchools : detail.daftar_sekolah).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-6 text-gray-500 italic">
+                          Tidak ada data sekolah ditemukan.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {detail.daftar_sekolah.length > 10 && schoolTotalPages > 1 && (
+                <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-800 no-print">
+                  <p className="text-xs text-gray-500">
+                    Menampilkan {filteredSchools.length > 0 ? (schoolCurrentPage - 1) * schoolItemsPerPage + 1 : 0} - {Math.min(schoolCurrentPage * schoolItemsPerPage, filteredSchools.length)} dari {filteredSchools.length} sekolah
+                  </p>
+                  <Pagination
+                    currentPage={schoolCurrentPage}
+                    totalPages={schoolTotalPages}
+                    onPageChange={(page) => setSchoolCurrentPage(page)}
+                  />
+                </div>
+              )}
             </div>
           </ComponentCard>
         )}
@@ -671,7 +801,9 @@ export default function DetailPelaporanPage() {
       >
         <div className="space-y-4">
           {docLoading ? (
-            <div className="py-10 text-center">Memuat dokumen...</div>
+            <div className="flex justify-center items-center py-10">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+            </div>
           ) : documents.length > 0 ? (
             <div className="grid grid-cols-1 gap-3">
               {documents.map((doc) => (

@@ -26,8 +26,10 @@ import { useSekolah } from "../context/SekolahContext";
 import { useAuth } from "../context/AuthContext";
 import { getRoleSlug } from "../services/roleUtils";
 import { useSystemSettings } from "../context/SystemSettingsContext";
+import api from "../services/api";
 
 type NavItem = {
+  key?: string;
   name: string;
   icon: React.ReactNode;
   path?: string;
@@ -39,35 +41,42 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
+    key: "dashboard",
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/",
   },
   {
+    key: "profil-instansi",
     icon: <SchoolIcon />,
     name: "Profil Instansi",
     path: "/profil-instansi",
   },
   {
+    key: "kepegawaian",
     name: "Kepegawaian",
     icon: <GroupIcon />,
     subItems: [
       {
+        key: "data-pegawai",
         name: "Data Pegawai",
         path: "/kepegawaian/data-pegawai",
         icon: <DotIcon />,
       },
       {
+        key: "tugas-pegawai",
         name: "Tugas Pegawai",
         path: "/kepegawaian/tugas-pegawai",
         icon: <DotIcon />,
       },
       {
+        key: "mapping-pengawas",
         name: "Mapping Pengawas Pembina",
         path: "/kepegawaian/mapping-pengawas",
         icon: <DotIcon />,
       },
       {
+        key: "pegawai-non-aktif",
         name: "Pegawai Non Aktif",
         path: "/kepegawaian/pegawai-non-aktif",
         icon: <DotIcon />,
@@ -76,24 +85,29 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "data-master",
     name: "Data Master",
     icon: <BoxIcon />,
     subItems: [
       {
+        key: "satuan-pendidikan",
         name: "Satuan Pendidikan",
         icon: <DotIcon />,
         subItems: [
           {
+            key: "satuan-pendidikan-data",
             name: "Data Satuan Pendidikan",
             path: "/satuan-pendidikan/data",
             icon: <DotIcon />,
           },
           {
+            key: "satuan-pendidikan-spasial",
             name: "Data Spasial",
             path: "/satuan-pendidikan/spasial",
             icon: <DotIcon />,
           },
           {
+            key: "satuan-pendidikan-rekapitulasi",
             name: "Rekapitulasi Sekolah",
             path: "/satuan-pendidikan/rekapitulasi",
             icon: <DotIcon />,
@@ -101,30 +115,36 @@ const navItems: NavItem[] = [
         ],
       },
       {
+        key: "kepala-sekolah",
         name: "Kepala Sekolah",
         path: "/kepala-sekolah",
         icon: <DotIcon />,
       },
       {
+        key: "gtk",
         name: "GTK",
         icon: <DotIcon />,
         subItems: [
           {
+            key: "gtk-guru",
             name: "Guru",
             path: "/gtk/guru?tab=guru",
             icon: <DotIcon />,
           },
           {
+            key: "gtk-tendik",
             name: "Tendik",
             path: "/gtk/tendik?tab=tendik",
             icon: <DotIcon />,
           },
           {
+            key: "gtk-rekapitulasi",
             name: "Rekapitulasi GTK",
             path: "/gtk/rekapitulasi?tab=rekap",
             icon: <DotIcon />,
           },
           {
+            key: "gtk-non-aktif",
             name: "GTK Non Aktif",
             path: "/gtk/non-aktif?tab=nonaktif",
             icon: <DotIcon />,
@@ -133,20 +153,24 @@ const navItems: NavItem[] = [
         ],
       },
       {
+        key: "peserta-didik",
         name: "Peserta Didik",
         icon: <DotIcon />,
         subItems: [
           {
+            key: "peserta-didik-data",
             name: "Peserta Didik",
             path: "/peserta-didik/data?tab=aktif",
             icon: <DotIcon />,
           },
           {
+            key: "peserta-didik-rekapitulasi",
             name: "Rekapitulasi Siswa",
             path: "/peserta-didik/rekapitulasi?tab=rekap",
             icon: <DotIcon />,
           },
           {
+            key: "peserta-didik-non-aktif",
             name: "PD Non Aktif",
             path: "/peserta-didik/non-aktif?tab=keluar",
             icon: <DotIcon />,
@@ -157,24 +181,29 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "analitik-evaluasi",
     name: "Analitik & Evaluasi",
     icon: <PieChartIcon />,
     subItems: [
       {
+        key: "residu",
         name: "Residu",
         icon: <DotIcon />,
         subItems: [
           {
+            key: "residu-guru",
             name: "Guru",
             path: "/analisa/residu/guru",
             icon: <DotIcon />,
           },
           {
+            key: "residu-tendik",
             name: "Tendik",
             path: "/analisa/residu/tendik",
             icon: <DotIcon />,
           },
           {
+            key: "residu-peserta-didik",
             name: "Peserta Didik",
             path: "/analisa/residu/peserta-didik",
             icon: <DotIcon />,
@@ -182,15 +211,18 @@ const navItems: NavItem[] = [
         ],
       },
       {
+        key: "pendidikan-gtk",
         name: "Pendidikan GTK",
         icon: <DotIcon />,
         subItems: [
           {
+            key: "pendidikan-gtk-guru",
             name: "Guru",
             path: "/analisa/pendidikan-gtk/guru",
             icon: <DotIcon />,
           },
           {
+            key: "pendidikan-gtk-tendik",
             name: "Tendik",
             path: "/analisa/pendidikan-gtk/tendik",
             icon: <DotIcon />,
@@ -198,20 +230,24 @@ const navItems: NavItem[] = [
         ],
       },
       {
+        key: "laporan-presensi",
         name: "Laporan Presensi",
         icon: <DotIcon />,
         subItems: [
           {
+            key: "laporan-presensi-gtk",
             name: "GTK",
             path: "/laporan-absensi/gtk",
             icon: <DotIcon />,
           },
           {
+            key: "laporan-presensi-peserta-didik",
             name: "Peserta Didik",
             path: "/laporan-absensi/peserta-didik",
             icon: <DotIcon />,
           },
           {
+            key: "laporan-presensi-rekap-terpadu",
             name: "Rekap Terpadu",
             path: "/laporan-absensi/rekap-terpadu",
             icon: <DotIcon />,
@@ -219,16 +255,19 @@ const navItems: NavItem[] = [
         ],
       },
       {
+        key: "pensiun",
         name: "Pensiun",
         path: "/analisa/pensiun",
         icon: <DotIcon />,
       },
       {
+        key: "sertifikasi-guru",
         name: "Sertifikasi Guru",
         path: "/analisa/sertifikasi",
         icon: <DotIcon />,
       },
       {
+        key: "sptjm-dapodik",
         name: "SPTJM Dapodik",
         path: "/analisa/sptjm-dapodik",
         icon: <DotIcon />,
@@ -236,15 +275,18 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "pkks",
     name: "PKKS",
     icon: <TaskIcon />,
     subItems: [
       {
+        key: "pkks-instrumen",
         name: "Instrumen Penilaian",
         path: "/pkks/instrumen",
         icon: <DotIcon />,
       },
       {
+        key: "pkks-bank-soal",
         name: "Bank Soal PKKS",
         path: "/pkks/bank-soal",
         icon: <DotIcon />,
@@ -252,15 +294,18 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "layanan",
     name: "Layanan",
     icon: <PlugInIcon />,
     subItems: [
       {
+        key: "layanan-gtk",
         name: "Layanan GTK",
         path: "/layanan/gtk",
         icon: <DotIcon />,
       },
       {
+        key: "layanan-peserta-didik",
         name: "Layanan Peserta Didik",
         path: "/layanan/peserta-didik",
         icon: <DotIcon />,
@@ -268,30 +313,36 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "dokumen-layanan",
     icon: <DocsIcon />,
     name: "Dokumen Layanan",
     path: "/dokumen-layanan",
   },
   {
+    key: "administrasi-surat",
     name: "Administrasi Surat",
     icon: <MailIcon />,
     subItems: [
       {
+        key: "administrasi-surat-masuk",
         name: "Surat Masuk",
         path: "/administrasi-surat/masuk",
         icon: <DotIcon />,
       },
       {
+        key: "administrasi-surat-keluar",
         name: "Surat Keluar",
         path: "/administrasi-surat/keluar",
         icon: <DotIcon />,
       },
       {
+        key: "administrasi-surat-template",
         name: "Template Surat",
         path: "/administrasi-surat/template",
         icon: <DotIcon />,
       },
       {
+        key: "administrasi-surat-pengaturan",
         name: "Pengaturan Penomoran",
         path: "/administrasi-surat/pengaturan",
         icon: <DotIcon />,
@@ -299,28 +350,39 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "daftar-antrian",
     icon: <ListIcon />,
     name: "Daftar Antrian",
     path: "/daftar-antrian",
   },
   {
+    key: "pelaporan-dokumen",
     icon: <PieChartIcon />,
     name: "Pelaporan dan Dokumen",
     path: "/pelaporan-dokumen",
   },
   {
+    key: "pengaturan",
     name: "Pengaturan",
     icon: <PlugInIcon />,
     subItems: [
       {
+        key: "pengaturan-sistem",
         name: "Pengaturan Sistem",
         path: "/pengaturan/sistem",
         icon: <UserCircleIcon />,
       },
       {
+        key: "pengaturan-koneksi",
         name: "Koneksi Mandala",
         path: "/sync-api",
         icon: <BoltIcon />,
+      },
+      {
+        key: "pengaturan-hak-akses",
+        name: "Pengaturan Hak Akses",
+        path: "/pengaturan/menu",
+        icon: <DocsIcon />,
       },
     ],
   },
@@ -332,6 +394,36 @@ const AppSidebar: React.FC = () => {
   const { user } = useAuth();
   const { settings, getStorageUrl } = useSystemSettings();
   const location = useLocation();
+
+  const [allowedKeys, setAllowedKeys] = useState<string[]>([]);
+  const [hasConfigs, setHasConfigs] = useState(false);
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        const response = await api.get("/mandala/menu-roles");
+        if (response.data?.status === "success" || response.data?.data) {
+          const roles = response.data.data || [];
+          setHasConfigs(roles.length > 0);
+          
+          const isOperator = user?.role?.toLowerCase().includes("operator");
+          const userJabatanId = isOperator ? 99 : (user as any)?.jabatan ?? 5;
+          
+          const keys = roles
+            .filter((r: { jabatan_id: number; menu_key: string }) => r.jabatan_id === userJabatanId)
+            .map((r: { menu_key: string }) => r.menu_key);
+            
+          setAllowedKeys(keys);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil hak akses menu:", err);
+      }
+    };
+    
+    if (user) {
+      fetchPermissions();
+    }
+  }, [user]);
 
   const rolePrefix = user ? `/${getRoleSlug(user.role)}` : "";
 
@@ -349,13 +441,38 @@ const AppSidebar: React.FC = () => {
       return navItems.filter(item => item.name === "Dashboard" || item.name === "Pengaturan");
     }
 
-    if (isOperator) {
-      // Operator Sekolah gets Dashboard, Profil Instansi, Data Master, and Pelaporan dan Dokumen
+    let items = navItems;
+
+    if (hasConfigs) {
+      const filterMenuItems = (menuList: NavItem[]): NavItem[] => {
+        return menuList
+          .filter(item => {
+            if (!item.key) return true;
+            return allowedKeys.includes(item.key);
+          })
+          .map(item => {
+            if (item.subItems) {
+              return {
+                ...item,
+                subItems: filterMenuItems(item.subItems)
+              };
+            }
+            return item;
+          })
+          .filter(item => {
+            if (item.subItems && item.subItems.length === 0) {
+              return false;
+            }
+            return true;
+          });
+      };
+      items = filterMenuItems(navItems);
+    } else if (isOperator) {
+      // Default fallback operator filter if no db configuration is present
       return navItems
         .filter(item => ["Dashboard", "Profil Instansi", "Data Master", "Pelaporan dan Dokumen"].includes(item.name))
         .map(item => {
           if (item.name === "Data Master") {
-            // Filter Data Master subItems: only keep GTK and Peserta Didik
             const filteredSub = (item.subItems || [])
               .filter(sub => ["GTK", "Peserta Didik"].includes(sub.name))
               .map(sub => {
@@ -382,7 +499,7 @@ const AppSidebar: React.FC = () => {
         });
     }
 
-    return navItems;
+    return items;
   };
 
   const filteredNavItems = getFilteredNavItems();
