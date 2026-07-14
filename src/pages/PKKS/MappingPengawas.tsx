@@ -339,10 +339,20 @@ export default function MappingPengawasPage() {
         title="Mapping Pengawas Pembina | SIMAK"
         description="Manajemen mapping pengawas pembina ke sekolah binaan"
       />
-      <PageBreadcrumb pageTitle="Mapping Pengawas Pembina" />
 
-      {/* 1. Dashboard Stats Card */}
-      <div className="grid grid-cols-1 gap-5 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Mapping Pengawas Pembina
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Pemetaan pengawas pembina ke masing-masing satuan pendidikan binaan di bawah sistem Mandala.
+          </p>
+        </div>
+
+        {/* 1. Dashboard Stats Card */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="flex items-center justify-center rounded-xl bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400 size-12">
             <UserIcon className="size-6" />
@@ -877,6 +887,7 @@ export default function MappingPengawasPage() {
           </form>
         </div>
       )}
+      </div>
     </>
   );
 }

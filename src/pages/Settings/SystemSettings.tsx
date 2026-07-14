@@ -158,9 +158,19 @@ export default function SystemSettingsPage() {
         title="Pengaturan Sistem | SIMAK"
         description="Atur nama aplikasi, logo, footer, dan informasi SEO instansi Anda"
       />
-      <PageBreadcrumb pageTitle="Pengaturan Sistem" />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Pengaturan Sistem
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Atur konfigurasi branding instansi, metadata SEO, aset logo, dan status pemeliharaan sistem.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Main settings column */}
           <div className="lg:col-span-8 space-y-6">
@@ -406,6 +416,7 @@ export default function SystemSettingsPage() {
           </div>
         </div>
       </form>
+      </div>
     </>
   );
 }

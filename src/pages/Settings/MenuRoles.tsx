@@ -465,9 +465,19 @@ export default function MenuRolesPage() {
         title="Pengaturan Hak Akses Menu | MANDALA"
         description="Atur hak akses menu berdasarkan jabatan pegawai dan operator"
       />
-      <PageBreadcrumb pageTitle="Pengaturan Hak Akses Menu" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Pengaturan Hak Akses Menu
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Atur hak akses visibilitas menu di sidebar untuk masing-masing jabatan/peran pengguna.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         
         {/* LEFT: Jabatan Card */}
         <div className="lg:col-span-1">
@@ -575,6 +585,7 @@ export default function MenuRolesPage() {
           </ComponentCard>
         </div>
 
+      </div>
       </div>
     </>
   );

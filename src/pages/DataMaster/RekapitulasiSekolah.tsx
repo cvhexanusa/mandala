@@ -190,7 +190,6 @@ export default function RekapitulasiSekolah() {
         title="Rekapitulasi Sekolah | SIMAK Admin Panel"
         description="Ringkasan rekapitulasi satuan pendidikan Mandala per kabupaten, jenjang, dan kecamatan secara detail"
       />
-      <PageBreadcrumb pageTitle="Rekapitulasi Sekolah" />
 
       <div className="space-y-6">
         {/* Header Summary */}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
@@ -75,16 +76,20 @@ export default function MandalaConnectionPage() {
         title="Koneksi Mandala | SIMAK Integration"
         description="Configure your bridge between SIMAK and Mandala Schema"
       />
-      <div className="mx-auto max-w-lg">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] sm:p-8">
-          <div className="mb-8 text-center">
-            <h3 className="mb-2 text-xl font-bold text-gray-800 dark:text-white/90 sm:text-2xl">
-              Pengaturan Koneksi Mandala
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Konfigurasikan jembatan integrasi data sekolah dari sistem SIMAK ke aplikasi luar (Mandala).
-            </p>
-          </div>
+
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Koneksi Mandala
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Konfigurasikan jembatan integrasi data sekolah dari sistem SIMAK ke aplikasi luar (Mandala).
+          </p>
+        </div>
+
+        <div className="mx-auto max-w-lg">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] sm:p-8">
 
           {fetching ? (
             <div className="flex justify-center py-10">
@@ -135,6 +140,7 @@ export default function MandalaConnectionPage() {
             </ul>
           </div>
         </div>
+      </div>
       </div>
     </>
   );

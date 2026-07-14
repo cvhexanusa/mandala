@@ -216,15 +216,14 @@ export default function InstansiView() {
   return (
     <div>
       <PageMeta title="Profil Instansi | SIMAK" description="Manajemen Profil Instansi" />
-      <PageBreadcrumb pageTitle="Daftar Instansi (Cadisdik)" />
       
       <div className="space-y-6">
-        <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
               Manajemen Profil Instansi
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Kelola data profil Cadisdik Wilayah.</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Kelola data profil Cadisdik Wilayah.</p>
           </div>
           <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
             Tambah Instansi

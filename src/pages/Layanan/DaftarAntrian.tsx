@@ -329,16 +329,25 @@ export default function DaftarAntrian() {
   return (
     <div>
       <PageMeta title="Daftar Antrian | SIMAK" description="Manajemen Antrian Tamu" />
-      <PageBreadcrumb pageTitle="Daftar Antrian Tamu" />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <RekapCard title="Total Antrian" value={rekap?.total || 0} subtitle="Hari ini" />
-        <RekapCard title="Menunggu" value={rekap?.menunggu || 0} subtitle="Belum dipanggil" variant="brand" />
-        <RekapCard title="Dilayani" value={rekap?.dilayani || 0} subtitle="Sedang proses" variant="warning" />
-        <RekapCard title="Selesai" value={rekap?.selesai || 0} subtitle="Sudah selesai" variant="success" />
-      </div>
 
       <div className="space-y-6">
+        {/* Header Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Daftar Antrean Tamu
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Kelola antrean kunjungan tamu dan pelayanan terpadu Cadisdik Wilayah.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <RekapCard title="Total Antrian" value={rekap?.total || 0} subtitle="Hari ini" />
+          <RekapCard title="Menunggu" value={rekap?.menunggu || 0} subtitle="Belum dipanggil" variant="brand" />
+          <RekapCard title="Dilayani" value={rekap?.dilayani || 0} subtitle="Sedang proses" variant="warning" />
+          <RekapCard title="Selesai" value={rekap?.selesai || 0} subtitle="Sudah selesai" variant="success" />
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="w-64">

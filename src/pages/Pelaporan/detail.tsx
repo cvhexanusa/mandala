@@ -349,9 +349,12 @@ export default function DetailPelaporanPage() {
         description={`Detail permintaan pelaporan dokumen ${detail.judul}`}
       />
       <div className="space-y-6">
-        <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-6">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Detail Pelaporan</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+        {/* Header Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Detail Pelaporan
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Pantau status pengumpulan dokumen dan pratinjau rekap data dari sekolah penerima tugas.
           </p>
         </div>
