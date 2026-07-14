@@ -162,11 +162,28 @@ const JABATAN_LIST = [
 export default function MenuRolesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedJabatanId, setSelectedJabatanId] = useState<number>(0);
+  const [selectedJabatanId, setSelectedJabatanId] = useState<number | string>(0);
+  const [jenisJabatanList, setJenisJabatanList] = useState<{ jenis_jabatan_id: string; nama: string }[]>([]);
+
+  const combinedRoles = React.useMemo(() => {
+    const staticRoles = JABATAN_LIST.map(j => ({
+      id: j.id,
+      name: j.name,
+      description: j.description,
+      isDynamic: false
+    }));
+    const dynamicRoles = jenisJabatanList.map(j => ({
+      id: j.jenis_jabatan_id,
+      name: j.nama,
+      description: "Jabatan Administratif Kustom",
+      isDynamic: true
+    }));
+    return [...staticRoles, ...dynamicRoles];
+  }, [jenisJabatanList]);
   
   // Matrix state: Record<jabatanId, Record<menuKey, boolean>>
-  const [permissionMatrix, setPermissionMatrix] = useState<Record<number, Record<string, boolean>>>(() => {
-    const initial: Record<number, Record<string, boolean>> = {};
+  const [permissionMatrix, setPermissionMatrix] = useState<Record<number | string, Record<string, boolean>>>(() => {
+    const initial: Record<number | string, Record<string, boolean>> = {};
     JABATAN_LIST.forEach(jabatan => {
       initial[jabatan.id] = {};
       const setFalseRecursive = (item: MenuItem) => {
@@ -183,12 +200,20 @@ export default function MenuRolesPage() {
   const loadMenuRoles = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/mandala/menu-roles");
-      if (response.data?.status === "success" || response.data?.data) {
-        const roles = response.data.data || [];
+      const [menuRolesRes, jenisJabatanRes] = await Promise.all([
+        api.get("/mandala/menu-roles"),
+        api.get("/mandala/jenis-jabatan")
+      ]);
+
+      const activeJenisJabatan = jenisJabatanRes.data?.data || [];
+      setJenisJabatanList(activeJenisJabatan);
+
+      if (menuRolesRes.data?.status === "success" || menuRolesRes.data?.data) {
+        const roles = menuRolesRes.data.data || [];
         
         // Reset matrix to false first
-        const newMatrix: Record<number, Record<string, boolean>> = {};
+        const newMatrix: Record<number | string, Record<string, boolean>> = {};
+        
         JABATAN_LIST.forEach(jabatan => {
           newMatrix[jabatan.id] = {};
           const setFalseRecursive = (item: MenuItem) => {
@@ -200,9 +225,22 @@ export default function MenuRolesPage() {
           MENU_HIERARCHY.forEach(menu => setFalseRecursive(menu));
         });
 
+        activeJenisJabatan.forEach((jabatan: { jenis_jabatan_id: string }) => {
+          newMatrix[jabatan.jenis_jabatan_id] = {};
+          const setFalseRecursive = (item: MenuItem) => {
+            newMatrix[jabatan.jenis_jabatan_id][item.key] = false;
+            if (item.subItems) {
+              item.subItems.forEach(sub => setFalseRecursive(sub));
+            }
+          };
+          MENU_HIERARCHY.forEach(menu => setFalseRecursive(menu));
+        });
+
         // Set true for active db mappings
-        roles.forEach((item: { menu_key: string; jabatan_id: number }) => {
-          if (newMatrix[item.jabatan_id]) {
+        roles.forEach((item: { menu_key: string; jabatan_id?: number | null; jenis_jabatan_id?: string | null }) => {
+          if (item.jenis_jabatan_id && newMatrix[item.jenis_jabatan_id]) {
+            newMatrix[item.jenis_jabatan_id][item.menu_key] = true;
+          } else if (item.jabatan_id !== undefined && item.jabatan_id !== null && newMatrix[item.jabatan_id]) {
             newMatrix[item.jabatan_id][item.menu_key] = true;
           }
         });
@@ -318,17 +356,29 @@ export default function MenuRolesPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const rolesToSave: Array<{ menu_key: string; jabatan_id: number; jabatan_nama: string }> = [];
+      const rolesToSave: Array<{ menu_key: string; jabatan_id?: number | null; jenis_jabatan_id?: string | null; jabatan_nama: string }> = [];
       
-      Object.entries(permissionMatrix).forEach(([jabatanIdStr, menuMap]) => {
-        const jabId = parseInt(jabatanIdStr);
-        const jabName = JABATAN_LIST.find(j => j.id === jabId)?.name || "Pegawai";
+      Object.entries(permissionMatrix).forEach(([key, menuMap]) => {
+        const isDynamic = key.includes('-');
+        
+        let jabId: number | null = null;
+        let jenisJabId: string | null = null;
+        let jabName = "";
+
+        if (isDynamic) {
+          jenisJabId = key;
+          jabName = jenisJabatanList.find(j => j.jenis_jabatan_id === key)?.nama || "Jabatan Kustom";
+        } else {
+          jabId = parseInt(key);
+          jabName = JABATAN_LIST.find(j => j.id === jabId)?.name || "Pegawai";
+        }
         
         Object.entries(menuMap).forEach(([menuKey, isChecked]) => {
           if (isChecked) {
             rolesToSave.push({
               menu_key: menuKey,
               jabatan_id: jabId,
+              jenis_jabatan_id: jenisJabId,
               jabatan_nama: jabName
             });
           }
@@ -350,7 +400,7 @@ export default function MenuRolesPage() {
     }
   };
 
-  const countCheckedMenus = (jabatanId: number) => {
+  const countCheckedMenus = (jabatanId: number | string) => {
     const menus = permissionMatrix[jabatanId] || {};
     return Object.values(menus).filter(Boolean).length;
   };
@@ -363,7 +413,8 @@ export default function MenuRolesPage() {
     );
   }
 
-  const selectedJabatanName = JABATAN_LIST.find(j => j.id === selectedJabatanId)?.name || "";
+  const selectedRole = combinedRoles.find(r => r.id === selectedJabatanId);
+  const selectedJabatanName = selectedRole ? selectedRole.name : "";
 
   const renderMenuNode = (item: MenuItem, level: number = 0) => {
     const isChecked = permissionMatrix[selectedJabatanId]?.[item.key] || false;
@@ -422,10 +473,10 @@ export default function MenuRolesPage() {
         <div className="lg:col-span-1">
           <ComponentCard
             title="Jabatan & Peran"
-            description="Pilih salah satu jabatan untuk mengatur menu."
+            desc="Pilih salah satu jabatan untuk mengatur menu."
           >
             <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
-              {JABATAN_LIST.map((jabatan) => {
+              {combinedRoles.map((jabatan) => {
                 const isActive = selectedJabatanId === jabatan.id;
                 const checkedCount = countCheckedMenus(jabatan.id);
 
@@ -471,7 +522,7 @@ export default function MenuRolesPage() {
         <div className="lg:col-span-3">
           <ComponentCard
             title={`Menu Akses: ${selectedJabatanName}`}
-            description="Konfigurasi izin menu navigasi. Pilihan sub-menu otomatis mengaktifkan menu induk."
+            desc="Konfigurasi izin menu navigasi. Pilihan sub-menu otomatis mengaktifkan menu induk."
             action={
               <div className="flex gap-2">
                 <Button

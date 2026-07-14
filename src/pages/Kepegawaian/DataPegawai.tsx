@@ -35,6 +35,8 @@ interface Pegawai {
   tempat_lahir?: string;
   tanggal_lahir?: string;
   alamat_lengkap?: string;
+  jenis_jabatan_id?: string | null;
+  jenis_jabatan?: { jenis_jabatan_id: string; nama: string } | null;
 }
 
 const JABATAN_MAP: Record<number, string> = {
@@ -93,6 +95,12 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [viewingData, setViewingData] = useState<Pegawai | null>(null);
 
+  // Jenis Jabatan States
+  const [jenisJabatanList, setJenisJabatanList] = useState<{ jenis_jabatan_id: string; nama: string }[]>([]);
+  const [isJabatanModalOpen, setIsJabatanModalOpen] = useState(false);
+  const [newJabatanName, setNewJabatanName] = useState("");
+  const [editingJabatan, setEditingJabatan] = useState<{ jenis_jabatan_id: string; nama: string } | null>(null);
+
   // Search & Pagination State
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -131,14 +139,16 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
     nomor_telepon: "",
     golongan: "",
     aktif: true,
+    jenis_jabatan_id: "",
   });
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [pegawaiRes, instansiRes] = await Promise.all([
+      const [pegawaiRes, instansiRes, jenisJabatanRes] = await Promise.all([
         dapodikService.getPegawai(),
-        dapodikService.getCadisdik()
+        dapodikService.getCadisdik(),
+        dapodikService.getJenisJabatan()
       ]);
       
       const pegawaiData = pegawaiRes.data || [];
@@ -159,6 +169,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
       
       setData(filteredPegawai);
       setInstansiList(instansiRes.data || []);
+      setJenisJabatanList(jenisJabatanRes.data || []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
       Swal.fire("Error", "Gagal memuat data pegawai", "error");
@@ -239,6 +250,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         nomor_telepon: item.nomor_telepon || "",
         golongan: item.golongan !== undefined && item.golongan !== null ? item.golongan.toString() : "",
         aktif: item.aktif,
+        jenis_jabatan_id: item.jenis_jabatan_id || "",
       });
     } else {
       setEditingData(null);
@@ -253,6 +265,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         nomor_telepon: "",
         golongan: "",
         aktif: showOnlyInactive ? false : true,
+        jenis_jabatan_id: "",
       });
     }
     setIsModalOpen(true);
@@ -261,6 +274,70 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingData(null);
+  };
+
+  const handleOpenJabatanModal = () => {
+    setNewJabatanName("");
+    setEditingJabatan(null);
+    setIsJabatanModalOpen(true);
+  };
+
+  const handleAddOrUpdateJabatan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newJabatanName.trim()) {
+      Swal.fire("Peringatan", "Nama jabatan tidak boleh kosong", "warning");
+      return;
+    }
+
+    try {
+      if (editingJabatan) {
+        await dapodikService.updateJenisJabatan(editingJabatan.jenis_jabatan_id, { nama: newJabatanName.trim() });
+        Swal.fire("Berhasil", "Jabatan berhasil diperbarui", "success");
+      } else {
+        await dapodikService.createJenisJabatan({ nama: newJabatanName.trim() });
+        Swal.fire("Berhasil", "Jabatan baru berhasil ditambahkan", "success");
+      }
+      setNewJabatanName("");
+      setEditingJabatan(null);
+      
+      // Refetch
+      const res = await dapodikService.getJenisJabatan();
+      setJenisJabatanList(res.data || []);
+    } catch (error) {
+      console.error("Failed to save jenis jabatan:", error);
+      Swal.fire("Error", "Gagal menyimpan jenis jabatan", "error");
+    }
+  };
+
+  const handleEditJabatan = (item: { jenis_jabatan_id: string; nama: string }) => {
+    setEditingJabatan(item);
+    setNewJabatanName(item.nama);
+  };
+
+  const handleDeleteJabatan = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Apakah Anda yakin?",
+      text: "Data jabatan ini akan dihapus permanen!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await dapodikService.deleteJenisJabatan(id);
+        Swal.fire("Berhasil", "Jabatan berhasil dihapus", "success");
+        // Refetch
+        const res = await dapodikService.getJenisJabatan();
+        setJenisJabatanList(res.data || []);
+      } catch (error) {
+        console.error("Failed to delete jenis jabatan:", error);
+        Swal.fire("Error", "Gagal menghapus jenis jabatan", "error");
+      }
+    }
   };
 
   const handleOpenDetail = (item: Pegawai) => {
@@ -279,10 +356,27 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === 'jabatan') {
+      const isUuid = value.includes('-');
+      if (isUuid) {
+        setFormData((prev) => ({
+          ...prev,
+          jenis_jabatan_id: value,
+          jabatan: "", // Set to empty string to prevent numeric role default
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          jenis_jabatan_id: "",
+          jabatan: value,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -307,11 +401,12 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         cadisdik_id: formData.cadisdik_id,
         nama_lengkap: formData.nama_lengkap.trim(),
         nip: cleanNip || null,
-        jabatan: parseInt(formData.jabatan),
+        jabatan: formData.jabatan !== "" ? parseInt(formData.jabatan) : null,
         jenis_kelamin: parseInt(formData.jenis_kelamin),
         nomor_telepon: formData.nomor_telepon?.trim() || "000000000000",
         aktif: formData.aktif,
         golongan: formData.golongan !== "" ? parseInt(formData.golongan) : null,
+        jenis_jabatan_id: formData.jenis_jabatan_id || null,
         // Gunakan data yang sudah ada jika edit, atau buat default jika tambah baru
         nik: editingData?.nik || dummyNik, 
         tempat_lahir: editingData?.tempat_lahir || "Tidak Diketahui",
@@ -485,11 +580,11 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
           const nama = item.nama_lengkap || "-";
           const nip = item.nip || "-";
           const email = item.email || "-";
-          const jabatan = JABATAN_MAP[item.jabatan] || "Tidak Diketahui";
+          const jabatan = item.jenis_jabatan?.nama || JABATAN_MAP[item.jabatan] || "Tidak Diketahui";
           const instansiObj = instansiList.find(i => i.cadisdik_id === item.cadisdik_id);
           const instansi = instansiObj ? instansiObj.nama_instansi : "Instansi Tidak Ditemukan";
           const status = item.aktif ? "Aktif" : "Non-Aktif";
-
+ 
           return [no, nama, nip, email, jabatan, instansi, status];
         });
 
@@ -500,7 +595,10 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   };
 
   // Convert map to options for select
-  const jabatanOptions = Object.entries(JABATAN_MAP).map(([val, label]) => ({ value: val, label }));
+  const combinedJabatanOptions = [
+    ...Object.entries(JABATAN_MAP).map(([val, label]) => ({ value: val, label })),
+    ...jenisJabatanList.map(j => ({ value: j.jenis_jabatan_id, label: j.nama }))
+  ];
   const jkOptions = Object.entries(JK_MAP).map(([val, label]) => ({ value: val, label }));
   const instansiOptions = instansiList.map(inst => ({ value: inst.cadisdik_id, label: inst.nama_instansi }));
 
@@ -531,9 +629,18 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               Export Excel
             </Button>
             {!showOnlyInactive && (
-              <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
-                Tambah Pegawai
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  startIcon={<PlusIcon className="size-4" />} 
+                  onClick={handleOpenJabatanModal}
+                >
+                  Kelola Jabatan
+                </Button>
+                <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
+                  Tambah Pegawai
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -591,7 +698,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
                         <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded">
-                            {JABATAN_MAP[item.jabatan] || "Tidak Diketahui"}
+                            {item.jenis_jabatan?.nama || JABATAN_MAP[item.jabatan] || "Tidak Diketahui"}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
@@ -747,8 +854,9 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Jabatan <span className="text-error-500">*</span></label>
                   <Select 
-                      options={jabatanOptions}
-                      defaultValue={formData.jabatan}
+                      options={combinedJabatanOptions}
+                      value={formData.jenis_jabatan_id || formData.jabatan}
+                      defaultValue={formData.jenis_jabatan_id || formData.jabatan}
                       onChange={(val) => handleSelectChange('jabatan', val)}
                   />
               </div>
@@ -817,6 +925,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 <DataRow label="NIP" value={viewingData.nip} />
                 <DataRow label="Email" value={viewingData.email} />
                 <DataRow label="Jabatan" value={JABATAN_MAP[viewingData.jabatan] || "Tidak Diketahui"} />
+                <DataRow label="Jenis Jabatan Administratif" value={viewingData.jenis_jabatan?.nama || "-"} />
                 <DataRow label="Jenis Kelamin" value={JK_MAP[viewingData.jenis_kelamin] || "-"} />
                 <DataRow label="Nomor Telepon" value={viewingData.nomor_telepon} />
                 <DataRow label="Golongan" value={viewingData.golongan !== undefined && viewingData.golongan !== null ? (dynamicGolonganMap[viewingData.golongan] || GOLONGAN_MAP[viewingData.golongan] || viewingData.golongan) : "-"} />
@@ -827,6 +936,85 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
           )}
           <div className="flex justify-end pt-6 mt-6 border-t border-gray-100 dark:border-gray-800">
             <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>Tutup</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Kelola Jenis Jabatan */}
+      <Modal
+        isOpen={isJabatanModalOpen}
+        onClose={() => setIsJabatanModalOpen(false)}
+        className="max-w-md"
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
+            Kelola Jenis Jabatan Administratif
+          </h3>
+
+          <form onSubmit={handleAddOrUpdateJabatan} className="flex gap-2 mb-6">
+            <Input
+              type="text"
+              placeholder="Nama jabatan baru..."
+              value={newJabatanName}
+              onChange={(e) => setNewJabatanName(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" variant="primary">
+              {editingJabatan ? "Simpan" : "Tambah"}
+            </Button>
+            {editingJabatan && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditingJabatan(null);
+                  setNewJabatanName("");
+                }}
+              >
+                Batal
+              </Button>
+            )}
+          </form>
+
+          <div className="max-h-60 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
+            {jenisJabatanList.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center p-4">
+                Belum ada data jabatan.
+              </p>
+            ) : (
+              <table className="w-full text-sm">
+                <tbody>
+                  {jenisJabatanList.map((item) => (
+                    <tr
+                      key={item.jenis_jabatan_id}
+                      className="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
+                    >
+                      <td className="px-4 py-3 text-gray-800 dark:text-white/90 font-medium">
+                        {item.nama}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleEditJabatan(item)}
+                          className="text-warning-500 hover:text-warning-600 mr-3"
+                          title="Edit"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteJabatan(item.jenis_jabatan_id)}
+                          className="text-error-500 hover:text-error-600"
+                          title="Hapus"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </Modal>

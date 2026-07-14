@@ -398,5 +398,46 @@ export const dapodikService = {
       console.error('Gagal mengambil data golongan:', error);
       throw error;
     }
+  },
+
+  // --- Jenis Jabatan CRUD ---
+  getJenisJabatan: async () => {
+    try {
+      const response = await api.get('/mandala/jenis-jabatan');
+      return response.data;
+    } catch (error) {
+      console.error('Gagal mengambil data jenis jabatan:', error);
+      throw error;
+    }
+  },
+
+  createJenisJabatan: async (data: any) => {
+    try {
+      const response = await api.post('/mandala/jenis-jabatan', data);
+      return response.data;
+    } catch (error) {
+      console.error('Gagal membuat jenis jabatan:', error);
+      throw error;
+    }
+  },
+
+  updateJenisJabatan: async (id: string, data: any) => {
+    try {
+      const response = await api.patch(`/mandala/jenis-jabatan/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal update jenis jabatan ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deleteJenisJabatan: async (id: string) => {
+    try {
+      const response = await api.delete(`/mandala/jenis-jabatan/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal menghapus jenis jabatan ${id}:`, error);
+      throw error;
+    }
   }
 };
