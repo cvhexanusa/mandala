@@ -5,12 +5,14 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import { Modal } from "../ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
-import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, CopyIcon } from "../../icons";
+import { PencilIcon, TrashBinIcon, PlusIcon, EyeIcon, CopyIcon, SchoolIcon, BoxIcon, GridIcon } from "../../icons";
 import Swal from "sweetalert2";
 import { dapodikService } from "../../services/dapodikService";
 import { useAuth } from "../../context/AuthContext";
 import SchoolDetailPage from "../../pages/DataMaster/SchoolDetailPage";
 import { useSekolah } from "../../context/SekolahContext";
+import ComponentCard from "../common/ComponentCard";
+import Badge from "../ui/badge/Badge";
 
 interface Cadisdik {
   cadisdik_id: string;
@@ -20,12 +22,15 @@ interface Cadisdik {
   nomor_telepon: string | null;
   website: string | null;
   aktif: boolean;
+  provinsi?: string;
+  kabupaten?: string[];
 }
 
 export default function InstansiView() {
   const { user } = useAuth();
   const { sekolah } = useSekolah();
   const isOperator = user?.role?.toLowerCase().includes("operator");
+  const isSuperAdmin = user?.role?.toLowerCase() === "super admin" || user?.role?.toLowerCase() === "super-admin" || (user as any)?.jabatan === 0;
   const mySchoolId = user?.instansi_id || (isOperator ? sekolah?.sekolah_id : null);
 
   if (isOperator && mySchoolId) {
@@ -213,110 +218,221 @@ export default function InstansiView() {
     });
   };
 
+  const myInstansi = data.find(item => 
+    (user?.cadisdik_id && item.cadisdik_id === user.cadisdik_id) ||
+    (user?.cadisdik && item.nama_instansi?.toLowerCase() === (user as any).cadisdik.toLowerCase())
+  );
+
   return (
     <div>
       <PageMeta title="Profil Instansi | SIMAK" description="Manajemen Profil Instansi" />
       
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Manajemen Profil Instansi
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Kelola data profil Cadisdik Wilayah.</p>
-          </div>
-          <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
-            Tambah Instansi
-          </Button>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800 overflow-hidden relative">
-          {loading && (
-            <div className="absolute inset-0 bg-white/50 dark:bg-black/50 z-10 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+        {isSuperAdmin ? (
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                Manajemen Profil Instansi
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Kelola data profil Cadisdik Wilayah.</p>
             </div>
-          )}
-          <div className="overflow-x-auto custom-scrollbar">
-            <Table className="min-w-[1000px]">
-              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                <TableRow>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Nama Instansi</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Email</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">No. Telepon</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Alamat</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Status</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 uppercase">Aksi</TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                {data.length > 0 ? (
-                  data.map((item) => (
-                    <TableRow key={item.cadisdik_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                      <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">
-                        <div>{item.nama_instansi}</div>
-                        {(item.provinsi || (item.kabupaten && item.kabupaten.length > 0)) && (
-                          <div className="text-[10px] text-gray-400 font-normal mt-0.5">
-                            {item.provinsi && <span>{item.provinsi}</span>}
-                            {item.kabupaten && item.kabupaten.length > 0 && (
-                              <span> • {item.kabupaten.join(", ")}</span>
-                            )}
+            <Button startIcon={<PlusIcon />} onClick={() => handleOpenModal()}>
+              Tambah Instansi
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                Profil Instansi
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Detail data profil instansi tempat Anda bertugas.</p>
+            </div>
+            {myInstansi && (
+              <Button 
+                variant="outline" 
+                startIcon={<PencilIcon />} 
+                onClick={() => handleOpenModal(myInstansi)}
+              >
+                Edit Profil Instansi
+              </Button>
+            )}
+          </div>
+        )}
+
+        {isSuperAdmin ? (
+          <div className="bg-white rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800 overflow-hidden relative">
+            {loading && (
+              <div className="absolute inset-0 bg-white/50 dark:bg-black/50 z-10 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+              </div>
+            )}
+            <div className="overflow-x-auto custom-scrollbar">
+              <Table className="min-w-[1000px]">
+                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                  <TableRow>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Nama Instansi</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Email</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">No. Telepon</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Alamat</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 uppercase">Status</TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-right text-theme-xs dark:text-gray-400 uppercase">Aksi</TableCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                  {data.length > 0 ? (
+                    data.map((item) => (
+                      <TableRow key={item.cadisdik_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                        <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">
+                          <div>{item.nama_instansi}</div>
+                          {(item.provinsi || (item.kabupaten && item.kabupaten.length > 0)) && (
+                            <div className="text-[10px] text-gray-400 font-normal mt-0.5">
+                              {item.provinsi && <span>{item.provinsi}</span>}
+                              {item.kabupaten && item.kabupaten.length > 0 && (
+                                <span> • {item.kabupaten.join(", ")}</span>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
+                          {item.email}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
+                          {item.nomor_telepon || "-"}
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
+                          <div className="truncate max-w-[250px]" title={item.alamat}>
+                            {item.alamat}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
-                        {item.email}
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
-                        {item.nomor_telepon || "-"}
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
-                        <div className="truncate max-w-[250px]" title={item.alamat}>
-                          {item.alamat}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-center">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${item.aktif ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400'}`}>
-                          {item.aktif ? 'Aktif' : 'Non-Aktif'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => handleOpenDetail(item)}
-                            className="p-2 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors"
-                            title="Detail"
-                          >
-                            <EyeIcon className="size-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleOpenModal(item)}
-                            className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <PencilIcon className="size-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(item.cadisdik_id)}
-                            className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
-                            title="Hapus"
-                          >
-                            <TrashBinIcon className="size-4" />
-                          </button>
-                        </div>
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-center">
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${item.aktif ? 'bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400' : 'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400'}`}>
+                            {item.aktif ? 'Aktif' : 'Non-Aktif'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => handleOpenDetail(item)}
+                              className="p-2 text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors"
+                              title="Detail"
+                            >
+                              <EyeIcon className="size-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleOpenModal(item)}
+                              className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <PencilIcon className="size-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(item.cadisdik_id)}
+                              className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
+                              title="Hapus"
+                            >
+                              <TrashBinIcon className="size-4" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
+                        Belum ada data instansi yang terdaftar.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400">
-                      Belum ada data instansi yang terdaftar.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative">
+            {loading && (
+              <div className="absolute inset-0 bg-white/50 dark:bg-black/50 z-10 flex items-center justify-center min-h-[200px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+              </div>
+            )}
+            {myInstansi ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Left Column: Status & Scope */}
+                <div className="md:col-span-1 space-y-6">
+                  <ComponentCard title="Status Instansi">
+                    <div className="space-y-5">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-gray-400 uppercase font-medium tracking-wider">Bentuk Pendidikan</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-white">Kantor Cabang Dinas (Cadisdik)</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-gray-400 uppercase font-medium tracking-wider">Status Operasional</span>
+                        <div className="mt-1">
+                          <Badge color={myInstansi.aktif ? "success" : "warning"}>
+                            {myInstansi.aktif ? "Aktif" : "Non-Aktif"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-gray-400 uppercase font-medium tracking-wider">Provinsi</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-white">
+                          {myInstansi.provinsi || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </ComponentCard>
+
+                  <ComponentCard title="Cakupan Wilayah">
+                    <div className="space-y-4">
+                      <p className="text-xs text-gray-400 uppercase font-medium tracking-wider">Kabupaten / Kota</p>
+                      {myInstansi.kabupaten && myInstansi.kabupaten.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {myInstansi.kabupaten.map((kab, idx) => (
+                            <span 
+                              key={idx} 
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
+                            >
+                              {kab}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">-</span>
+                      )}
+                    </div>
+                  </ComponentCard>
+                </div>
+
+                {/* Right Column: Detailed Information */}
+                <div className="md:col-span-2 space-y-6">
+                  <ComponentCard title="Informasi Identitas Instansi">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
+                      <DetailRow label="Nama Resmi Instansi" value={myInstansi.nama_instansi} icon={<SchoolIcon className="size-4 text-brand-500" />} />
+                      <DetailRow label="Email Resmi" value={myInstansi.email || "-"} icon={<span className="text-brand-500 text-xs font-bold font-mono">@</span>} />
+                      <DetailRow label="Website Instansi" value={myInstansi.website || "-"} icon={<GridIcon className="size-4 text-brand-500" />} />
+                      <DetailRow label="Nomor Telepon" value={myInstansi.nomor_telepon || "-"} icon={<BoxIcon className="size-4 text-brand-500" />} />
+                    </div>
+                  </ComponentCard>
+
+                  <ComponentCard title="Lokasi dan Kontak Korespondensi">
+                    <div className="grid grid-cols-1 gap-8">
+                      <DetailRow 
+                        label="Alamat Lengkap Kantor" 
+                        value={myInstansi.alamat || "-"} 
+                      />
+                    </div>
+                  </ComponentCard>
+                </div>
+              </div>
+            ) : (
+              !loading && (
+                <div className="bg-white rounded-2xl border border-gray-200 dark:bg-white/[0.03] dark:border-gray-800 p-10 text-center text-gray-500 dark:text-gray-400">
+                  Data instansi Anda tidak ditemukan. Silakan hubungi administrator.
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal Add/Edit */}
@@ -338,6 +454,7 @@ export default function InstansiView() {
                   value={formData.nama_instansi}
                   onChange={handleInputChange}
                   required
+                  disabled={!isSuperAdmin}
                   placeholder="Contoh: Cadisdik Wilayah VII"
                 />
               </div>
@@ -375,11 +492,12 @@ export default function InstansiView() {
                 <select
                   name="provinsi"
                   value={formData.provinsi}
+                  disabled={!isSuperAdmin}
                   onChange={(e) => {
                     setFormData(prev => ({ ...prev, provinsi: e.target.value, kabupaten: [] }));
                   }}
                   required
-                  className="w-full h-11 px-4 text-sm text-gray-800 dark:text-white/90 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all"
+                  className="w-full h-11 px-4 text-sm text-gray-800 dark:text-white/90 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all disabled:opacity-60 disabled:bg-gray-100 dark:disabled:bg-gray-800 cursor-not-allowed"
                 >
                   <option value="">Pilih Provinsi</option>
                   {provinsiList.map((p) => (
@@ -398,6 +516,7 @@ export default function InstansiView() {
                           <input
                             type="checkbox"
                             checked={isChecked}
+                            disabled={!isSuperAdmin}
                             onChange={() => {
                               if (isChecked) {
                                 setFormData(prev => ({
@@ -411,7 +530,7 @@ export default function InstansiView() {
                                 }));
                               }
                             }}
-                            className="rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                            className="rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 cursor-not-allowed"
                           />
                           {k}
                         </label>
@@ -436,8 +555,9 @@ export default function InstansiView() {
                   id="aktif" 
                   name="aktif"
                   checked={formData.aktif}
+                  disabled={!isSuperAdmin}
                   onChange={handleInputChange}
-                  className="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500"
+                  className="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500 disabled:opacity-60 cursor-not-allowed"
                 />
                 <label htmlFor="aktif" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                   Instansi Aktif <span className="text-xs text-gray-500 block">Tandai jika instansi ini sedang beroperasi</span>
@@ -522,6 +642,20 @@ function DataRow({ label, value, isID = false }: { label: string; value: any; is
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, icon }: { label: string; value: any; icon?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-gray-400 font-medium flex items-center gap-2">
+        {icon}
+        {label}
+      </span>
+      <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+        {value || "-"}
+      </span>
     </div>
   );
 }

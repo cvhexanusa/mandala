@@ -163,9 +163,13 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         return a.pegawai_id.localeCompare(b.pegawai_id);
       });
       
-      const filteredPegawai = sortedPegawai.filter(item => 
+      let filteredPegawai = sortedPegawai.filter(item => 
         showOnlyInactive ? !item.aktif : item.aktif
       );
+      
+      if (!isSuperAdmin && user?.cadisdik_id) {
+        filteredPegawai = filteredPegawai.filter(item => item.cadisdik_id === user.cadisdik_id);
+      }
       
       setData(filteredPegawai);
       setInstansiList(instansiRes.data || []);
@@ -238,6 +242,15 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
 
   const handleOpenModal = (item?: Pegawai) => {
     if (item) {
+      if (!isSuperAdmin && item.jabatan === 0) {
+        Swal.fire({
+          icon: "error",
+          title: "Akses Ditolak",
+          text: "Anda tidak dapat mengedit profil Super Admin.",
+          confirmButtonColor: "#3085d6",
+        });
+        return;
+      }
       setEditingData(item);
       setFormData({
         cadisdik_id: item.cadisdik_id || "",
@@ -382,6 +395,26 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isSuperAdmin && editingData?.jabatan === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Akses Ditolak',
+            text: 'Anda tidak dapat mengubah data Super Admin.',
+            confirmButtonColor: "#3085d6",
+        });
+        return;
+    }
+
+    if (!isSuperAdmin && formData.jabatan !== "" && parseInt(formData.jabatan) === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Akses Ditolak',
+            text: 'Anda tidak dapat menetapkan jabatan sebagai Super Admin.',
+            confirmButtonColor: "#3085d6",
+        });
+        return;
+    }
+
     const cleanNip = formData.nip.trim();
     if (!formData.cadisdik_id || !formData.nama_lengkap) {
         Swal.fire({
@@ -596,7 +629,9 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
 
   // Convert map to options for select
   const combinedJabatanOptions = [
-    ...Object.entries(JABATAN_MAP).map(([val, label]) => ({ value: val, label })),
+    ...Object.entries(JABATAN_MAP)
+      .filter(([val]) => isSuperAdmin || val !== "0")
+      .map(([val, label]) => ({ value: val, label })),
     ...jenisJabatanList.map(j => ({ value: j.jenis_jabatan_id, label: j.nama }))
   ];
   const jkOptions = Object.entries(JK_MAP).map(([val, label]) => ({ value: val, label }));
@@ -631,7 +666,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               <>
                 <Button 
                   variant="outline" 
-                  startIcon={<PlusIcon className="size-4" />} 
+                  startIcon={<PlusIcon />} 
                   onClick={handleOpenJabatanModal}
                 >
                   Kelola Jabatan
@@ -717,29 +752,33 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                           >
                             <EyeIcon className="size-4" />
                           </button>
-                          <button 
-                            onClick={() => handleOpenModal(item)}
-                            className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <PencilIcon className="size-4" />
-                          </button>
-                          {showOnlyInactive ? (
-                            <button 
-                              onClick={() => handleRestore(item.pegawai_id)}
-                              className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors"
-                              title="Batalkan Registrasi Keluar"
-                            >
-                              <ArrowRightIcon className="size-4 rotate-180" />
-                            </button>
-                          ) : (
-                            <button 
-                              onClick={() => handleRegisterKeluar(item.pegawai_id)}
-                              className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
-                              title="Register Keluar"
-                            >
-                              <ArrowRightIcon className="size-4" />
-                            </button>
+                          {(isSuperAdmin || item.jabatan !== 0) && (
+                            <>
+                              <button 
+                                onClick={() => handleOpenModal(item)}
+                                className="p-2 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <PencilIcon className="size-4" />
+                              </button>
+                              {showOnlyInactive ? (
+                                <button 
+                                  onClick={() => handleRestore(item.pegawai_id)}
+                                  className="p-2 text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 rounded-lg transition-colors"
+                                  title="Batalkan Registrasi Keluar"
+                                >
+                                  <ArrowRightIcon className="size-4 rotate-180" />
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleRegisterKeluar(item.pegawai_id)}
+                                  className="p-2 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
+                                  title="Register Keluar"
+                                >
+                                  <ArrowRightIcon className="size-4" />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -924,7 +963,7 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
                 <DataRow label="NIP" value={viewingData.nip} />
                 <DataRow label="Email" value={viewingData.email} />
                 <DataRow label="Jabatan" value={JABATAN_MAP[viewingData.jabatan] || "Tidak Diketahui"} />
-                <DataRow label="Jenis Jabatan Administratif" value={viewingData.jenis_jabatan?.nama || "-"} />
+                <DataRow label="Jenis Jabatan" value={viewingData.jenis_jabatan?.nama || "-"} />
                 <DataRow label="Jenis Kelamin" value={JK_MAP[viewingData.jenis_kelamin] || "-"} />
                 <DataRow label="Nomor Telepon" value={viewingData.nomor_telepon} />
                 <DataRow label="Golongan" value={viewingData.golongan !== undefined && viewingData.golongan !== null ? (dynamicGolonganMap[viewingData.golongan] || GOLONGAN_MAP[viewingData.golongan] || viewingData.golongan) : "-"} />
@@ -947,10 +986,10 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
       >
         <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
-            Kelola Jenis Jabatan Administratif
+            Kelola Jenis Jabatan
           </h3>
 
-          <form onSubmit={handleAddOrUpdateJabatan} className="flex gap-2 mb-6">
+          <form onSubmit={handleAddOrUpdateJabatan} className="flex gap-2 mb-6 items-center">
             <Input
               type="text"
               placeholder="Nama jabatan baru..."
@@ -958,13 +997,15 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
               onChange={(e) => setNewJabatanName(e.target.value)}
               className="flex-1"
             />
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" size="sm" className="h-11">
               {editingJabatan ? "Simpan" : "Tambah"}
             </Button>
             {editingJabatan && (
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
+                className="h-11"
                 onClick={() => {
                   setEditingJabatan(null);
                   setNewJabatanName("");
