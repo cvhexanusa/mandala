@@ -247,6 +247,44 @@ export const mandalaService = {
     });
     return response.data;
   },
+
+  // K. Monitoring Pengawas CRUD
+  getJadwalMonitoring: async (params?: { start_date?: string; end_date?: string; sekolah_id?: string; pegawai_id?: string }) => {
+    const response = await api.get('/mandala/monitoring/jadwal', { params });
+    return response.data;
+  },
+
+  createJadwalMonitoring: async (data: {
+    sekolah_id: string;
+    tanggal_mulai: string;
+    tanggal_selesai: string;
+    agenda: string;
+    keterangan?: string;
+  }) => {
+    const response = await api.post('/mandala/monitoring/jadwal', data);
+    return response.data;
+  },
+
+  updateJadwalMonitoring: async (id: string, data: {
+    tanggal_mulai?: string;
+    tanggal_selesai?: string;
+    agenda?: string;
+    keterangan?: string;
+    status?: string;
+  }) => {
+    const response = await api.patch(`/mandala/monitoring/jadwal/${id}`, data);
+    return response.data;
+  },
+
+  deleteJadwalMonitoring: async (id: string) => {
+    const response = await api.delete(`/mandala/monitoring/jadwal/${id}`);
+    return response.data;
+  },
+
+  getSekolahBinaan: async () => {
+    const response = await api.get('/mandala/pengawas/sekolah-binaan');
+    return response.data;
+  },
 };
 
 export interface Pelaporan {

@@ -982,79 +982,119 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
       <Modal
         isOpen={isJabatanModalOpen}
         onClose={() => setIsJabatanModalOpen(false)}
-        className="max-w-md"
+        className="max-w-lg"
       >
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
+        <div className="p-6 md:p-8">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 pb-4 border-b border-gray-100 dark:border-gray-800 mb-6">
             Kelola Jenis Jabatan
           </h3>
 
-          <form onSubmit={handleAddOrUpdateJabatan} className="flex gap-2 mb-6 items-center">
-            <Input
-              type="text"
-              placeholder="Nama jabatan baru..."
-              value={newJabatanName}
-              onChange={(e) => setNewJabatanName(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" variant="primary" size="sm" className="h-11">
-              {editingJabatan ? "Simpan" : "Tambah"}
-            </Button>
-            {editingJabatan && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-11"
-                onClick={() => {
-                  setEditingJabatan(null);
-                  setNewJabatanName("");
-                }}
-              >
-                Batal
-              </Button>
-            )}
+          <form onSubmit={handleAddOrUpdateJabatan} className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                {editingJabatan ? "Ubah Nama Jabatan" : "Tambah Jabatan Baru"}
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    type="text"
+                    placeholder="Nama jabatan..."
+                    value={newJabatanName}
+                    onChange={(e) => setNewJabatanName(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" variant="primary" className="h-11 px-5">
+                  {editingJabatan ? "Simpan" : "Tambah"}
+                </Button>
+                {editingJabatan && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 px-4"
+                    onClick={() => {
+                      setEditingJabatan(null);
+                      setNewJabatanName("");
+                    }}
+                  >
+                    Batal
+                  </Button>
+                )}
+              </div>
+            </div>
           </form>
 
-          <div className="max-h-60 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
-            {jenisJabatanList.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center p-4">
-                Belum ada data jabatan.
-              </p>
-            ) : (
-              <table className="w-full text-sm">
-                <tbody>
-                  {jenisJabatanList.map((item) => (
-                    <tr
-                      key={item.jenis_jabatan_id}
-                      className="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-white/[0.01]"
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Daftar Jabatan Saat Ini
+            </label>
+            <div className="max-h-60 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl divide-y divide-gray-50 dark:divide-gray-850 custom-scrollbar">
+              {/* 1. Predefined/Static System Positions */}
+              {Object.entries(JABATAN_MAP)
+                .filter(([val]) => isSuperAdmin || val !== "0") // Filter out Super Admin if not super admin
+                .map(([val, name]) => (
+                  <div
+                    key={`static-${val}`}
+                    className="flex items-center justify-between px-4 py-3 bg-gray-50/50 dark:bg-white/[0.01]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+                        {name}
+                      </span>
+                      <span className="px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 rounded-full">
+                        Bawaan Sistem
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 italic flex items-center gap-1">
+                      <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      Terkunci
+                    </span>
+                  </div>
+                ))}
+
+              {/* 2. Custom/Dynamic Positions from API */}
+              {jenisJabatanList.map((item) => (
+                <div
+                  key={`custom-${item.jenis_jabatan_id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/30 dark:hover:bg-white/[0.005]"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+                      {item.nama}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-medium bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400 rounded-full">
+                      Kustom
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEditJabatan(item)}
+                      className="px-2 py-1 text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-500/10 rounded-md transition-colors text-xs font-semibold"
+                      title="Edit"
                     >
-                      <td className="px-4 py-3 text-gray-800 dark:text-white/90 font-medium">
-                        {item.nama}
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => handleEditJabatan(item)}
-                          className="text-warning-500 hover:text-warning-600 mr-3"
-                          title="Edit"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteJabatan(item.jenis_jabatan_id)}
-                          className="text-error-500 hover:text-error-600"
-                          title="Hapus"
-                        >
-                          Hapus
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteJabatan(item.jenis_jabatan_id)}
+                      className="px-2 py-1 text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-md transition-colors text-xs font-semibold"
+                      title="Hapus"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* fallback empty state if absolutely nothing exists */}
+              {Object.keys(JABATAN_MAP).length === 0 && jenisJabatanList.length === 0 && (
+                <p className="text-sm text-gray-500 text-center p-4">
+                  Belum ada data jabatan.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </Modal>

@@ -57,6 +57,7 @@ import CreatePelaporanPage from "./pages/Pelaporan/create";
 import DetailPelaporanPage from "./pages/Pelaporan/detail";
 import IsiAntrian from "./pages/Layanan/Public/IsiAntrian";
 import MonitorAntrian from "./pages/Layanan/Public/MonitorAntrian";
+import JadwalMonitoring from "./pages/Monitoring/JadwalMonitoring";
 
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
@@ -169,6 +170,9 @@ export default function App() {
 
             {/* Daftar Antrian */}
             <Route path="daftar-antrian" element={<DaftarAntrian />} />
+
+            {/* Monitoring */}
+            <Route path="monitoring/jadwal" element={<JadwalMonitoring />} />
 
             {/* Pelaporan dan Dokumen */}
             <Route path="pelaporan-dokumen" element={<PelaporanPage />} />

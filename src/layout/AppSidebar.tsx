@@ -275,6 +275,19 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    key: "monitoring",
+    name: "Monitoring",
+    icon: <CalenderIcon />,
+    subItems: [
+      {
+        key: "monitoring-jadwal",
+        name: "Jadwal Monitoring",
+        path: "/monitoring/jadwal",
+        icon: <DotIcon />,
+      },
+    ],
+  },
+  {
     key: "pkks",
     name: "PKKS",
     icon: <TaskIcon />,
@@ -413,6 +426,11 @@ const AppSidebar: React.FC = () => {
             .filter((r: { jabatan_id: number; menu_key: string }) => r.jabatan_id === userJabatanId)
             .map((r: { menu_key: string }) => r.menu_key);
             
+          // Force allow Monitoring menu for Pengawas (6) or Admin/Super Admin (0, 1) during development
+          if (userJabatanId === 6 || userJabatanId === 0 || userJabatanId === 1) {
+            keys.push("monitoring", "monitoring-jadwal");
+          }
+
           setAllowedKeys(keys);
         }
       } catch (err) {
