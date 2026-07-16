@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDownIcon } from "../../icons";
 
 interface Option {
-  value: string;
+  value: string | number;
   label: string;
 }
 
@@ -11,8 +11,8 @@ interface SelectProps {
   placeholder?: string;
   onChange: (value: string) => void;
   className?: string;
-  defaultValue?: string;
-  value?: string;
+  defaultValue?: string | number;
+  value?: string | number;
   disabled?: boolean;
 }
 
@@ -25,64 +25,86 @@ const Select: React.FC<SelectProps> = ({
   value,
   disabled = false,
 }) => {
-  // Manage the selected value
-  const [internalValue, setInternalValue] = useState<string>(value || defaultValue);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedValue, setSelectedValue] = useState<string | number>(value !== undefined ? value : defaultValue);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync with prop value
+  // Sync with value prop
   useEffect(() => {
     if (value !== undefined) {
-      setInternalValue(value);
+      setSelectedValue(value);
     }
   }, [value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    if (value === undefined) {
-      setInternalValue(newValue);
-    }
-    onChange(newValue); // Trigger parent handler
+  // Close when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const handleOptionClick = (optionValue: string | number) => {
+    if (disabled) return;
+    setSelectedValue(optionValue);
+    onChange(String(optionValue));
+    setIsOpen(false);
   };
 
-  return (
-    <div className="relative">
-      <select
-        disabled={disabled}
-        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 ${
-          disabled ? "bg-gray-100 cursor-not-allowed opacity-60 dark:bg-gray-800 text-gray-700" : ""
-        } ${
-          internalValue
-            ? "text-gray-900 dark:text-white/90"
-            : "text-gray-500 dark:text-gray-400"
-        } ${className}`}
-        value={internalValue}
-        onChange={handleChange}
-      >
-        {/* Placeholder option */}
-        {placeholder && (
-          <option
-            value=""
-            disabled
-            className="text-gray-500 dark:bg-gray-900 dark:text-gray-400"
-          >
-            {placeholder}
-          </option>
-        )}
-        {/* Map over options */}
-        {options.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
-            className="text-gray-900 dark:bg-gray-900 dark:text-white/90"
-          >
-            {option.label}
-          </option>
-        ))}
-      </select>
+  const selectedOption = options.find((opt) => String(opt.value) === String(selectedValue));
 
-      {!disabled && (
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
-          <ChevronDownIcon className="size-5" />
+  return (
+    <div ref={containerRef} className={`relative w-full ${className}`}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`h-11 w-full flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm shadow-theme-xs transition-all text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-500 ${
+          disabled
+            ? "bg-gray-150 border-gray-200 dark:border-gray-800 dark:bg-gray-800 text-gray-400 cursor-not-allowed opacity-60"
+            : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white/90 focus:border-brand-300 dark:focus:border-brand-800"
+        }`}
+      >
+        <span className={selectedOption ? "text-gray-900 dark:text-white/90 font-medium" : "text-gray-400 dark:text-white/30"}>
+          {selectedOption ? selectedOption.label : (placeholder || "-- Pilih --")}
         </span>
+        <ChevronDownIcon
+          className={`size-5 text-gray-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {/* Options Dropdown List */}
+      {isOpen && !disabled && (
+        <div className="absolute left-0 right-0 mt-1.5 z-[100] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-lg p-1.5 max-h-60 overflow-y-auto custom-scrollbar">
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-gray-400 text-center">Tidak ada pilihan</div>
+          ) : (
+            options.map((option) => {
+              const isSelected = String(option.value) === String(selectedValue);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleOptionClick(option.value)}
+                  className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-colors cursor-pointer flex items-center justify-between ${
+                    isSelected
+                      ? "bg-brand-50/50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.01]"
+                  }`}
+                >
+                  <span>{option.label}</span>
+                  {isSelected && (
+                    <span className="text-brand-500 dark:text-brand-400 font-bold">✓</span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );

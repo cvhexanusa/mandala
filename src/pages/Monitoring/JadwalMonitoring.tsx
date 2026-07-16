@@ -3,6 +3,7 @@ import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
+import DatePicker from "../../components/form/date-picker";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import {
   PlusIcon,
@@ -70,6 +71,8 @@ export default function JadwalMonitoring() {
   // UI state
   const [isSupervisorDropdownOpen, setIsSupervisorDropdownOpen] = useState(false);
   const [isSchoolDropdownOpen, setIsSchoolDropdownOpen] = useState(false);
+  const [selectedGroupDetails, setSelectedGroupDetails] = useState<any>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // Form State
   const [selectedSupervisor, setSelectedSupervisor] = useState("");
@@ -80,11 +83,25 @@ export default function JadwalMonitoring() {
   const [keterangan, setKeterangan] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Format Date to DD-MM-YYYY for display
+  const formatDateDMY = (dateStr: string) => {
+    if (!dateStr) return "-";
+    const cleanStr = dateStr.split("T")[0];
+    const parts = cleanStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
   // Fetch Schedules list
   const fetchSchedules = async () => {
     try {
       const res = await mandalaService.getJadwalMonitoring();
-      setSchedules(res.data || []);
+      const rawData = res.data || [];
+      // Sort by tanggal_mulai descending (newest first)
+      const sorted = [...rawData].sort((a, b) => 
+        new Date(b.tanggal_mulai).getTime() - new Date(a.tanggal_mulai).getTime()
+      );
+      setSchedules(sorted);
     } catch (error) {
       console.error("Gagal mengambil data jadwal:", error);
     }
@@ -273,10 +290,10 @@ export default function JadwalMonitoring() {
   };
 
   // Update schedule status
-  const handleStatusChange = (id: string, newStatus: "completed" | "cancelled") => {
+  const handleStatusChange = (ids: string[], newStatus: "completed" | "cancelled") => {
     Swal.fire({
       title: "Ubah Status?",
-      text: `Ubah status jadwal menjadi ${newStatus === "completed" ? "Selesai" : "Batal"}?`,
+      text: `Ubah status jadwal terpilih menjadi ${newStatus === "completed" ? "Selesai" : "Batal"}?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -286,7 +303,8 @@ export default function JadwalMonitoring() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await mandalaService.updateJadwalMonitoring(id, { status: newStatus });
+          const promises = ids.map(id => mandalaService.updateJadwalMonitoring(id, { status: newStatus }));
+          await Promise.all(promises);
           Swal.fire("Berhasil", "Status jadwal berhasil diperbarui", "success");
           fetchSchedules();
         } catch (error: any) {
@@ -298,10 +316,10 @@ export default function JadwalMonitoring() {
   };
 
   // Delete schedule
-  const handleDeleteJadwal = (id: string) => {
+  const handleDeleteJadwal = (ids: string[]) => {
     Swal.fire({
       title: "Hapus Jadwal?",
-      text: "Data jadwal monitoring ini akan dihapus permanen dari server!",
+      text: "Data jadwal monitoring terpilih akan dihapus permanen dari server!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -311,7 +329,8 @@ export default function JadwalMonitoring() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await mandalaService.deleteJadwalMonitoring(id);
+          const promises = ids.map(id => mandalaService.deleteJadwalMonitoring(id));
+          await Promise.all(promises);
           Swal.fire("Berhasil", "Jadwal monitoring berhasil dihapus", "success");
           fetchSchedules();
         } catch (error: any) {
@@ -322,17 +341,62 @@ export default function JadwalMonitoring() {
     });
   };
 
+  // Group schedules by same properties (supervisor, dates, agenda, description)
+  const groupedSchedules = useMemo(() => {
+    const groups: { [key: string]: {
+      key: string;
+      agenda: string;
+      keterangan: string;
+      tanggal_mulai: string;
+      tanggal_selesai: string;
+      status: string;
+      pegawai_id: string;
+      pegawai?: any;
+      sekolahList: { sekolah_id: string; nama: string; npsn: string }[];
+      ids: string[];
+    }} = {};
+
+    schedules.forEach(item => {
+      const groupKey = `${item.pegawai_id}_${item.tanggal_mulai}_${item.tanggal_selesai}_${item.agenda}_${item.keterangan}`;
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          key: groupKey,
+          agenda: item.agenda,
+          keterangan: item.keterangan,
+          tanggal_mulai: item.tanggal_mulai,
+          tanggal_selesai: item.tanggal_selesai,
+          status: item.status,
+          pegawai_id: item.pegawai_id,
+          pegawai: item.pegawai,
+          sekolahList: [],
+          ids: []
+        };
+      }
+      if (item.sekolah) {
+        if (!groups[groupKey].sekolahList.some(s => s.sekolah_id === item.sekolah_id)) {
+          groups[groupKey].sekolahList.push({
+            sekolah_id: item.sekolah_id,
+            nama: item.sekolah.nama,
+            npsn: item.sekolah.npsn
+          });
+        }
+      }
+      groups[groupKey].ids.push(item.jadwal_monitoring_id);
+    });
+
+    return Object.values(groups);
+  }, [schedules]);
+
   // Filtered schedules for search query
   const filteredSchedules = useMemo(() => {
-    if (!searchQuery.trim()) return schedules;
+    if (!searchQuery.trim()) return groupedSchedules;
     const q = searchQuery.toLowerCase();
-    return schedules.filter(s => 
-      (s.sekolah?.nama || "").toLowerCase().includes(q) || 
-      (s.sekolah?.npsn || "").includes(q) || 
-      (s.agenda || "").toLowerCase().includes(q) ||
-      (s.pegawai?.nama_lengkap || "").toLowerCase().includes(q)
+    return groupedSchedules.filter(g => 
+      g.sekolahList.some(s => s.nama.toLowerCase().includes(q) || s.npsn.includes(q)) || 
+      (g.agenda || "").toLowerCase().includes(q) ||
+      (g.pegawai?.nama_lengkap || "").toLowerCase().includes(q)
     );
-  }, [schedules, searchQuery]);
+  }, [groupedSchedules, searchQuery]);
 
   return (
     <>
@@ -390,10 +454,9 @@ export default function JadwalMonitoring() {
 
             {/* Schedules Table */}
             <div className="overflow-x-auto custom-scrollbar">
-              <Table className="min-w-[1000px]">
+              <Table className="min-w-[800px]">
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                   <TableRow>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Sekolah Binaan</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Pengawas</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Rentang Tanggal</TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 uppercase">Agenda / Tujuan</TableCell>
@@ -404,33 +467,27 @@ export default function JadwalMonitoring() {
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500">
+                      <TableCell colSpan={5} className="px-5 py-10 text-center text-gray-500">
                         Memuat data jadwal monitoring...
                       </TableCell>
                     </TableRow>
                   ) : filteredSchedules.length > 0 ? (
                     filteredSchedules.map((item) => (
-                      <TableRow key={item.jadwal_monitoring_id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                        <TableCell className="px-5 py-4 text-start font-medium text-gray-800 dark:text-white/90">
-                          <div className="flex flex-col">
-                            <span>{item.sekolah?.nama || "Sekolah tidak diketahui"}</span>
-                            <span className="text-xs text-gray-400 font-normal">NPSN: {item.sekolah?.npsn || "-"}</span>
-                          </div>
-                        </TableCell>
+                      <TableRow key={item.key} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
                         <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400 font-medium">
                           <div className="flex items-center gap-1.5">
                             <UserIcon className="size-4 text-gray-400" />
-                            <span>{item.pegawai?.nama_lengkap || "Pengawas tidak diketahui"}</span>
+                            <span className="truncate max-w-[200px] block">{item.pegawai?.nama_lengkap || "Pengawas tidak diketahui"}</span>
                           </div>
                         </TableCell>
                         <TableCell className="px-5 py-4 text-start text-gray-500 text-theme-sm dark:text-gray-400">
                           <div className="flex items-center gap-1.5">
                             <CalenderIcon className="size-4 text-brand-500" />
-                            <span>{item.tanggal_mulai?.split('T')[0]} s/d {item.tanggal_selesai?.split('T')[0]}</span>
+                            <span className="text-xs">{formatDateDMY(item.tanggal_mulai)} s/d {formatDateDMY(item.tanggal_selesai)}</span>
                           </div>
                         </TableCell>
                         <TableCell className="px-5 py-4 text-start text-gray-800 dark:text-white/90 font-medium text-theme-sm">
-                          {item.agenda}
+                          <span className="truncate max-w-[180px] block" title={item.agenda}>{item.agenda}</span>
                         </TableCell>
                         <TableCell className="px-5 py-4 text-center">
                           {item.status === "scheduled" && (
@@ -451,25 +508,34 @@ export default function JadwalMonitoring() {
                         </TableCell>
                         <TableCell className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedGroupDetails(item);
+                                setIsDetailsModalOpen(true);
+                              }}
+                              className="px-2 py-1 text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded text-xs font-semibold cursor-pointer"
+                            >
+                              Detail
+                            </button>
                             {item.status === "scheduled" && (
                               <>
                                 <button
-                                  onClick={() => handleStatusChange(item.jadwal_monitoring_id, "completed")}
-                                  className="px-2 py-1 text-success-600 hover:bg-success-50 dark:hover:bg-success-500/10 rounded text-xs font-semibold"
+                                  onClick={() => handleStatusChange(item.ids, "completed")}
+                                  className="px-2 py-1 text-success-600 hover:bg-success-50 dark:hover:bg-success-500/10 rounded text-xs font-semibold cursor-pointer"
                                 >
                                   Selesai
                                 </button>
                                 <button
-                                  onClick={() => handleStatusChange(item.jadwal_monitoring_id, "cancelled")}
-                                  className="px-2 py-1 text-error-600 hover:bg-error-50 dark:hover:bg-error-500/10 rounded text-xs font-semibold"
+                                  onClick={() => handleStatusChange(item.ids, "cancelled")}
+                                  className="px-2 py-1 text-error-600 hover:bg-error-50 dark:hover:bg-error-500/10 rounded text-xs font-semibold cursor-pointer"
                                 >
                                   Batal
                                 </button>
                               </>
                             )}
                             <button
-                              onClick={() => handleDeleteJadwal(item.jadwal_monitoring_id)}
-                              className="p-1 text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded transition-colors"
+                              onClick={() => handleDeleteJadwal(item.ids)}
+                              className="p-1 text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded transition-colors cursor-pointer"
                               title="Hapus"
                             >
                               <TrashBinIcon className="size-4" />
@@ -480,7 +546,7 @@ export default function JadwalMonitoring() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="px-5 py-10 text-center text-gray-500">
+                      <TableCell colSpan={5} className="px-5 py-10 text-center text-gray-500">
                         {searchQuery ? `Tidak ada jadwal monitoring ditemukan untuk "${searchQuery}"` : "Belum ada jadwal monitoring terdaftar."}
                       </TableCell>
                     </TableRow>
@@ -682,23 +748,41 @@ export default function JadwalMonitoring() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          Dari Tanggal <span className="text-error-500">*</span>
-                        </label>
-                        <Input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
+                        <DatePicker
+                          id="startDatePicker"
+                          label="Dari Tanggal *"
+                          placeholder="Pilih Tanggal Mulai"
+                          defaultDate={startDate || undefined}
+                          onChange={(selectedDates) => {
+                            if (selectedDates && selectedDates[0]) {
+                              const d = selectedDates[0];
+                              const year = d.getFullYear();
+                              const month = String(d.getMonth() + 1).padStart(2, "0");
+                              const day = String(d.getDate()).padStart(2, "0");
+                              setStartDate(`${year}-${month}-${day}`);
+                            } else {
+                              setStartDate("");
+                            }
+                          }}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          Sampai Tanggal <span className="text-error-500">*</span>
-                        </label>
-                        <Input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
+                        <DatePicker
+                          id="endDatePicker"
+                          label="Sampai Tanggal *"
+                          placeholder="Pilih Tanggal Selesai"
+                          defaultDate={endDate || undefined}
+                          onChange={(selectedDates) => {
+                            if (selectedDates && selectedDates[0]) {
+                              const d = selectedDates[0];
+                              const year = d.getFullYear();
+                              const month = String(d.getMonth() + 1).padStart(2, "0");
+                              const day = String(d.getDate()).padStart(2, "0");
+                              setEndDate(`${year}-${month}-${day}`);
+                            } else {
+                              setEndDate("");
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -763,6 +847,149 @@ export default function JadwalMonitoring() {
                 </div>
               </div>
             </form>
+          </div>
+        )}
+        {/* Detail Modal */}
+        {isDetailsModalOpen && selectedGroupDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 dark:bg-black/80 backdrop-blur-xs">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full border border-gray-150 dark:border-gray-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-fade-in">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Detail Jadwal Monitoring
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Informasi lengkap agenda monitoring pengawas pembina.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    setSelectedGroupDetails(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-white text-lg font-bold p-1 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-grow">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                      Pengawas Pembina
+                    </h4>
+                    <div className="flex items-center gap-2.5 p-3 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800/60 rounded-xl">
+                      <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-600 dark:text-brand-400">
+                        <UserIcon className="size-5" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                          {selectedGroupDetails.pegawai?.nama_lengkap || "Pengawas tidak diketahui"}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          NIP: {selectedGroupDetails.pegawai?.nip || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                      Rentang Tanggal
+                    </h4>
+                    <div className="flex items-center gap-2.5 p-3 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800/60 rounded-xl">
+                      <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-600 dark:text-brand-400">
+                        <CalenderIcon className="size-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-white">
+                          {formatDateDMY(selectedGroupDetails.tanggal_mulai)} s/d {formatDateDMY(selectedGroupDetails.tanggal_selesai)}
+                        </span>
+                        <span className="text-xs text-gray-400">Durasi Monitoring</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Agenda & Keterangan */}
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800/60 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                        Agenda / Tujuan
+                      </h4>
+                      <div>
+                        {selectedGroupDetails.status === "scheduled" && (
+                          <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                            Terjadwal
+                          </span>
+                        )}
+                        {selectedGroupDetails.status === "completed" && (
+                          <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
+                            Selesai
+                          </span>
+                        )}
+                        {selectedGroupDetails.status === "cancelled" && (
+                          <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400">
+                            Dibatalkan
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white">
+                      {selectedGroupDetails.agenda}
+                    </p>
+                    {selectedGroupDetails.keterangan && (
+                      <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60 mt-2">
+                        <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                          Keterangan Tambahan
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 font-normal whitespace-pre-wrap">
+                          {selectedGroupDetails.keterangan}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sekolah Binaan List */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <SchoolIcon className="size-4" />
+                    <span>Daftar Sekolah Monitoring ({selectedGroupDetails.sekolahList.length})</span>
+                  </h4>
+                  <div className="border border-gray-150 dark:border-gray-800/60 rounded-xl divide-y divide-gray-100 dark:divide-gray-800/60 max-h-48 overflow-y-auto custom-scrollbar">
+                    {selectedGroupDetails.sekolahList.map((school: any) => (
+                      <div key={school.sekolah_id} className="p-3 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                            {school.nama}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            NPSN: {school.npsn}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    setSelectedGroupDetails(null);
+                  }}
+                >
+                  Tutup
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>
