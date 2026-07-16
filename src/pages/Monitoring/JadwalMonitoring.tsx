@@ -111,6 +111,12 @@ export default function JadwalMonitoring() {
           const supervisorList = allPegawai.filter((p: Pegawai) => p.jabatan === 6);
           setSupervisors(supervisorList);
           setAllMappings(mappingRes.data || []);
+          
+          // Auto-select logged-in user if they are in the supervisors list
+          const loggedInPegawaiId = user?.id || (user as any)?.pegawai_id;
+          if (loggedInPegawaiId && supervisorList.some(p => p.pegawai_id === loggedInPegawaiId)) {
+            setSelectedSupervisor(loggedInPegawaiId);
+          }
         } else {
           // Pengawas: Fetch mapped schools directly from backend
           const res = await mandalaService.getSekolahBinaan();
@@ -223,9 +229,10 @@ export default function JadwalMonitoring() {
           keterangan: keterangan.trim(),
         };
 
-        if (selectedSupervisor) {
-          payload.pegawai_id = selectedSupervisor;
-          payload.pegawaiId = selectedSupervisor;
+        const targetSupervisorId = selectedSupervisor || user?.id || (user as any)?.pegawai_id;
+        if (targetSupervisorId) {
+          payload.pegawai_id = targetSupervisorId;
+          payload.pegawaiId = targetSupervisorId;
         }
 
         console.log("Payload dikirim ke backend:", payload);
@@ -243,7 +250,12 @@ export default function JadwalMonitoring() {
       });
 
       // Reset form & reload data
-      setSelectedSupervisor("");
+      const loggedInPegawaiId = user?.id || (user as any)?.pegawai_id;
+      if (loggedInPegawaiId && supervisors.some(p => p.pegawai_id === loggedInPegawaiId)) {
+        setSelectedSupervisor(loggedInPegawaiId);
+      } else {
+        setSelectedSupervisor("");
+      }
       setSelectedSchools([]);
       setStartDate("");
       setEndDate("");
