@@ -139,40 +139,60 @@ const AuditPresensiPD: React.FC = () => {
         const hmName = ks?.identitas?.nama || "Belum Ditentukan";
         setKepalaSekolah(hmName);
 
-        // Fetch Active Counts and Full Active Student List
+        // Fetch Active Counts and Full Active Student List (All Pages)
         let pdTotal = currentSch?.total_siswa || currentSch?.jumlah_siswa || 0;
         let gtkTotal = currentSch?.total_gtk || 0;
         let activeStudents: any[] = [];
         try {
-          const [pdCountRes, gtkCountRes, pdActiveRes] = await Promise.all([
+          const [pdCountRes, gtkCountRes, pdFirstPage] = await Promise.all([
             dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, sekolahId),
             dapodikService.getGTK(1, "", 1, undefined, "aktif", sekolahId),
-            dapodikService.getPesertaDidik(3000, "", 1, undefined, "aktif", undefined, sekolahId)
+            dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, sekolahId)
           ]);
-          pdTotal = pdCountRes?.meta?.total_data || pdCountRes?.meta?.total || pdCountRes?.total || pdTotal;
+
+          const totalPdFromMeta = pdCountRes?.meta?.total_data || pdCountRes?.meta?.total || pdCountRes?.total || pdFirstPage?.meta?.total_data || pdFirstPage?.total || 0;
+          pdTotal = totalPdFromMeta || pdTotal;
           gtkTotal = gtkCountRes?.meta?.total_data || gtkCountRes?.meta?.total || gtkCountRes?.total || gtkTotal;
           
-          if (pdActiveRes && (pdActiveRes.status === 'success' || pdActiveRes.success === true)) {
-            activeStudents = pdActiveRes.data || [];
-          } else if (Array.isArray(pdActiveRes)) {
-            activeStudents = pdActiveRes;
-          } else if (pdActiveRes && pdActiveRes.data && Array.isArray(pdActiveRes.data)) {
-            activeStudents = pdActiveRes.data;
+          if (pdFirstPage && (pdFirstPage.status === 'success' || pdFirstPage.success === true)) {
+            activeStudents = pdFirstPage.data || [];
+          } else if (Array.isArray(pdFirstPage)) {
+            activeStudents = pdFirstPage;
+          } else if (pdFirstPage && pdFirstPage.data && Array.isArray(pdFirstPage.data)) {
+            activeStudents = pdFirstPage.data;
+          }
+
+          const totalPagesPd = Math.ceil((totalPdFromMeta || activeStudents.length) / 100);
+          if (totalPagesPd > 1) {
+            const pagePromises = [];
+            for (let p = 2; p <= totalPagesPd; p++) {
+              pagePromises.push(dapodikService.getPesertaDidik(100, "", p, undefined, "aktif", undefined, sekolahId));
+            }
+            const otherPages = await Promise.all(pagePromises);
+            otherPages.forEach((pageRes) => {
+              let pageData: any[] = [];
+              if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+                pageData = pageRes.data || [];
+              } else if (Array.isArray(pageRes)) {
+                pageData = pageRes;
+              } else if (pageRes && pageRes.data && Array.isArray(pageRes.data)) {
+                pageData = pageRes.data;
+              }
+              activeStudents = [...activeStudents, ...pageData];
+            });
           }
         } catch (e) {
           console.error("Gagal mengambil active counts/student list:", e);
         }
 
-        // Fetch Attendance Details
-        const params = {
-          sekolah_id: sekolahId,
-          tanggal: selectedDate,
-          limit: 1000,
-        };
-
+        // Fetch Attendance Details (All Pages)
         let attendanceGtk: any[] = [];
         try {
-          const gtkRes = await presensiService.getMandalaPresensiGTK(params);
+          const gtkRes = await presensiService.getMandalaPresensiGTK({
+            sekolah_id: sekolahId,
+            tanggal: selectedDate,
+            limit: 1000,
+          });
           if (gtkRes && (gtkRes.status === 'success' || gtkRes.success === true)) {
             attendanceGtk = gtkRes.data || [];
           } else if (Array.isArray(gtkRes)) {
@@ -184,11 +204,48 @@ const AuditPresensiPD: React.FC = () => {
 
         let attendancePd: any[] = [];
         try {
-          const pdRes = await presensiService.getMandalaPresensiPD(params);
-          if (pdRes && (pdRes.status === 'success' || pdRes.success === true)) {
-            attendancePd = pdRes.data || [];
-          } else if (Array.isArray(pdRes)) {
-            attendancePd = pdRes;
+          const firstPagePdRes = await presensiService.getMandalaPresensiPD({
+            sekolah_id: sekolahId,
+            tanggal: selectedDate,
+            limit: 100,
+            page: 1,
+          });
+
+          let totalAttCount = 0;
+          if (firstPagePdRes && (firstPagePdRes.status === 'success' || firstPagePdRes.success === true)) {
+            attendancePd = firstPagePdRes.data || [];
+            totalAttCount = firstPagePdRes.meta?.total_data || firstPagePdRes.meta?.total || firstPagePdRes.total || attendancePd.length;
+          } else if (Array.isArray(firstPagePdRes)) {
+            attendancePd = firstPagePdRes;
+            totalAttCount = firstPagePdRes.length;
+          } else if (firstPagePdRes && firstPagePdRes.data && Array.isArray(firstPagePdRes.data)) {
+            attendancePd = firstPagePdRes.data;
+            totalAttCount = firstPagePdRes.meta?.total_data || firstPagePdRes.total || attendancePd.length;
+          }
+
+          const totalPagesAtt = Math.ceil(totalAttCount / 100);
+          if (totalPagesAtt > 1) {
+            const pagePromises = [];
+            for (let p = 2; p <= totalPagesAtt; p++) {
+              pagePromises.push(presensiService.getMandalaPresensiPD({
+                sekolah_id: sekolahId,
+                tanggal: selectedDate,
+                limit: 100,
+                page: p,
+              }));
+            }
+            const otherPages = await Promise.all(pagePromises);
+            otherPages.forEach((pageRes) => {
+              let pageData: any[] = [];
+              if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+                pageData = pageRes.data || [];
+              } else if (Array.isArray(pageRes)) {
+                pageData = pageRes;
+              } else if (pageRes && pageRes.data && Array.isArray(pageRes.data)) {
+                pageData = pageRes.data;
+              }
+              attendancePd = [...attendancePd, ...pageData];
+            });
           }
         } catch (e) {
           console.error("Gagal mengambil data presensi PD:", e);
@@ -311,8 +368,8 @@ const AuditPresensiPD: React.FC = () => {
           }
         });
 
-        const totalGtk = Math.max(gtkTotal, attendanceGtk.length, 25);
-        const totalSiswa = Math.max(activeStudents.length, pdTotal, mergedPD.length, 250);
+        const totalGtk = Math.max(gtkTotal, attendanceGtk.length);
+        const totalSiswa = Math.max(activeStudents.length, pdTotal, mergedPD.length);
 
         const gtkBelum = Math.max(0, totalGtk - (gtkHadir + gtkIzinSakit + gtkAlpha));
         

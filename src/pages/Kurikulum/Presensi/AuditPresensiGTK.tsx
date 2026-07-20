@@ -142,20 +142,41 @@ const AuditPresensiGTK: React.FC = () => {
         let gtkTotal = currentSch?.total_gtk || 0;
         let activeGtk: any[] = [];
         try {
-          const [pdCountRes, gtkCountRes, gtkActiveRes] = await Promise.all([
+          const [pdCountRes, gtkCountRes, gtkFirstPage] = await Promise.all([
             dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, sekolahId),
             dapodikService.getGTK(1, "", 1, undefined, "aktif", sekolahId),
-            dapodikService.getGTK(1000, "", 1, undefined, "aktif", sekolahId)
+            dapodikService.getGTK(100, "", 1, undefined, "aktif", sekolahId)
           ]);
           pdTotal = pdCountRes?.meta?.total_data || pdCountRes?.meta?.total || pdCountRes?.total || pdTotal;
-          gtkTotal = gtkCountRes?.meta?.total_data || gtkCountRes?.meta?.total || gtkCountRes?.total || gtkTotal;
+          const totalGtkFromMeta = gtkCountRes?.meta?.total_data || gtkCountRes?.meta?.total || gtkCountRes?.total || gtkFirstPage?.meta?.total_data || gtkFirstPage?.total || 0;
+          gtkTotal = totalGtkFromMeta || gtkTotal;
           
-          if (gtkActiveRes && (gtkActiveRes.status === 'success' || gtkActiveRes.success === true)) {
-            activeGtk = gtkActiveRes.data || [];
-          } else if (Array.isArray(gtkActiveRes)) {
-            activeGtk = gtkActiveRes;
-          } else if (gtkActiveRes && gtkActiveRes.data && Array.isArray(gtkActiveRes.data)) {
-            activeGtk = gtkActiveRes.data;
+          if (gtkFirstPage && (gtkFirstPage.status === 'success' || gtkFirstPage.success === true)) {
+            activeGtk = gtkFirstPage.data || [];
+          } else if (Array.isArray(gtkFirstPage)) {
+            activeGtk = gtkFirstPage;
+          } else if (gtkFirstPage && gtkFirstPage.data && Array.isArray(gtkFirstPage.data)) {
+            activeGtk = gtkFirstPage.data;
+          }
+
+          const totalPagesGtk = Math.ceil((totalGtkFromMeta || activeGtk.length) / 100);
+          if (totalPagesGtk > 1) {
+            const pagePromises = [];
+            for (let p = 2; p <= totalPagesGtk; p++) {
+              pagePromises.push(dapodikService.getGTK(100, "", p, undefined, "aktif", sekolahId));
+            }
+            const otherPages = await Promise.all(pagePromises);
+            otherPages.forEach((pageRes) => {
+              let pageData: any[] = [];
+              if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+                pageData = pageRes.data || [];
+              } else if (Array.isArray(pageRes)) {
+                pageData = pageRes;
+              } else if (pageRes && pageRes.data && Array.isArray(pageRes.data)) {
+                pageData = pageRes.data;
+              }
+              activeGtk = [...activeGtk, ...pageData];
+            });
           }
         } catch (e) {
           console.error("Gagal mengambil active counts/GTK list:", e);
@@ -309,8 +330,8 @@ const AuditPresensiGTK: React.FC = () => {
           }
         });
 
-        const totalGtk = Math.max(activeGtk.length, gtkTotal, mergedGTK.length, 25);
-        const totalSiswa = Math.max(pdTotal, attendancePd.length, 250);
+        const totalGtk = Math.max(activeGtk.length, gtkTotal, mergedGTK.length);
+        const totalSiswa = Math.max(pdTotal, attendancePd.length);
 
         // If activeGtk was not loaded, fall back to old math calculation for gtkBelum
         if (activeGtk.length === 0 && mergedGTK.length === formattedGTK.length) {
