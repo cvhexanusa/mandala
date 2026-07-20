@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
@@ -9,6 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Modal } from "../ui/modal";
 import { getRoleSlug } from "../../services/roleUtils";
 import { useSystemSettings } from "../../context/SystemSettingsContext";
+import api from "../../services/api";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -26,6 +27,68 @@ export default function SignInForm() {
   const { login, verify2FA, setAuthData } = useAuth();
   const { settings } = useSystemSettings();
   const navigate = useNavigate();
+
+  // Reset 2FA States
+  const [isReset2FAModalOpen, setIsReset2FAModalOpen] = useState(false);
+  const [resetUsername, setResetUsername] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetOTP, setResetOTP] = useState("");
+  const [resetStep, setResetStep] = useState(1);
+  const [resetToken, setResetToken] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
+  const handleRequestReset2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError(null);
+    setResetSuccess(null);
+    try {
+      const response = await api.post("/mandala/auth/reset-2fa/request", {
+        username: resetUsername,
+        password: resetPassword,
+      });
+      if (response.data?.resetToken) {
+        setResetToken(response.data.resetToken);
+        setResetSuccess(response.data.message || "OTP telah dikirim.");
+        setResetStep(2);
+      }
+    } catch (err: any) {
+      setResetError(err.response?.data?.message || "Gagal memproses reset 2FA.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleVerifyReset2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError(null);
+    setResetSuccess(null);
+    try {
+      const response = await api.post("/mandala/auth/reset-2fa/verify", {
+        resetToken,
+        code: resetOTP,
+      });
+      setResetSuccess(response.data?.message || "2FA berhasil di-reset.");
+      setTimeout(() => {
+        setIsReset2FAModalOpen(false);
+        // Reset states
+        setResetUsername("");
+        setResetPassword("");
+        setResetOTP("");
+        setResetStep(1);
+        setResetToken("");
+        setResetSuccess(null);
+      }, 3000);
+    } catch (err: any) {
+      setResetError(err.response?.data?.message || "Verifikasi OTP gagal.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,13 +198,19 @@ export default function SignInForm() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end">
-                <Link
-                  to="/reset-password"
-                  className="text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400"
+              <div className="flex items-center justify-start">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetError(null);
+                    setResetSuccess(null);
+                    setResetStep(1);
+                    setIsReset2FAModalOpen(true);
+                  }}
+                  className="text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 bg-transparent border-none p-0 cursor-pointer"
                 >
-                  Lupa kata sandi?
-                </Link>
+                  Reset 2FA?
+                </button>
               </div>
               <div>
                 <Button
@@ -155,18 +224,6 @@ export default function SignInForm() {
               </div>
             </div>
           </form>
-
-          <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-sm font-normal text-center text-gray-500 dark:text-gray-400 sm:text-start">
-              Belum punya akun? {""}
-              <Link
-                to="/signup"
-                className="font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400"
-              >
-                Hubungi Admin Instansi
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
 
@@ -236,6 +293,127 @@ export default function SignInForm() {
               </div>
             </div>
           </form>
+        </div>
+      </Modal>
+
+      {/* Reset 2FA Modal */}
+      <Modal
+        isOpen={isReset2FAModalOpen}
+        onClose={() => setIsReset2FAModalOpen(false)}
+        className="max-w-[450px] p-6 sm:p-10"
+      >
+        <div className="text-center">
+          <h2 className="mb-2 text-xl font-bold text-gray-800 dark:text-white/90 sm:text-2xl">
+            Reset 2FA
+          </h2>
+          <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">
+            {resetStep === 1
+              ? "Masukkan username/NIP dan password Anda untuk mengajukan reset 2FA"
+              : "Masukkan 6-digit kode OTP yang dikirim ke email terdaftar Anda"}
+          </p>
+
+          {resetError && (
+            <div className="p-4 mb-6 text-sm text-error-600 bg-error-50 border border-error-100 rounded-xl dark:bg-error-500/10 dark:border-error-500/20">
+              {resetError}
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="p-4 mb-6 text-sm text-green-800 bg-green-50 border border-green-100 rounded-xl dark:bg-green-500/10 dark:text-green-400 dark:border-green-900/30">
+              {resetSuccess}
+            </div>
+          )}
+
+          {resetStep === 1 ? (
+            <form onSubmit={handleRequestReset2FA}>
+              <div className="space-y-6 text-left">
+                <div>
+                  <Label>
+                    NIP / Email <span className="text-error-500">*</span>
+                  </Label>
+                  <Input
+                    placeholder="Masukkan NIP atau Email"
+                    value={resetUsername}
+                    onChange={(e) => setResetUsername(e.target.value)}
+                    required
+                    className="rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label>
+                    Password <span className="text-error-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showResetPassword ? "text" : "password"}
+                      placeholder="Masukkan password"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      required
+                      className="rounded-xl"
+                    />
+                    <span
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                    >
+                      {showResetPassword ? (
+                        <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                      ) : (
+                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => setIsReset2FAModalOpen(false)}
+                    variant="outline"
+                    className="w-full rounded-xl"
+                  >
+                    Batal
+                  </Button>
+                  <Button disabled={resetLoading} type="submit" className="w-full rounded-xl">
+                    {resetLoading ? "Memproses..." : "Kirim OTP"}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyReset2FA}>
+              <div className="space-y-6 text-left">
+                <div>
+                  <Label>
+                    6-Digit Kode OTP <span className="text-error-500">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="000 000"
+                    value={resetOTP}
+                    onChange={(e) => setResetOTP(e.target.value.replace(/\D/g, ""))}
+                    maxLength={6}
+                    required
+                    className="text-2xl tracking-[0.5em] text-center font-bold rounded-xl"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => setResetStep(1)}
+                    variant="outline"
+                    className="w-full rounded-xl"
+                  >
+                    Kembali
+                  </Button>
+                  <Button disabled={resetLoading} type="submit" className="w-full rounded-xl">
+                    {resetLoading ? "Verifikasi..." : "Verifikasi"}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          )}
         </div>
       </Modal>
     </div>
