@@ -76,11 +76,53 @@ export default function ProfileView() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center md:items-end justify-center md:text-right text-center shrink-0">
-              <span className="text-[10px] uppercase text-brand-100 font-bold tracking-widest block mb-1">Status Kepegawaian</span>
-              <span className="px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-sm uppercase tracking-wider">
-                ● Aktif Bertugas
-              </span>
+            <div className="flex flex-col items-center md:items-end justify-center md:text-right text-center shrink-0 gap-3">
+              <div>
+                <span className="text-[10px] uppercase text-brand-100 font-bold tracking-widest block mb-1">Status Kepegawaian</span>
+                <span className="px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-sm uppercase tracking-wider">
+                  ● Aktif Bertugas
+                </span>
+              </div>
+              
+              <button
+                onClick={async () => {
+                  if (!user?.id) return;
+                  const result = await Swal.fire({
+                    title: "Apakah Anda yakin?",
+                    text: "Authenticator (2FA) Anda akan direset. Anda harus memindai ulang kode QR pada login berikutnya.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Ya, Reset 2FA",
+                    cancelButtonText: "Batal",
+                  });
+
+                  if (result.isConfirmed) {
+                    try {
+                      await dapodikService.reset2FAPegawai(user.id);
+                      Swal.fire({
+                        title: "Berhasil",
+                        text: "Authenticator 2FA berhasil direset. Silakan login ulang untuk menyetel 2FA baru.",
+                        icon: "success",
+                        timer: 3000,
+                      });
+                    } catch (err: any) {
+                      Swal.fire({
+                        title: "Gagal",
+                        text: err.response?.data?.message || "Terjadi kesalahan saat mereset 2FA.",
+                        icon: "error",
+                      });
+                    }
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-red-500/20 hover:bg-red-500/35 text-red-200 border border-red-500/30 backdrop-blur-sm transition-all cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Reset 2FA
+              </button>
             </div>
           </div>
 

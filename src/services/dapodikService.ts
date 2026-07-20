@@ -390,6 +390,16 @@ export const dapodikService = {
     }
   },
 
+  reset2FAPegawai: async (id: string) => {
+    try {
+      const response = await api.post(`/mandala/pegawai/${id}/reset-2fa`);
+      return response.data;
+    } catch (error) {
+      console.error(`Gagal mereset 2FA pegawai ${id}:`, error);
+      throw error;
+    }
+  },
+
   getGolongan: async () => {
     try {
       const response = await api.get('/mandala/pegawai/golongan');

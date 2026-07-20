@@ -4,6 +4,8 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import Badge from "../ui/badge/Badge";
+import Swal from "sweetalert2";
+import { dapodikService } from "../../services/dapodikService";
 
 interface Pegawai {
   pegawai_id: string;
@@ -32,10 +34,48 @@ interface UserMetaCardProps {
 
 export default function UserMetaCard({ pegawaiData }: UserMetaCardProps) {
   const { isOpen, openModal, closeModal } = useModal();
+  const [isResetting, setIsResetting] = React.useState(false);
+
   const handleSave = () => {
     // Handle save logic here
     console.log("Saving changes...");
     closeModal();
+  };
+
+  const handleReset2FA = async () => {
+    if (!pegawaiData) return;
+    
+    const result = await Swal.fire({
+      title: "Apakah Anda yakin?",
+      text: "Authenticator (2FA) Anda akan direset. Anda harus memindai ulang kode QR pada login berikutnya.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, Reset 2FA",
+      cancelButtonText: "Batal",
+    });
+
+    if (result.isConfirmed) {
+      setIsResetting(true);
+      try {
+        await dapodikService.reset2FAPegawai(pegawaiData.pegawai_id);
+        Swal.fire({
+          title: "Berhasil",
+          text: "Authenticator 2FA berhasil direset. Silakan login ulang untuk menyetel 2FA baru.",
+          icon: "success",
+          timer: 3000,
+        });
+      } catch (err: any) {
+        Swal.fire({
+          title: "Gagal",
+          text: err.response?.data?.message || "Terjadi kesalahan saat mereset 2FA.",
+          icon: "error",
+        });
+      } finally {
+        setIsResetting(false);
+      }
+    }
   };
 
   if (!pegawaiData) return null;
@@ -98,6 +138,27 @@ export default function UserMetaCard({ pegawaiData }: UserMetaCardProps) {
                   />
                 </svg>
                 Edit Profil
+              </button>
+
+              <button
+                onClick={handleReset2FA}
+                disabled={isResetting}
+                className="flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:hover:bg-red-500/20 px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                <svg
+                  className="fill-current w-4.5 h-4.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                {isResetting ? "Mereset..." : "Reset 2FA"}
               </button>
             </div>
           </div>
