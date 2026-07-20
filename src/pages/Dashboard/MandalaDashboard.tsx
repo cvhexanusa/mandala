@@ -133,7 +133,7 @@ export default function MandalaDashboard() {
         dapodikService.getPesertaDidik(1, '', 1, undefined, 'aktif', undefined, targetSekolahId),
         dapodikService.getGTK(1, '', 1, 'guru', 'aktif', targetSekolahId),
         dapodikService.getGTK(1, '', 1, 'tendik', 'aktif', targetSekolahId),
-        dapodikService.getRombonganBelajar('reguler', 1, 1).catch(() => null)
+        dapodikService.getRombonganBelajar('reguler', 1, 1, '', '', targetSekolahId).catch(() => null)
       ]);
 
       setGlobalSiswa(getCountHelper(resSiswa));

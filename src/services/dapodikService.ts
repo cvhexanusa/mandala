@@ -117,10 +117,11 @@ export const dapodikService = {
     }
   },
 
-  getRombonganBelajar: async (type: 'reguler' | 'pilihan' = 'reguler', limit: number = 10, page: number = 1, search: string = '', tingkat: string = '') => {
+  getRombonganBelajar: async (type: 'reguler' | 'pilihan' = 'reguler', limit: number = 10, page: number = 1, search: string = '', tingkat: string = '', sekolahId?: string) => {
     try {
       let url = `/mandala/dapodik/rombongan-belajar?type=${type}&limit=${limit}&page=${page}&search=${search}`;
       if (tingkat) url += `&tingkat=${tingkat}`;
+      if (sekolahId) url += `&sekolah_id=${sekolahId}`;
       const response = await api.get(url);
       return response.data;
     } catch (error: any) {
