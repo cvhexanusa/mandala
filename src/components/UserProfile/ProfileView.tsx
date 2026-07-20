@@ -25,14 +25,27 @@ export default function ProfileView() {
   useEffect(() => {
     if (user) {
       const userObj = user as any;
-      if (userObj.cadisdik) {
-        setInstansiName(userObj.cadisdik);
-      } else if (userObj.sekolah) {
-        setInstansiName(userObj.sekolah);
-      } else if (sekolah?.nama) {
-        setInstansiName(sekolah.nama);
+      const isOperatorUser = user.role?.toLowerCase().includes("operator");
+      if (isOperatorUser) {
+        if (sekolah?.nama) {
+          setInstansiName(sekolah.nama);
+        } else if (userObj.sekolah) {
+          setInstansiName(userObj.sekolah);
+        } else if (userObj.cadisdik) {
+          setInstansiName(userObj.cadisdik);
+        } else {
+          setInstansiName("Sekolah Anda");
+        }
       } else {
-        setInstansiName("Mandala Internal");
+        if (userObj.cadisdik) {
+          setInstansiName(userObj.cadisdik);
+        } else if (userObj.sekolah) {
+          setInstansiName(userObj.sekolah);
+        } else if (sekolah?.nama) {
+          setInstansiName(sekolah.nama);
+        } else {
+          setInstansiName("Mandala Internal");
+        }
       }
     }
   }, [user, sekolah]);

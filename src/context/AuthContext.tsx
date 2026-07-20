@@ -46,6 +46,17 @@ const isTokenExpired = (token: string): boolean => {
   }
 };
 
+const normalizeUser = (p: any): User | null => {
+  if (!p) return null;
+  return {
+    ...p,
+    id: p.id || p.pegawai_id || '',
+    nama: p.nama || p.nama_lengkap || 'Pengguna',
+    role: p.role || (p.jabatan === 0 ? 'Operator Sekolah' : 'Pegawai'),
+    instansi_id: p.instansi_id || p.sekolah_id || undefined,
+  };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,10 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Call the new refresh token endpoint for Mandala
                 const response = await api.post('/mandala/auth/refresh', { refreshToken });
                 const { accessToken, refreshToken: newRefreshToken, pegawai } = response.data;
+                const normalized = normalizeUser(pegawai);
                 localStorage.setItem("auth_token", accessToken);
                 localStorage.setItem("refresh_token", newRefreshToken);
-                localStorage.setItem("user_data", JSON.stringify(pegawai));
-                setUser(pegawai);
+                localStorage.setItem("user_data", JSON.stringify(normalized));
+                setUser(normalized);
               } catch (refreshErr) {
                 // Refresh failed
                 localStorage.removeItem("auth_token");
@@ -82,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(null);
             }
           } else {
-            setUser(JSON.parse(savedUser));
+            setUser(normalizeUser(JSON.parse(savedUser)));
           }
         } catch (err) {
           console.error("Gagal membaca data user dari storage:", err);
@@ -114,8 +126,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setAuthData = (userData: User) => {
-    localStorage.setItem('user_data', JSON.stringify(userData));
-    setUser(userData);
+    const normalized = normalizeUser(userData)!;
+    localStorage.setItem('user_data', JSON.stringify(normalized));
+    setUser(normalized);
   };
 
   const login = async (username: string, password: string): Promise<LoginResult> => {
@@ -137,10 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // If no 2FA required (unlikely based on my backend implementation for Pegawai, 
-      // but good for completeness)
       if (accessToken && data?.pegawai) {
-        const userData = data.pegawai;
+        const userData = normalizeUser(data.pegawai)!;
         localStorage.setItem("auth_token", accessToken);
         localStorage.setItem("user_data", JSON.stringify(userData));
         if (response.data.refreshToken) {
@@ -167,10 +178,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.data.status === 'success') {
         const { accessToken, refreshToken, pegawai } = response.data.data;
+        const normalized = normalizeUser(pegawai)!;
         localStorage.setItem("auth_token", accessToken);
         localStorage.setItem("refresh_token", refreshToken);
-        localStorage.setItem("user_data", JSON.stringify(pegawai));
-        setUser(pegawai);
+        localStorage.setItem("user_data", JSON.stringify(normalized));
+        setUser(normalized);
       } else {
         throw new Error(response.data.message || 'Verifikasi 2FA gagal');
       }

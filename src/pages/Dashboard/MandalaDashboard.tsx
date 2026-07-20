@@ -98,14 +98,27 @@ export default function MandalaDashboard() {
   useEffect(() => {
     if (user) {
       const userObj = user as any;
-      if (userObj.cadisdik) {
-        setInstansiName(userObj.cadisdik);
-      } else if (userObj.sekolah) {
-        setInstansiName(userObj.sekolah);
-      } else if (sekolah?.nama) {
-        setInstansiName(sekolah.nama);
+      const isOperatorUser = user.role?.toLowerCase().includes("operator");
+      if (isOperatorUser) {
+        if (sekolah?.nama) {
+          setInstansiName(sekolah.nama);
+        } else if (userObj.sekolah) {
+          setInstansiName(userObj.sekolah);
+        } else if (userObj.cadisdik) {
+          setInstansiName(userObj.cadisdik);
+        } else {
+          setInstansiName("Sekolah Anda");
+        }
       } else {
-        setInstansiName("Mandala Internal");
+        if (userObj.cadisdik) {
+          setInstansiName(userObj.cadisdik);
+        } else if (userObj.sekolah) {
+          setInstansiName(userObj.sekolah);
+        } else if (sekolah?.nama) {
+          setInstansiName(sekolah.nama);
+        } else {
+          setInstansiName("Mandala Internal");
+        }
       }
     }
   }, [user, sekolah]);
@@ -1077,7 +1090,7 @@ function OperatorDashboard({
               {getGreeting()}, {user?.nama || "Operator"}
             </h1>
             <p className="mt-2 max-w-xl text-brand-100 text-sm leading-relaxed">
-              Anda login sebagai Operator Sekolah untuk <strong>{sekolah?.nama || "Sekolah Anda"}</strong>. Kelola dan monitor data profil, GTK, serta peserta didik Anda secara real-time.
+              Anda login sebagai Operator Sekolah untuk <strong>{sekolah?.nama || (user as any)?.sekolah || "Sekolah Anda"}</strong>. Kelola dan monitor data profil, GTK, serta peserta didik Anda secara real-time.
             </p>
           </div>
 
