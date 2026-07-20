@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
-import PageBreadcrumb from "../../components/common/PageBreadcrumb";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import Input from "../../components/form/input/InputField";
 import {
   Table,
@@ -113,7 +113,8 @@ export default function SptjmDapodikDetailPage() {
 
         // 2. Fetch active semester directly from the semester_id API
         const semRes = await dapodikService.getSemesterAktif().catch(() => null);
-        const activeSem = semRes?.data || semRes || {};
+        const semestersData = semRes?.data || semRes;
+        const activeSem = Array.isArray(semestersData) ? semestersData[0] : (semestersData || {});
         
         const matchedTp = {
           semester_id: activeSem.semester_id || "20252",
