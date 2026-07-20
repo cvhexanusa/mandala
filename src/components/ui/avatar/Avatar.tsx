@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getFotoUrl } from "../../../utils/image";
 
 interface AvatarProps {
   src?: string; // URL of the avatar image
@@ -57,7 +58,7 @@ const Avatar: React.FC<AvatarProps> = ({
     setHasError(false);
   }, [src]);
 
-  const effectiveSrc = !src || src.trim() === "" || hasError ? fallbackSrc : src;
+  const effectiveSrc = !src || src.trim() === "" || hasError ? fallbackSrc : getFotoUrl(src);
   const isDefaultAvatar = effectiveSrc === fallbackSrc || effectiveSrc.includes("default-avatar.svg");
   const positionClass = isDefaultAvatar 
     ? "object-center" 
