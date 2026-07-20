@@ -1,9 +1,10 @@
-export const getFotoUrl = (path: string | null | undefined, fallback: string = "/images/default/profile.jpg"): string => {
-  if (!path) return fallback;
+export const getFotoUrl = (path: string | null | undefined, fallback: string = "/images/user/user-01.jpg"): string => {
+  const defaultFallback = fallback && fallback !== "" ? fallback : "/images/user/user-01.jpg";
+  if (!path) return defaultFallback;
   if (path.startsWith("http")) return path;
   const baseUrl = import.meta.env.VITE_API_URL 
     ? import.meta.env.VITE_API_URL.replace('/api', '') 
-    : 'http://localhost:3000';
+    : 'https://centralsimak.smakniscjr.sch.id';
   if (path.startsWith("/storage")) return `${baseUrl}${path}`;
   return `${baseUrl}/storage/${path}`;
 };

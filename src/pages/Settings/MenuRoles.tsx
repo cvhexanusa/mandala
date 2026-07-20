@@ -106,6 +106,14 @@ const MENU_HIERARCHY: MenuItem[] = [
     ]
   },
   {
+    key: "monitoring",
+    name: "Monitoring",
+    desc: "Menu induk agenda & kegiatan monitoring pengawas",
+    subItems: [
+      { key: "monitoring-jadwal", name: "Jadwal Monitoring", desc: "Kelola agenda & jadwal monitoring ke sekolah binaan" }
+    ]
+  },
+  {
     key: "pkks",
     name: "PKKS",
     desc: "Penilaian Kinerja Kepala Sekolah",

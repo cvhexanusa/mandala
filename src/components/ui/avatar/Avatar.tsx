@@ -1,10 +1,15 @@
+import React, { useState, useEffect } from "react";
+
 interface AvatarProps {
-  src: string; // URL of the avatar image
+  src?: string; // URL of the avatar image
   alt?: string; // Alt text for the avatar
   size?: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"; // Avatar size
   status?: "online" | "offline" | "busy" | "none"; // Status indicator
   className?: string; // Additional classes
+  fallbackSrc?: string;
 }
+
+const DEFAULT_AVATAR = "/images/user/user-01.jpg";
 
 const sizeClasses = {
   xsmall: "h-6 w-6 max-w-6",
@@ -36,11 +41,25 @@ const Avatar: React.FC<AvatarProps> = ({
   size = "medium",
   status = "none",
   className = "",
+  fallbackSrc = DEFAULT_AVATAR,
 }) => {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
+  const effectiveSrc = !src || src.trim() === "" || hasError ? fallbackSrc : src;
+
   return (
     <div className={`relative rounded-full shrink-0 ${sizeClasses[size]} ${className}`}>
       {/* Avatar Image */}
-      <img src={src} alt={alt} className="w-full h-full object-cover rounded-full" />
+      <img
+        src={effectiveSrc}
+        alt={alt}
+        onError={() => setHasError(true)}
+        className="w-full h-full object-cover rounded-full"
+      />
 
       {/* Status Indicator */}
       {status !== "none" && (

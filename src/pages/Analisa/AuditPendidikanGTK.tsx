@@ -533,10 +533,10 @@ const AuditPendidikanGTK: React.FC = () => {
                         <TableCell className="px-4 py-3 text-right">
                           <button
                             onClick={() => navigate(`/${role}/gtk/detail`, { state: { gtkList: [log.rawItem] } })}
-                            className="p-2 text-gray-500 hover:text-brand-500 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 dark:hover:bg-brand-500/20 rounded-lg transition-colors cursor-pointer"
                             title="Lihat Profil Detail"
                           >
-                            <UserIcon className="size-5" />
+                            Detail
                           </button>
                         </TableCell>
                       </TableRow>

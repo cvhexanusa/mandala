@@ -421,15 +421,14 @@ const AppSidebar: React.FC = () => {
           
           const isOperator = user?.role?.toLowerCase().includes("operator");
           const userJabatanId = isOperator ? 99 : (user as any)?.jabatan ?? 5;
-          
+          const userJenisJabatanId = (user as any)?.jenis_jabatan_id;
+
           const keys = roles
-            .filter((r: { jabatan_id: number; menu_key: string }) => r.jabatan_id === userJabatanId)
+            .filter((r: { jabatan_id?: number | null; jenis_jabatan_id?: string | null; menu_key: string }) => {
+              if (userJenisJabatanId && r.jenis_jabatan_id === userJenisJabatanId) return true;
+              return r.jabatan_id === userJabatanId;
+            })
             .map((r: { menu_key: string }) => r.menu_key);
-            
-          // Force allow Monitoring menu for Pengawas (6) or Admin/Super Admin (0, 1) during development
-          if (userJabatanId === 6 || userJabatanId === 0 || userJabatanId === 1) {
-            keys.push("monitoring", "monitoring-jadwal");
-          }
 
           setAllowedKeys(keys);
         }

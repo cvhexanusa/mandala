@@ -223,15 +223,14 @@ export default function SchoolDetailPage({ schoolId }: SchoolDetailPageProps = {
             <ComponentCard title="Statistik Terpadu">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/10 text-center md:text-left">
-                        <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold mb-1 tracking-widest">Total Guru</p>
+                        <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold mb-1 tracking-widest">Total GTK</p>
                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{total_guru?.toLocaleString()}</p>
                     </div>
                     <div className="p-4 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/10 text-center md:text-left">
-                        <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold mb-1 tracking-widest">Total Siswa</p>
+                        <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold mb-1 tracking-widest">Total Peserta Didik</p>
                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{total_siswa?.toLocaleString()}</p>
                     </div>
                 </div>
-                <p className="mt-4 text-[10px] text-gray-400 italic text-center">* Data ditarik langsung dari response API pusat.</p>
             </ComponentCard>
           </div>
 

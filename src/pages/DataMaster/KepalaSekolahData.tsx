@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import Avatar from "../../components/ui/avatar/Avatar";
+import { getFotoUrl } from "../../utils/image";
 import Badge from "../../components/ui/badge/Badge";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
@@ -269,7 +270,7 @@ export default function KepalaSekolahData() {
                         <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{index + 1}</TableCell>
                         <TableCell className="px-5 py-4 text-start whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            <Avatar src={item.identitas?.foto} size="small" />
+                            <Avatar src={getFotoUrl(item.identitas?.foto)} size="small" />
                             <span className="font-medium text-gray-800 dark:text-white/90">{item.identitas?.nama}</span>
                           </div>
                         </TableCell>

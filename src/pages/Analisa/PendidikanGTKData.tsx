@@ -376,10 +376,10 @@ export default function PendidikanGTKData({ type }: PendidikanGTKDataProps) {
                           <TableCell className="px-5 py-4 text-right">
                             <button
                               onClick={() => navigate(`/${role}/analisa/pendidikan-gtk/audit/${school.sekolah_id}${type ? `?type=${type}` : ""}`)}
-                              className="p-2 text-gray-500 hover:text-brand-500 transition-colors"
+                              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 dark:hover:bg-brand-500/20 rounded-lg transition-colors cursor-pointer"
                               title="Lihat Detail"
                             >
-                              <EyeIcon className="size-5" />
+                              Detail
                             </button>
                           </TableCell>
                         </TableRow>
