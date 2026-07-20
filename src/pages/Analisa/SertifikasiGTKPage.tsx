@@ -18,6 +18,8 @@ import {
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
+import Avatar from "../../components/ui/avatar/Avatar";
+import { getFotoUrl } from "../../utils/image";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -709,13 +711,7 @@ export default function SertifikasiGTKPage() {
                           <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{globalIndex}</TableCell>
                           <TableCell className="px-5 py-4 text-start">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center">
-                                {avatarUrl ? (
-                                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                ) : (
-                                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                                )}
-                              </div>
+                              <Avatar src={getFotoUrl(g.identitas?.foto || g.foto)} size="small" />
                               <span className="font-semibold text-gray-800 dark:text-white/90">{g.identitas?.nama || g.nama || "-"}</span>
                             </div>
                           </TableCell>

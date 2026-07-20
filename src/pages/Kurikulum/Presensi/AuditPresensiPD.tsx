@@ -20,6 +20,7 @@ import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
+import { getFotoUrl } from "../../../utils/image";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -275,9 +276,7 @@ const AuditPresensiPD: React.FC = () => {
             return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + " WIB";
           };
 
-          const fotoUrl = pd?.foto 
-            ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${pd.foto}` 
-            : '';
+          const fotoUrl = getFotoUrl(pd?.foto || pd?.identitas?.foto);
 
           const recordId = item.peserta_didik_id || pd?.id || pd?.identitas?.id;
           const recordNisn = pd?.nisn || pd?.nipd || pd?.identitas?.nisn;
@@ -309,9 +308,7 @@ const AuditPresensiPD: React.FC = () => {
             (studentNisn && checkedInNisns.has(studentNisn));
 
           if (!isAlreadyCheckedIn) {
-            const fotoUrl = student.identitas?.foto 
-              ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${student.identitas.foto}` 
-              : '';
+            const fotoUrl = getFotoUrl(student.identitas?.foto || student.foto);
 
             virtualPD.push({
               id: studentId || Math.random().toString(),

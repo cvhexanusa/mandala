@@ -20,7 +20,7 @@ import { exportToCSV } from "../../utils/exportUtils";
 import { DownloadIcon, PrinterIcon, SchoolIcon, SearchIcon, UserIcon } from "../../icons";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 import { formatPendidikan } from "../../utils/dapodikUtils";
-
+import { getFotoUrl } from "../../utils/image";
 
 const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
@@ -96,9 +96,7 @@ const AuditPendidikanGTK: React.FC = () => {
 
         // Format GTK members
         const formattedGTK = gtkList.map((item: any) => {
-          const fotoUrl = item.identitas?.foto 
-            ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${item.identitas.foto}` 
-            : '';
+          const fotoUrl = getFotoUrl(item.identitas?.foto || item.foto);
 
           return {
             id: item.ptk_id || item.identitas?.id || Math.random().toString(),

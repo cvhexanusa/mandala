@@ -22,6 +22,7 @@ import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon, EyeIcon } 
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
+import { getFotoUrl } from "../../../utils/image";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -282,9 +283,7 @@ const PresensiPD: React.FC = () => {
           return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + " WIB";
         };
 
-        const fotoUrl = pd?.foto 
-          ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${pd.foto}` 
-          : '';
+        const fotoUrl = getFotoUrl(pd?.foto || pd?.identitas?.foto);
 
         return {
           id: item.peserta_didik_id || Math.random().toString(),

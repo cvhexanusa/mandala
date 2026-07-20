@@ -19,6 +19,7 @@ import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
+import { getFotoUrl } from "../../../utils/image";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -237,9 +238,7 @@ const AuditPresensiGTK: React.FC = () => {
             return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + " WIB";
           };
 
-          const fotoUrl = gtk?.foto 
-            ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${gtk.foto}` 
-            : '';
+          const fotoUrl = getFotoUrl(gtk?.foto || gtk?.identitas?.foto);
 
           const recordId = item.ptk_id || gtk?.id || gtk?.identitas?.id;
           const recordNuptk = gtk?.nuptk || gtk?.nip || gtk?.identitas?.nuptk;
@@ -271,9 +270,7 @@ const AuditPresensiGTK: React.FC = () => {
             (gtkNuptk && checkedInGtkNuptks.has(gtkNuptk));
 
           if (!isAlreadyCheckedIn) {
-            const fotoUrl = gtkMember.identitas?.foto 
-              ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${gtkMember.identitas.foto}` 
-              : '';
+            const fotoUrl = getFotoUrl(gtkMember.identitas?.foto || gtkMember.foto);
 
             virtualGTK.push({
               id: gtkId || Math.random().toString(),
