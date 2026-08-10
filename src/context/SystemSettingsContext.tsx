@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import api from "../services/api";
 import { dapodikService } from "../services/dapodikService";
+import { getEnv } from "@/utils/env";
+import { getStorageUrl } from "@/utils/image";
 
 export interface SystemSetting {
   system_setting_id?: string;
@@ -35,14 +37,7 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
   const [settings, setSettings] = useState<SystemSetting | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const getStorageUrl = (filename: string | null | undefined) => {
-    if (!filename) return "";
-    if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
-    const baseUrl = (import.meta.env.VITE_API_URL || "https://centralsimak.smakniscjr.sch.id/api").trim().replace(/\/api$/, "");
-    if (filename.startsWith("/storage")) return `${baseUrl}${filename}`;
-    if (filename.startsWith("storage/")) return `${baseUrl}/${filename}`;
-    return `${baseUrl}/storage/${filename}`;
-  };
+  // getStorageUrl diambil langsung dari utility getStorageUrl yang mendukung signed URL & token auth
 
   const refreshSettings = async () => {
     try {
@@ -136,7 +131,7 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     // Append API key variations to payload to satisfy backend DTO validation (e.g. key, apiKey, etc.)
-    const mandalaKey = (import.meta.env.VITE_MANDALA_KEY || "").trim();
+    const mandalaKey = getEnv("VITE_MANDALA_KEY", "");
     if (mandalaKey) {
       if (!formData.has("key")) formData.append("key", mandalaKey);
       if (!formData.has("apiKey")) formData.append("apiKey", mandalaKey);

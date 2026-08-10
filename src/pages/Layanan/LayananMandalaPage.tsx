@@ -18,7 +18,8 @@ import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Badge from "../../components/ui/badge/Badge";
 import Avatar from "../../components/ui/avatar/Avatar";
-import { getFotoUrl } from "../../utils/image";
+import { getFotoUrl, getStorageUrl } from "../../utils/image";
+import { getEnv } from "../../utils/env";
 import { SearchIcon, BoltIcon, CheckCircleIcon, PlusIcon, PencilIcon, TrashBinIcon, ListIcon } from "../../icons";
 import Swal from "sweetalert2";
 
@@ -84,10 +85,7 @@ export default function LayananMandalaPage() {
 
   const getFileUrl = (url: string) => {
     if (!url) return "#";
-    const baseUrl = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') 
-      : 'http://localhost:3000';
-    return `${baseUrl}${url}`;
+    return getStorageUrl(url);
   };
 
   const handleUpdateFileStatus = async (fileId: string, currentStatus: number) => {

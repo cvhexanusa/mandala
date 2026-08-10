@@ -701,10 +701,6 @@ export default function SertifikasiGTKPage() {
                     paginatedDetailGurus.map((g, index) => {
                       const globalIndex = (detailCurrentPage - 1) * 10 + index + 1;
                       const certList = parseSertifikasi(g);
-                      
-                      const avatarUrl = g.identitas?.foto 
-                        ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'https://centralsimak.smakniscjr.sch.id'}/storage/${g.identitas.foto}` 
-                        : "";
 
                       return (
                         <TableRow key={g.ptk_id || g.id || index} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">

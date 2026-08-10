@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { getEnv } from '@/utils/env';
 
 // Konfigurasi Axios dengan praktik keamanan dasar
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || 'https://centralsimak.smakniscjr.sch.id/api').trim(),
+  baseURL: getEnv('VITE_API_URL', 'https://centralsimak.smakniscjr.sch.id/api'),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -14,6 +15,12 @@ const api = axios.create({
 // Interceptor untuk menangani token keamanan (misal JWT)
 api.interceptors.request.use(
   (config) => {
+    // Selalu perbarui baseURL secara dinamis jika ada perubahan runtime env
+    const currentBaseUrl = getEnv('VITE_API_URL', 'https://centralsimak.smakniscjr.sch.id/api');
+    if (currentBaseUrl && (!config.baseURL || config.baseURL.includes('localhost') || config.baseURL !== currentBaseUrl)) {
+      config.baseURL = currentBaseUrl;
+    }
+
     // Token Auth (User Login) - Masih dipertahankan jika ada
     const token = localStorage.getItem('auth_token');
     if (token) {
@@ -22,14 +29,11 @@ api.interceptors.request.use(
 
     // API Key (Mandala Integration)
     // Sesuai strategi: Setiap request WAJIB menyertakan x-mandala-key
-    // Mengambil dari .env (VITE_MANDALA_KEY)
-    const mandalaKey = (import.meta.env.VITE_MANDALA_KEY || '').trim();
+    // Mengambil dari runtime / .env realtime (VITE_MANDALA_KEY)
+    const mandalaKey = getEnv('VITE_MANDALA_KEY', '');
     
     if (mandalaKey) {
       config.headers['x-mandala-key'] = mandalaKey;
-      
-      // Jika request ke endpoint mandala, kita pastikan key terkirim di header
-      // dan tidak perlu mencemari query params jika tidak diperlukan
     }
 
     return config;
