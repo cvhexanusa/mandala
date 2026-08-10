@@ -6,6 +6,28 @@ PassengerAppType node
 PassengerStartupFile server.js
 # DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
 
+# 1. Arahkan index utama ke file produksi dist/index.html (mencegah index.html root mode dev terbaca)
+DirectoryIndex dist/index.html index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 2. Redirect request storage langsung ke backend SIMAK
+  RewriteRule ^storage/(.*)$ https://centralsimak.smakniscjr.sch.id/storage/$1 [R=302,L,QSA]
+
+  # 3. Jika file yang dicari ada di dalam folder /dist/, serve langsung dari /dist/
+  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
+  RewriteRule ^(.*)$ dist/$1 [L]
+
+  # 4. Jika request mengarah ke file nyata, langsung serve
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # 5. SPA Fallback: Semua request route lainnya diarahkan ke dist/index.html agar React Router menangani
+  RewriteRule ^ dist/index.html [L]
+</IfModule>
+
 # DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION BEGIN
 <IfModule Litespeed>
 </IfModule>
