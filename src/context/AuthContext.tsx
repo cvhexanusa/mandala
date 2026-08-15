@@ -48,12 +48,15 @@ const isTokenExpired = (token: string): boolean => {
 
 const normalizeUser = (p: any): User | null => {
   if (!p) return null;
-  const isOp = p.role?.toLowerCase().includes('operator') || p.jabatan === 0 || p.jabatan === '0';
+  const isPengawas = String(p.role || '').toLowerCase().includes('pengawas') || 
+    p.jabatan === 6 || p.jabatan === '6' || 
+    p.jabatan_id === 6 || p.jabatan_id === '6';
+  const isOp = String(p.role || '').toLowerCase().includes('operator') || p.jabatan === 0 || p.jabatan === '0';
   return {
     ...p,
     id: p.id || p.pegawai_id || '',
     nama: p.nama || p.nama_lengkap || 'Pengguna',
-    role: p.role || (isOp ? 'Operator Sekolah' : 'Pegawai'),
+    role: p.role || (isPengawas ? 'Pengawas Pembina' : isOp ? 'Operator Sekolah' : 'Pegawai'),
     instansi_id: p.instansi_id || p.sekolah_id || undefined,
   };
 };
