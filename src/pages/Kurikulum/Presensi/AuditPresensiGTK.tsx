@@ -19,7 +19,8 @@ import { SearchIcon, SchoolIcon, UserIcon, PrinterIcon, DownloadIcon } from "../
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
-import { getFotoUrl } from "../../../utils/image";
+import { mandalaService } from "../../../services/mandalaService";
+import { useAuth } from "../../../context/AuthContext";
 
 interface SchoolRecap {
   sekolah_id: string;
@@ -92,6 +93,9 @@ const AuditPresensiGTK: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   // Load School Details & Attendance
   useEffect(() => {
     const loadAuditData = async () => {
@@ -101,7 +105,7 @@ const AuditPresensiGTK: React.FC = () => {
         // Fetch Schools
         let schoolList: any[] = [];
         try {
-          const schoolRes = await dapodikService.getSekolah();
+          const schoolRes = isPengawas ? await mandalaService.getSekolahBinaanFull() : await dapodikService.getSekolah();
           if (schoolRes.status === 'success' || schoolRes.success === true) {
             schoolList = schoolRes.data || [];
           } else if (Array.isArray(schoolRes)) {

@@ -20,6 +20,8 @@ import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../../utils/exportUtils";
+import { mandalaService } from "../../../services/mandalaService";
+import { useAuth } from "../../../context/AuthContext";
 import PrintReportLayout, { PrintSignature } from "../../../components/common/PrintReportLayout";
 
 interface SchoolRecap {
@@ -83,12 +85,15 @@ const RekapTerpadu: React.FC = () => {
   const [logDataGTK, setLogDataGTK] = useState<any[]>([]);
   const [logDataPD, setLogDataPD] = useState<any[]>([]);
 
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   // Load School List and Setup Filters
   useEffect(() => {
     const initPage = async () => {
       try {
         setLoading(true);
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas ? await mandalaService.getSekolahBinaanFull() : await dapodikService.getSekolah();
         let schoolList = [];
         if (response.status === 'success' || response.success === true) {
           schoolList = response.data || [];

@@ -22,6 +22,9 @@ import Avatar from "../../components/ui/avatar/Avatar";
 import { getFotoUrl } from "../../utils/image";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
+
 const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -31,6 +34,8 @@ const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function SertifikasiGTKPage() {
   const navigate = useNavigate();
   const { role } = useParams();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
 
   // States
   const [schools, setSchools] = useState<any[]>([]);
@@ -49,7 +54,7 @@ export default function SertifikasiGTKPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const schoolRes = await dapodikService.getSekolah();
+        const schoolRes = isPengawas ? await mandalaService.getSekolahBinaanFull() : await dapodikService.getSekolah();
         let schoolList = [];
         if (schoolRes.status === "success" || schoolRes.success === true) {
           schoolList = schoolRes.data || [];

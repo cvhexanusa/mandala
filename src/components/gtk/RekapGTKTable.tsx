@@ -38,9 +38,8 @@ export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTe
         let binaanIds: string[] = [];
         if (isPengawas) {
           try {
-            const bRes = await mandalaService.getSekolahBinaan();
-            const bList = bRes?.data || (Array.isArray(bRes) ? bRes : []);
-            binaanIds = bList.map((s: any) => s.sekolah_id);
+            const bList = await mandalaService.getSekolahBinaanFull();
+            binaanIds = bList.map((s: any) => s.sekolah_id || s.id);
           } catch (e) {
             console.error("Gagal memuat sekolah binaan:", e);
           }

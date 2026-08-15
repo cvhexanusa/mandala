@@ -18,10 +18,14 @@ import Pagination from "../../components/common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
 import Swal from "sweetalert2";
 import { exportToCSV } from "../../utils/exportUtils";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 
 export default function ResiduData() {
   const { type } = useParams<{ type: string }>();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
   
   const [schools, setSchools] = useState<any[]>([]);
   const [rawData, setRawData] = useState<any[]>([]);
@@ -43,7 +47,7 @@ export default function ResiduData() {
       setRawData([]);
       setSelectedSchoolId(null); // Reset detail view when type/category changes
       try {
-        const schoolRes = await dapodikService.getSekolah();
+        const schoolRes = isPengawas ? await mandalaService.getSekolahBinaanFull() : await dapodikService.getSekolah();
         let schoolList = [];
         if (schoolRes.status === 'success' || schoolRes.success === true) {
           schoolList = schoolRes.data || [];

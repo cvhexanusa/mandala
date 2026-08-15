@@ -21,6 +21,8 @@ import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 import { formatPtkInduk } from "../../utils/dapodikUtils";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 
 interface GTKItem {
   identitas?: {
@@ -42,6 +44,8 @@ interface GTKItem {
 
 export default function PensiunPage() {
   const { role } = useParams();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
 
   // States
   const [schools, setSchools] = useState<any[]>([]);
@@ -103,7 +107,7 @@ export default function PensiunPage() {
       setLoading(true);
       try {
         const [schoolRes, gtkRes] = await Promise.all([
-          dapodikService.getSekolah(),
+          isPengawas ? mandalaService.getSekolahBinaanFull() : dapodikService.getSekolah(),
           dapodikService.getGTK(3000, "", 1, undefined, "aktif") // fetch up to 3000 active GTK
         ]);
 

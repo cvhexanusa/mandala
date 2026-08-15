@@ -131,33 +131,29 @@ export default function GTKData() {
 
   // Fetch GTK counts to show in schools list directory
   useEffect(() => {
+    if (allSchools.length === 0) return;
     const fetchCounts = async () => {
       setLoadingCounts(true);
       try {
-        const response = await dapodikService.getGTK(2000, "", 1, undefined, "aktif");
-        let data = [];
-        if (response && (response.status === 'success' || response.success === true)) {
-          data = response.data || [];
-        } else if (Array.isArray(response)) {
-          data = response;
-        } else if (response && response.data && Array.isArray(response.data)) {
-          data = response.data;
-        }
+        const countPromises = allSchools.map(async (school: any) => {
+          const schId = school.sekolah_id || school.id;
+          try {
+            const [guruRes, tendikRes] = await Promise.all([
+              dapodikService.getGTK(1, "", 1, "guru", "aktif", schId),
+              dapodikService.getGTK(1, "", 1, "tendik", "aktif", schId)
+            ]);
+            const guruTotal = guruRes?.meta?.total_data || guruRes?.meta?.total || guruRes?.total || (guruRes?.data ? guruRes.data.length : 0);
+            const tendikTotal = tendikRes?.meta?.total_data || tendikRes?.meta?.total || tendikRes?.total || (tendikRes?.data ? tendikRes.data.length : 0);
+            return { sekolah_id: schId, guru: guruTotal, tendik: tendikTotal };
+          } catch (e) {
+            return { sekolah_id: schId, guru: school.total_guru || 0, tendik: school.total_tendik || 0 };
+          }
+        });
 
+        const results = await Promise.all(countPromises);
         const counts: Record<string, { guru: number; tendik: number }> = {};
-        data.forEach((item: any) => {
-          const schoolId = item.identitas?.sekolah_id;
-          if (!schoolId) return;
-          if (!counts[schoolId]) {
-            counts[schoolId] = { guru: 0, tendik: 0 };
-          }
-          
-          const isGuru = item.kepegawaian?.jenis_ptk?.toLowerCase().includes("guru") || item.type === "guru";
-          if (isGuru) {
-            counts[schoolId].guru++;
-          } else {
-            counts[schoolId].tendik++;
-          }
+        results.forEach((item) => {
+          counts[item.sekolah_id] = { guru: item.guru, tendik: item.tendik };
         });
         setGtkCounts(counts);
       } catch (err) {
@@ -167,7 +163,7 @@ export default function GTKData() {
       }
     };
     fetchCounts();
-  }, []);
+  }, [allSchools]);
 
   // Filter Kecamatan based on Kab/Kota
   useEffect(() => {

@@ -298,7 +298,7 @@ export const mandalaService = {
     sekolahBinaanFullCachePromise = (async () => {
       try {
         const [binaanRes, schoolsRes] = await Promise.all([
-          api.get('/mandala/pengawas/sekolah-binaan'),
+          api.get('/mandala/pengawas/sekolah-binaan').catch(() => null),
           api.get('/mandala/sekolah')
         ]);
 
@@ -322,12 +322,39 @@ export const mandalaService = {
           allSchools = sData.data;
         }
 
-        const binaanIds = new Set(binaanList.map((item: any) => item.sekolah_id || item.id));
+        // Fallback: Jika /mandala/pengawas/sekolah-binaan kosong di hosting,
+        // ambil sekolah_id binaan dari /mandala/mapping-pengawas untuk pengawas yang sedang login
+        if (!binaanList || binaanList.length === 0) {
+          try {
+            const savedUserStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_data') : null;
+            if (savedUserStr) {
+              const u = JSON.parse(savedUserStr);
+              const userId = u.id || u.pegawai_id;
+              const userNip = u.nip;
+              const mapRes = await api.get('/mandala/mapping-pengawas');
+              const mapData = mapRes?.data?.data || (Array.isArray(mapRes?.data) ? mapRes.data : []);
+              if (Array.isArray(mapData)) {
+                const myMappings = mapData.filter((m: any) => 
+                  (userId && m.pegawai_id === userId) || (userNip && m.pegawai?.nip === userNip)
+                );
+                binaanList = myMappings.map((m: any) => ({
+                  sekolah_id: m.sekolah_id || m.sekolah?.sekolah_id,
+                  nama: m.sekolah?.nama,
+                  npsn: m.sekolah?.npsn
+                }));
+              }
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback mapping pengawas error:', fallbackErr);
+          }
+        }
 
-        // Filter full schools matching binaan IDs
+        const binaanIds = new Set(binaanList.map((item: any) => item.sekolah_id || item.id).filter(Boolean));
+
+        // Filter full schools matching binaan IDs from allSchools
         const matchedSchools = allSchools.filter((s: any) => binaanIds.has(s.sekolah_id || s.id));
 
-        // Fallback: If any binaan school is not in allSchools, include it from binaanList
+        // Fallback: Jika ada sekolah binaan yang belum ada di allSchools, tambahkan bItem
         binaanList.forEach((bItem: any) => {
           const bId = bItem.sekolah_id || bItem.id;
           if (bId && !matchedSchools.some((s: any) => (s.sekolah_id || s.id) === bId)) {

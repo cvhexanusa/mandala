@@ -62,9 +62,14 @@ function formatSemester(tp: any): string {
   return tp.semester || "1 (Ganjil)";
 }
 
+import { useAuth } from "../../context/AuthContext";
+
 export default function SptjmDapodikPage() {
   const navigate = useNavigate();
   const { role } = useParams();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +85,7 @@ export default function SptjmDapodikPage() {
     const loadSchools = async () => {
       setLoading(true);
       try {
-        const schoolRes = await dapodikService.getSekolah();
+        const schoolRes = isPengawas ? await mandalaService.getSekolahBinaanFull() : await dapodikService.getSekolah();
         let schoolList = [];
         if (schoolRes.status === "success" || schoolRes.success === true) {
           schoolList = schoolRes.data || [];

@@ -38,12 +38,9 @@ export default function KepalaSekolahData() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [schoolRes, gtkRes] = await Promise.all([
-          isPengawas ? mandalaService.getSekolahBinaanFull() : dapodikService.getSekolah(),
-          dapodikService.getGTK(500, "", 1, "tendik", "aktif")
-        ]);
+        const schoolRes = isPengawas ? await mandalaService.getSekolahBinaanFull() : await dapodikService.getSekolah();
 
-        let schoolList = [];
+        let schoolList: any[] = [];
         if (schoolRes.status === 'success' || schoolRes.success === true) {
           schoolList = schoolRes.data || [];
         } else if (Array.isArray(schoolRes)) {
@@ -53,20 +50,203 @@ export default function KepalaSekolahData() {
         }
         setSchools(schoolList);
 
-        let gtkList = [];
-        if (gtkRes.status === 'success' || gtkRes.success === true) {
-          gtkList = gtkRes.data || [];
-        } else if (Array.isArray(gtkRes)) {
-          gtkList = gtkRes;
-        } else if (gtkRes.data && Array.isArray(gtkRes.data)) {
-          gtkList = gtkRes.data;
+        // Helper to check valid UUID format (36 chars with hyphens)
+        const isUUID = (str: string) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+
+        // Helper to match GTK to school by ID, NPSN, or School Name
+        const isGtkForSchool = (g: any, sch: any) => {
+          const schId = String(sch.sekolah_id || sch.id || "").toLowerCase().trim();
+          const schNpsn = String(sch.npsn || "").toLowerCase().trim();
+          const schNama = String(sch.nama || "").toLowerCase().trim();
+
+          const gSchId = String(g.identitas?.sekolah_id || g.sekolah_id || g.sekolah?.sekolah_id || "").toLowerCase().trim();
+          const gNpsn = String(g.identitas?.npsn || g.npsn || g.sekolah?.npsn || "").toLowerCase().trim();
+          const gNamaSekolah = String(g.identitas?.sekolah_nama || g.sekolah_nama || g.identitas?.nama_sekolah || g.nama_sekolah || g.sekolah?.nama || "").toLowerCase().trim();
+
+          if (schId && gSchId && schId === gSchId) return true;
+          if (schNpsn && gNpsn && schNpsn === gNpsn) return true;
+          if (schNpsn && gSchId && schNpsn === gSchId) return true;
+          if (schId && gNpsn && schId === gNpsn) return true;
+          if (schNama && gNamaSekolah && (schNama.includes(gNamaSekolah) || gNamaSekolah.includes(schNama))) return true;
+
+          return false;
+        };
+
+        // 1. Fetch GTK globally across all pages (limit=100)
+        const maxLimit = 100;
+        const firstGtkPage = await dapodikService.getGTK(maxLimit, "", 1, undefined, undefined).catch(() => null);
+        let globalGtk: any[] = [];
+        let totalCount = 0;
+
+        if (firstGtkPage && (firstGtkPage.status === 'success' || firstGtkPage.success === true)) {
+          globalGtk = firstGtkPage.data || [];
+          totalCount = firstGtkPage.meta?.total_data || firstGtkPage.meta?.total || firstGtkPage.total || globalGtk.length;
+        } else if (Array.isArray(firstGtkPage)) {
+          globalGtk = firstGtkPage;
+          totalCount = firstGtkPage.length;
+        } else if (firstGtkPage?.data && Array.isArray(firstGtkPage.data)) {
+          globalGtk = firstGtkPage.data;
+          totalCount = firstGtkPage.meta?.total_data || firstGtkPage.total || globalGtk.length;
         }
 
-        // Filter headmasters: jenis_ptk or tugas_tambahan contains "kepala sekolah"
-        const ksList = gtkList.filter((g: any) => 
-          g.kepegawaian?.jenis_ptk?.toLowerCase().includes("kepala sekolah") ||
-          g.tugas_tambahan?.toLowerCase().includes("kepala sekolah")
-        );
+        const totalPages = Math.ceil(totalCount / maxLimit);
+        if (totalPages > 1) {
+          const pagePromises = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(dapodikService.getGTK(maxLimit, "", p, undefined, undefined).catch(() => null));
+          }
+          const otherPages = await Promise.all(pagePromises);
+          otherPages.forEach((pageRes) => {
+            let pageData = [];
+            if (pageRes && (pageRes.status === 'success' || pageRes.success === true)) {
+              pageData = pageRes.data || [];
+            } else if (Array.isArray(pageRes)) {
+              pageData = pageRes;
+            } else if (pageRes?.data && Array.isArray(pageRes.data)) {
+              pageData = pageRes.data;
+            }
+            globalGtk = [...globalGtk, ...pageData];
+          });
+        }
+
+        // 2. Fetch GTK (by valid UUID), Detail, and Summary per school
+        const schoolDataPromises = schoolList.map(async (sch: any) => {
+          const schId = sch.sekolah_id || sch.id;
+          const validUUID = isUUID(schId) ? schId : undefined;
+          try {
+            const [gtkResById, detailRes, summaryRes] = await Promise.all([
+              validUUID ? dapodikService.getGTK(100, "", 1, undefined, undefined, validUUID).catch(() => null) : null,
+              validUUID ? mandalaService.getSchoolDetail(validUUID).catch(() => null) : null,
+              validUUID ? mandalaService.getSchoolSummary(validUUID).catch(() => null) : null
+            ]);
+
+            const extractData = (res: any) => {
+              if (res && (res.status === 'success' || res.success === true)) return res.data || [];
+              if (Array.isArray(res)) return res;
+              if (res?.data && Array.isArray(res.data)) return res.data;
+              return [];
+            };
+
+            const gtkById = extractData(gtkResById);
+            const gtkFromGlobal = globalGtk.filter((g: any) => isGtkForSchool(g, sch));
+
+            const combinedMap = new Map();
+            [...gtkById, ...gtkFromGlobal].forEach((g: any) => {
+              const gId = g.identitas?.id || g.id || g.identitas?.nuptk || g.nuptk || g.identitas?.nama || g.nama;
+              if (gId && !combinedMap.has(gId)) {
+                combinedMap.set(gId, g);
+              }
+            });
+
+            const schoolGtk = Array.from(combinedMap.values());
+            const detailData = detailRes?.data || detailRes;
+            const summaryData = summaryRes?.data || summaryRes;
+
+            return {
+              sch,
+              schId,
+              schoolGtk,
+              detailData: Array.isArray(detailData) ? detailData[0] : detailData,
+              summaryData: Array.isArray(summaryData) ? summaryData[0] : summaryData
+            };
+          } catch (e) {
+            return { sch, schId, schoolGtk: [], detailData: null, summaryData: null };
+          }
+        });
+
+        const schoolDataResults = await Promise.all(schoolDataPromises);
+        const ksList: any[] = [];
+
+        schoolDataResults.forEach(({ sch, schId, schoolGtk, detailData, summaryData }) => {
+          // A. Search GTK explicitly tagged as Kepala Sekolah
+          let ks = schoolGtk.find((g: any) => {
+            const str = [
+              g.kepegawaian?.jenis_ptk,
+              g.jenis_ptk,
+              g.jenis_ptk_id_str,
+              g.tugas_tambahan,
+              g.tugas_tambahan_id_str,
+              g.jabatan,
+              g.jabatan_ptk_id_str,
+              g.jabatan_tugas_tambahan,
+              g.kepegawaian?.tugas_tambahan,
+              g.identitas?.jabatan,
+              g.role
+            ].map(v => String(v || '').toLowerCase()).join(' ');
+
+            return str.includes("kepala sekolah") || str.includes("kepala_sekolah") || str.includes("kepsek") || g.is_kepsek === 1 || g.is_kepsek === "1";
+          });
+
+          // B. Search GTK with "kepala", "plt", or "pjs"
+          if (!ks) {
+            ks = schoolGtk.find((g: any) => {
+              const str = [
+                g.kepegawaian?.jenis_ptk,
+                g.jenis_ptk,
+                g.jenis_ptk_id_str,
+                g.tugas_tambahan,
+                g.tugas_tambahan_id_str,
+                g.jabatan,
+                g.jabatan_ptk_id_str,
+                g.jabatan_tugas_tambahan,
+                g.kepegawaian?.tugas_tambahan
+              ].map(v => String(v || '').toLowerCase()).join(' ');
+
+              return str.includes("kepala") || str.includes("plt") || str.includes("pjs");
+            });
+          }
+
+          // C. Extract headmaster name from detailData, summaryData, or sch
+          const d = detailData || {};
+          const s = summaryData || {};
+          const extractedName = 
+            d.kepala_sekolah || d.nama_kepala_sekolah || d.nama_ks || d.pimpinan || d.penanggung_jawab ||
+            s.kepala_sekolah || s.nama_kepala_sekolah || s.nama_ks || s.pimpinan || s.penanggung_jawab ||
+            sch.kepala_sekolah || sch.nama_kepala_sekolah || sch.nama_ks || sch.pimpinan || sch.penanggung_jawab;
+
+          // D. If no GTK explicitly tagged, match GTK by extracted name
+          if (!ks && extractedName) {
+            const matchByName = schoolGtk.find((g: any) => {
+              const name = (g.identitas?.nama || g.nama || "").toLowerCase().trim();
+              return name && name === String(extractedName).toLowerCase().trim();
+            });
+            if (matchByName) {
+              ks = matchByName;
+            }
+          }
+
+          if (ks) {
+            ksList.push({
+              ...ks,
+              sekolah_id: schId,
+              identitas: {
+                ...ks.identitas,
+                sekolah_id: schId
+              }
+            });
+          } else {
+            const extractedNuptk = d.nuptk_kepala_sekolah || d.nuptk || s.nuptk_kepala_sekolah || s.nuptk || sch.nuptk_kepala_sekolah || sch.nuptk || "-";
+            const extractedPhone = d.no_hp_kepala_sekolah || d.telepon || d.no_telepon || s.telepon || sch.telepon || sch.no_telepon || "-";
+            const extractedStatus = d.status_kepala_sekolah || d.status_kepegawaian || s.status_kepala_sekolah || sch.status_kepala_sekolah || "-";
+
+            ksList.push({
+              identitas: {
+                id: `ks-${schId}`,
+                nama: extractedName || "Belum Ditentukan",
+                jenis_kelamin: d.jk_kepala_sekolah || d.jenis_kelamin || "-",
+                sekolah_id: schId,
+                nuptk: extractedNuptk,
+                no_hp: extractedPhone
+              },
+              kepegawaian: {
+                status_kepegawaian: extractedStatus,
+                jenis_ptk: "Kepala Sekolah"
+              },
+              sekolah_id: schId
+            });
+          }
+        });
+
         setHeadmasters(ksList);
       } catch (err) {
         console.error("Gagal memuat data Kepala Sekolah:", err);
@@ -80,28 +260,29 @@ export default function KepalaSekolahData() {
 
   const schoolOptions = [
     { value: "all", label: "Pilih Sekolah" },
-    ...schools.map((s) => ({ value: s.sekolah_id, label: s.nama }))
+    ...schools.map((s) => ({ value: s.sekolah_id || s.id, label: s.nama }))
   ];
 
   const filteredHeadmasters = headmasters.filter((hm) => {
-    const school = schools.find((s) => s.sekolah_id === hm.identitas?.sekolah_id);
+    const hmSchoolId = hm.identitas?.sekolah_id || hm.sekolah_id;
+    const school = schools.find((s) => (s.sekolah_id || s.id) === hmSchoolId);
     if (isPengawas && !school) return false;
     const schoolName = school ? school.nama : "";
-    const hmName = hm.identitas?.nama || "";
-    const nuptk = hm.identitas?.nuptk || "";
+    const hmName = hm.identitas?.nama || hm.nama || "";
+    const nuptk = hm.identitas?.nuptk || hm.nuptk || "";
 
     const matchesSearch = 
       hmName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       nuptk.toLowerCase().includes(searchQuery.toLowerCase()) ||
       schoolName.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesSchool = sekolahFilter === "all" || hm.identitas?.sekolah_id === sekolahFilter;
+    const matchesSchool = sekolahFilter === "all" || hmSchoolId === sekolahFilter;
 
     return matchesSearch && matchesSchool;
   });
 
   const getSchoolName = (sekolahId: string) => {
-    const school = schools.find((s) => s.sekolah_id === sekolahId);
+    const school = schools.find((s) => (s.sekolah_id || s.id) === sekolahId);
     return school ? school.nama : sekolahId || "-";
   };
 

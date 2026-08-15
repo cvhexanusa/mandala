@@ -8,6 +8,8 @@ import {
 
 import { useState, useEffect } from "react";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 
 interface RekapPDKompetensi {
   kompetensi: string;
@@ -25,6 +27,9 @@ interface RekapPDKompetensiTableProps {
 }
 
 export default function RekapPDKompetensiTable({ searchTerm, sekolahId }: RekapPDKompetensiTableProps) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [rekapData, setRekapData] = useState<RekapPDKompetensi[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,7 +40,20 @@ export default function RekapPDKompetensiTable({ searchTerm, sekolahId }: RekapP
         const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
         let mapped: RekapPDKompetensi[] = [];
         
+        let binaanIds: string[] = [];
+        if (isPengawas) {
+          try {
+            const bList = await mandalaService.getSekolahBinaanFull();
+            binaanIds = bList.map((s: any) => s.sekolah_id || s.id);
+          } catch (e) {
+            console.error("Gagal memuat sekolah binaan:", e);
+          }
+        }
+        
         try {
+          if (isPengawas && !targetSekolahId) {
+            throw new Error("Skipping strategy 1 for Pengawas global view");
+          }
           const response = await dapodikService.getPdRekapKompetensi(targetSekolahId);
           const dataArray = response?.data ?? response;
           if (Array.isArray(dataArray) && dataArray.length > 0) {
@@ -55,7 +73,11 @@ export default function RekapPDKompetensiTable({ searchTerm, sekolahId }: RekapP
           console.warn("Rekap PD Kompetensi API failed, falling back to client-side aggregation:", apiError);
           
           const result = await dapodikService.getPesertaDidik(5000, "", 1, undefined, "aktif", undefined, targetSekolahId);
-          const pdData = result?.data || (Array.isArray(result) ? result : []);
+          let pdData = result?.data || (Array.isArray(result) ? result : []);
+
+          if (isPengawas && binaanIds.length > 0) {
+            pdData = pdData.filter((pd: any) => binaanIds.includes(pd.identitas?.sekolah_id || pd.sekolah_id));
+          }
           
           if (pdData.length > 0) {
             const groups: Record<string, RekapPDKompetensi> = {};
