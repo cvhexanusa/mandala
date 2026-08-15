@@ -39,7 +39,7 @@ export default function KepalaSekolahData() {
       setLoading(true);
       try {
         const [schoolRes, gtkRes] = await Promise.all([
-          isPengawas ? mandalaService.getSekolahBinaan() : dapodikService.getSekolah(),
+          isPengawas ? mandalaService.getSekolahBinaanFull() : dapodikService.getSekolah(),
           dapodikService.getGTK(500, "", 1, "tendik", "aktif")
         ]);
 
@@ -85,6 +85,7 @@ export default function KepalaSekolahData() {
 
   const filteredHeadmasters = headmasters.filter((hm) => {
     const school = schools.find((s) => s.sekolah_id === hm.identitas?.sekolah_id);
+    if (isPengawas && !school) return false;
     const schoolName = school ? school.nama : "";
     const hmName = hm.identitas?.nama || "";
     const nuptk = hm.identitas?.nuptk || "";

@@ -29,7 +29,7 @@ export default function SchoolData() {
     const fetchFilterData = async () => {
       try {
         const response = isPengawas 
-          ? await mandalaService.getSekolahBinaan() 
+          ? await mandalaService.getSekolahBinaanFull() 
           : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {

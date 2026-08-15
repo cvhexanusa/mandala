@@ -10,6 +10,8 @@ import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { EyeIcon } from "../../icons";
 import { getFotoUrl } from "../../utils/image";
 
@@ -26,6 +28,9 @@ interface StudentTableProps {
 }
 
 export default function StudentTable({ onSelectionChange, onDetail, searchTerm, completenessFilter: _completenessFilter, gradeFilter, itemsPerPage, sekolahId, onDataLoaded }: StudentTableProps) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [currentPage, setCurrentPage] = useState(1);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,7 +41,9 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas
+          ? await mandalaService.getSekolahBinaanFull()
+          : await dapodikService.getSekolah();
         let schoolList = [];
         if (response.status === 'success' || response.success === true) {
           schoolList = response.data || [];
@@ -51,7 +58,7 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
       }
     };
     fetchSchools();
-  }, []);
+  }, [isPengawas]);
 
   const getSchoolName = (sekolahId: string) => {
     const school = schools.find((s) => s.sekolah_id === sekolahId);
@@ -120,6 +127,11 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
           });
         }
           
+        if (isPengawas && schools.length > 0) {
+          const binaanIds = schools.map((s: any) => s.sekolah_id);
+          fetchedData = fetchedData.filter((item: any) => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
+        }
+
         setAllStudents(fetchedData);
         if (onDataLoaded) onDataLoaded(fetchedData);
       } catch (error) {
@@ -129,7 +141,7 @@ export default function StudentTable({ onSelectionChange, onDetail, searchTerm, 
       }
     };
     fetchAllStudents();
-  }, [gradeFilter, sekolahId]);
+  }, [gradeFilter, sekolahId, isPengawas, schools]);
 
   // Client-side filtering & search
   const filteredStudents = useMemo(() => {

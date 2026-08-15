@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import {
   Table,
   TableBody,
@@ -20,6 +22,9 @@ interface RekapGTKUsia {
 }
 
 export default function RekapGTKUsiaTable({ sekolahId }: { sekolahId?: string }) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [rekapData, setRekapData] = useState<RekapGTKUsia[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +34,22 @@ export default function RekapGTKUsiaTable({ sekolahId }: { sekolahId?: string })
       try {
         const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
         let mappedData: RekapGTKUsia[] = [];
+
+        let binaanIds: string[] = [];
+        if (isPengawas) {
+          try {
+            const bRes = await mandalaService.getSekolahBinaan();
+            const bList = bRes?.data || (Array.isArray(bRes) ? bRes : []);
+            binaanIds = bList.map((s: any) => s.sekolah_id);
+          } catch (e) {
+            console.error("Gagal memuat sekolah binaan:", e);
+          }
+        }
         
         try {
+          if (isPengawas && !targetSekolahId) {
+            throw new Error("Skipping strategy 1 for Pengawas global view");
+          }
           // Attempt Strategy 1: Specialized endpoint
           const result = await dapodikService.getGtkRekapUsia(targetSekolahId);
           const responseData = result?.data ?? result;
@@ -66,6 +85,10 @@ export default function RekapGTKUsiaTable({ sekolahId }: { sekolahId?: string })
               }
               const otherPages = await Promise.all(promises);
               otherPages.forEach(p => allGTK = [...allGTK, ...(p.data || [])]);
+          }
+
+          if (isPengawas && binaanIds.length > 0) {
+            allGTK = allGTK.filter(gtk => binaanIds.includes(gtk.identitas?.sekolah_id || gtk.sekolah_id));
           }
 
           if (allGTK.length > 0) {
@@ -121,7 +144,7 @@ export default function RekapGTKUsiaTable({ sekolahId }: { sekolahId?: string })
       }
     };
     fetchData();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas]);
 
   const totals = rekapData.reduce((acc, curr) => ({
     lakiLaki: acc.lakiLaki + (curr.lakiLaki || 0),

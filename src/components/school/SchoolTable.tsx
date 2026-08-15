@@ -82,7 +82,7 @@ export default function SchoolTable({
       setLoading(true);
       try {
         const response = isPengawas 
-          ? await mandalaService.getSekolahBinaan() 
+          ? await mandalaService.getSekolahBinaanFull() 
           : await dapodikService.getSekolah();
         let sekolahData = [];
         

@@ -168,7 +168,7 @@ export default function MandalaDashboard() {
       setError(null);
       const isPengawasUser = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
       const response = isPengawasUser
-        ? await mandalaService.getSekolahBinaan()
+        ? await mandalaService.getSekolahBinaanFull()
         : await mandalaService.getSchools();
       
       let fetchedSchools: MandalaSchool[] = [];

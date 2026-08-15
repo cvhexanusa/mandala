@@ -11,6 +11,8 @@ import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { EyeIcon } from "../../icons";
 import { getFotoUrl } from "../../utils/image";
 import { formatPtkInduk } from "../../utils/dapodikUtils";
@@ -25,6 +27,9 @@ interface GuruTableProps {
 }
 
 export default function GuruTable({ onSelectionChange, onDetail, searchTerm, itemsPerPage, sekolahId }: GuruTableProps) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
@@ -35,7 +40,9 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas
+          ? await mandalaService.getSekolahBinaanFull()
+          : await dapodikService.getSekolah();
         let schoolList = [];
         if (response.status === 'success' || response.success === true) {
           schoolList = response.data || [];
@@ -50,7 +57,7 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
       }
     };
     fetchSchools();
-  }, []);
+  }, [isPengawas]);
 
   const getSchoolName = (sekolahId: string) => {
     const school = schools.find((s) => s.sekolah_id === sekolahId);
@@ -115,6 +122,11 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
           });
         }
 
+        if (isPengawas && schools.length > 0) {
+          const binaanIds = schools.map((s: any) => s.sekolah_id);
+          fetchedData = fetchedData.filter((item: any) => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
+        }
+
         setAllGuru(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data guru:", error);
@@ -124,7 +136,7 @@ export default function GuruTable({ onSelectionChange, onDetail, searchTerm, ite
     };
 
     fetchAllGuru();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas, schools]);
 
   // Client-side filtering & search
   const filteredGuru = useMemo(() => {

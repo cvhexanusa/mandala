@@ -54,7 +54,7 @@ export default function RekapitulasiSekolah() {
     try {
       setLoading(true);
       const response = isPengawas
-        ? await mandalaService.getSekolahBinaan()
+        ? await mandalaService.getSekolahBinaanFull()
         : await dapodikService.getSekolah();
       let schools = [];
       

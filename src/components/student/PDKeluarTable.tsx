@@ -9,6 +9,8 @@ import {
 import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { EyeIcon } from "../../icons";
 
 interface PDKeluarTableProps {
@@ -20,11 +22,37 @@ interface PDKeluarTableProps {
 }
 
 export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm, itemsPerPage, sekolahId }: PDKeluarTableProps) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [currentPage, setCurrentPage] = useState(1);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
+  const [schools, setSchools] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const response = isPengawas
+          ? await mandalaService.getSekolahBinaanFull()
+          : await dapodikService.getSekolah();
+        let schoolList = [];
+        if (response.status === 'success' || response.success === true) {
+          schoolList = response.data || [];
+        } else if (Array.isArray(response)) {
+          schoolList = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          schoolList = response.data;
+        }
+        setSchools(schoolList);
+      } catch (error) {
+        console.error("Gagal mengambil daftar sekolah:", error);
+      }
+    };
+    fetchSchools();
+  }, [isPengawas]);
 
   useEffect(() => {
     const fetchAllStudents = async () => {
@@ -87,6 +115,11 @@ export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm,
           });
         }
 
+        if (isPengawas && schools.length > 0) {
+          const binaanIds = schools.map((s: any) => s.sekolah_id);
+          fetchedData = fetchedData.filter((item: any) => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
+        }
+
         setAllStudents(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data PD keluar:", error);
@@ -95,7 +128,7 @@ export default function PDKeluarTable({ onSelectionChange, onDetail, searchTerm,
       }
     };
     fetchAllStudents();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas, schools]);
 
   // Client-side filtering & search
   const filteredStudents = useMemo(() => {

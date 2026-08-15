@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import {
   Table,
   TableBody,
@@ -19,6 +21,9 @@ interface RekapPD {
 }
 
 export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTerm?: string; sekolahId?: string }) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [rekapData, setRekapData] = useState<RekapPD[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,10 +33,20 @@ export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTer
       try {
         const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
         let mappedData: RekapPD[] = [];
+
+        let binaanIds: string[] = [];
+        if (isPengawas) {
+          try {
+            const bRes = await mandalaService.getSekolahBinaan();
+            const bList = bRes?.data || (Array.isArray(bRes) ? bRes : []);
+            binaanIds = bList.map((s: any) => s.sekolah_id);
+          } catch (e) {
+            console.error("Gagal memuat sekolah binaan:", e);
+          }
+        }
         
         // Step 1: Fetch first page to get metadata and check for pre-calculated rekap
         const firstPage = await dapodikService.getPesertaDidik(100, "", 1, undefined, "aktif", undefined, targetSekolahId);
-        console.log("DEBUG: Full Meta Data Inspect:", firstPage?.meta || firstPage?.summary || "No Meta");
         
         const meta = firstPage?.meta || {};
         const totalOverall = meta.total_data || firstPage.total || meta.total || 0;
@@ -39,8 +54,7 @@ export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTer
         // Look for breakdown in metadata first (Strategy 1)
         const rekapRaw = firstPage.rekap_tingkat || meta.rekap_tingkat || firstPage.summary?.rekap_tingkat || firstPage.rekap?.tingkat || meta.rekap?.tingkat;
 
-        if (Array.isArray(rekapRaw) && rekapRaw.length > 0) {
-            console.log("DEBUG: Using pre-calculated rekap from metadata");
+        if (!isPengawas && Array.isArray(rekapRaw) && rekapRaw.length > 0) {
             mappedData = rekapRaw.map((item: any) => {
                 const rawT = String(item.tingkat || item.tingkat_pendidikan || "").toUpperCase();
                 let displayT = "Tingkat " + rawT.replace("KELAS", "").trim();
@@ -58,8 +72,6 @@ export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTer
             });
         } else {
             // Strategy 2: Manual Aggregation by fetching ALL pages (required since limit is capped at 100)
-            console.warn(`DEBUG: Metadata breakdown not found. Fetching all ${totalOverall} students in pages...`);
-            
             let allStudents: any[] = firstPage.data || [];
             const maxLimit = 100; // Backend usually caps at 100
             const totalPages = Math.ceil(totalOverall / maxLimit);
@@ -75,6 +87,10 @@ export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTer
                     const pageData = pageRes.data || (Array.isArray(pageRes) ? pageRes : []);
                     allStudents = [...allStudents, ...pageData];
                 });
+            }
+
+            if (isPengawas && binaanIds.length > 0) {
+              allStudents = allStudents.filter(pd => binaanIds.includes(pd.identitas?.sekolah_id || pd.sekolah_id));
             }
 
             console.log(`DEBUG: Total records fetched for aggregation: ${allStudents.length}`);
@@ -134,7 +150,7 @@ export default function RekapPDTable({ searchTerm = "", sekolahId }: { searchTer
       }
     };
     fetchData();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas]);
 
   const safeRekapData = Array.isArray(rekapData) ? rekapData : [];
   const filteredData = safeRekapData.filter(item => 

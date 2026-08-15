@@ -97,7 +97,7 @@ export default function StudentData() {
     const fetchFilterData = async () => {
       try {
         const response = isPengawas 
-          ? await mandalaService.getSekolahBinaan() 
+          ? await mandalaService.getSekolahBinaanFull() 
           : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {
@@ -132,7 +132,7 @@ export default function StudentData() {
       setLoadingCounts(true);
       try {
         const response = isPengawas 
-          ? await mandalaService.getSekolahBinaan() 
+          ? await mandalaService.getSekolahBinaanFull() 
           : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {
@@ -314,6 +314,11 @@ export default function StudentData() {
             }
             fetchedData = [...fetchedData, ...pageData];
           });
+        }
+
+        if (isPengawas && !targetSekolahId && allSchools.length > 0) {
+          const binaanIds = allSchools.map(s => s.sekolah_id);
+          fetchedData = fetchedData.filter(item => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
         }
 
         exportData = fetchedData;
@@ -503,6 +508,11 @@ export default function StudentData() {
           }
           fetchedData = [...fetchedData, ...pageData];
         });
+      }
+
+      if (isPengawas && !targetSekolahId && allSchools.length > 0) {
+        const binaanIds = allSchools.map(s => s.sekolah_id);
+        fetchedData = fetchedData.filter(item => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
       }
 
       setPrintData(fetchedData);

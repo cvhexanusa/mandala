@@ -164,7 +164,7 @@ export default function SpasialData() {
     try {
       setLoading(true);
       const [response, mappingResponse] = await Promise.all([
-        isPengawas ? mandalaService.getSekolahBinaan() : mandalaService.getSchools(),
+        isPengawas ? mandalaService.getSekolahBinaanFull() : mandalaService.getSchools(),
         mandalaService.getMappingPengawas().catch(err => {
           console.error("Gagal mengambil mapping pengawas:", err);
           return { data: [] };

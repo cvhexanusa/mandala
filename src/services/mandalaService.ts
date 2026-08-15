@@ -285,7 +285,73 @@ export const mandalaService = {
     const response = await api.get('/mandala/pengawas/sekolah-binaan');
     return response.data;
   },
+
+  clearSekolahBinaanCache: () => {
+    sekolahBinaanFullCachePromise = null;
+  },
+
+  getSekolahBinaanFull: async () => {
+    if (sekolahBinaanFullCachePromise) {
+      return sekolahBinaanFullCachePromise;
+    }
+
+    sekolahBinaanFullCachePromise = (async () => {
+      try {
+        const [binaanRes, schoolsRes] = await Promise.all([
+          api.get('/mandala/pengawas/sekolah-binaan'),
+          api.get('/mandala/sekolah')
+        ]);
+
+        let binaanList: any[] = [];
+        const bData = binaanRes?.data;
+        if (bData?.status === 'success' || bData?.success === true) {
+          binaanList = bData.data || [];
+        } else if (Array.isArray(bData)) {
+          binaanList = bData;
+        } else if (bData?.data && Array.isArray(bData.data)) {
+          binaanList = bData.data;
+        }
+
+        let allSchools: any[] = [];
+        const sData = schoolsRes?.data;
+        if (sData?.status === 'success' || sData?.success === true) {
+          allSchools = sData.data || [];
+        } else if (Array.isArray(sData)) {
+          allSchools = sData;
+        } else if (sData?.data && Array.isArray(sData.data)) {
+          allSchools = sData.data;
+        }
+
+        const binaanIds = new Set(binaanList.map((item: any) => item.sekolah_id || item.id));
+
+        // Filter full schools matching binaan IDs
+        const matchedSchools = allSchools.filter((s: any) => binaanIds.has(s.sekolah_id || s.id));
+
+        // Fallback: If any binaan school is not in allSchools, include it from binaanList
+        binaanList.forEach((bItem: any) => {
+          const bId = bItem.sekolah_id || bItem.id;
+          if (bId && !matchedSchools.some((s: any) => (s.sekolah_id || s.id) === bId)) {
+            matchedSchools.push(bItem);
+          }
+        });
+
+        return {
+          status: 'success',
+          success: true,
+          data: matchedSchools
+        };
+      } catch (error: any) {
+        sekolahBinaanFullCachePromise = null;
+        console.error('Gagal mengambil data sekolah binaan full:', error);
+        throw error;
+      }
+    })();
+
+    return sekolahBinaanFullCachePromise;
+  },
 };
+
+let sekolahBinaanFullCachePromise: Promise<any> | null = null;
 
 export interface Pelaporan {
   pelaporan_id: string;

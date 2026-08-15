@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import {
   Table,
   TableBody,
@@ -19,6 +21,9 @@ interface RekapPDUsia {
 }
 
 export default function RekapPDUsiaTable({ sekolahId }: { sekolahId?: string }) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [rekapData, setRekapData] = useState<RekapPDUsia[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,8 +33,22 @@ export default function RekapPDUsiaTable({ sekolahId }: { sekolahId?: string }) 
       try {
         const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
         let mappedData: RekapPDUsia[] = [];
+
+        let binaanIds: string[] = [];
+        if (isPengawas) {
+          try {
+            const bRes = await mandalaService.getSekolahBinaan();
+            const bList = bRes?.data || (Array.isArray(bRes) ? bRes : []);
+            binaanIds = bList.map((s: any) => s.sekolah_id);
+          } catch (e) {
+            console.error("Gagal memuat sekolah binaan:", e);
+          }
+        }
         
         try {
+          if (isPengawas && !targetSekolahId) {
+            throw new Error("Skipping strategy 1 for Pengawas global view");
+          }
           // Attempt Strategy 1: Specialized endpoint (keep as fallback/try first)
           const result = await dapodikService.getPdRekapUsia(targetSekolahId);
           const responseData = result?.data ?? result;
@@ -70,6 +89,10 @@ export default function RekapPDUsiaTable({ sekolahId }: { sekolahId?: string }) 
                   const pageData = pageRes.data || (Array.isArray(pageRes) ? pageRes : []);
                   allStudents = [...allStudents, ...pageData];
               });
+          }
+
+          if (isPengawas && binaanIds.length > 0) {
+            allStudents = allStudents.filter(pd => binaanIds.includes(pd.identitas?.sekolah_id || pd.sekolah_id));
           }
 
           if (allStudents.length > 0) {
@@ -141,7 +164,7 @@ export default function RekapPDUsiaTable({ sekolahId }: { sekolahId?: string }) 
       }
     };
     fetchData();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas]);
 
   const grandTotal = rekapData.reduce((acc, curr) => ({
     lakiLaki: acc.lakiLaki + curr.lakiLaki,

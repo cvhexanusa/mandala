@@ -11,6 +11,8 @@ import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { EyeIcon } from "../../icons";
 import { getFotoUrl } from "../../utils/image";
 import { formatPtkInduk } from "../../utils/dapodikUtils";
@@ -25,11 +27,37 @@ interface NonAktifTableProps {
 }
 
 export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm, completenessFilter: _completenessFilter, itemsPerPage, sekolahId }: NonAktifTableProps) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [currentPage, setCurrentPage] = useState(1);
   const [allGTK, setAllGTK] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<any[]>([]);
+  const [schools, setSchools] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const response = isPengawas
+          ? await mandalaService.getSekolahBinaanFull()
+          : await dapodikService.getSekolah();
+        let schoolList = [];
+        if (response.status === 'success' || response.success === true) {
+          schoolList = response.data || [];
+        } else if (Array.isArray(response)) {
+          schoolList = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          schoolList = response.data;
+        }
+        setSchools(schoolList);
+      } catch (error) {
+        console.error("Gagal mengambil daftar sekolah:", error);
+      }
+    };
+    fetchSchools();
+  }, [isPengawas]);
 
   useEffect(() => {
     const fetchAllGTK = async () => {
@@ -89,6 +117,11 @@ export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm,
           });
         }
 
+        if (isPengawas && schools.length > 0) {
+          const binaanIds = schools.map((s: any) => s.sekolah_id);
+          fetchedData = fetchedData.filter((item: any) => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
+        }
+
         setAllGTK(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data GTK non-aktif:", error);
@@ -97,7 +130,7 @@ export default function NonAktifTable({ onSelectionChange, onDetail, searchTerm,
       }
     };
     fetchAllGTK();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas, schools]);
 
   // Client-side filtering & search
   const filteredGTK = useMemo(() => {

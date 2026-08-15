@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import {
   Table,
   TableBody,
@@ -20,6 +22,9 @@ interface RekapGTK {
 }
 
 export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTerm?: string; sekolahId?: string }) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [rekapData, setRekapData] = useState<RekapGTK[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +35,21 @@ export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTe
         const targetSekolahId = (sekolahId === "all" || !sekolahId) ? undefined : sekolahId;
         let mappedData: RekapGTK[] = [];
         
+        let binaanIds: string[] = [];
+        if (isPengawas) {
+          try {
+            const bRes = await mandalaService.getSekolahBinaan();
+            const bList = bRes?.data || (Array.isArray(bRes) ? bRes : []);
+            binaanIds = bList.map((s: any) => s.sekolah_id);
+          } catch (e) {
+            console.error("Gagal memuat sekolah binaan:", e);
+          }
+        }
+
         try {
+          if (isPengawas && !targetSekolahId) {
+            throw new Error("Skipping strategy 1 for Pengawas global view");
+          }
           // Attempt Strategy 1: Specialized endpoint
           const result = await dapodikService.getGtkRekapKategori(targetSekolahId);
           const responseData = result?.data ?? result;
@@ -62,7 +81,7 @@ export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTe
               throw new Error("No rekap data found");
           }
         } catch (apiError) {
-          console.warn("Rekap GTK Kategori API failed, fetching ALL pages for accuracy...");
+          console.warn("Rekap GTK Kategori API fallback, fetching ALL pages for accuracy...");
           
           // Strategy 2: Fetch ALL pages and aggregate manually
           const firstPage = await dapodikService.getGTK(100, "", 1, undefined, "aktif", targetSekolahId);
@@ -78,6 +97,10 @@ export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTe
               }
               const otherPages = await Promise.all(promises);
               otherPages.forEach(p => allGTK = [...allGTK, ...(p.data || [])]);
+          }
+
+          if (isPengawas && binaanIds.length > 0) {
+            allGTK = allGTK.filter(gtk => binaanIds.includes(gtk.identitas?.sekolah_id || gtk.sekolah_id));
           }
 
           if (allGTK.length > 0) {
@@ -109,7 +132,7 @@ export default function RekapGTKTable({ searchTerm = "", sekolahId }: { searchTe
       }
     };
     fetchData();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas]);
 
   const filteredData = rekapData.filter(item => 
     (item.kategori || "").toLowerCase().includes((searchTerm || "").toLowerCase())

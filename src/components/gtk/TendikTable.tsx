@@ -11,6 +11,8 @@ import Pagination from "../common/Pagination";
 import Checkbox from "../form/input/Checkbox";
 import Avatar from "../ui/avatar/Avatar";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { EyeIcon } from "../../icons";
 import { getFotoUrl } from "../../utils/image";
 import { formatPtkInduk } from "../../utils/dapodikUtils";
@@ -25,6 +27,9 @@ interface TendikTableProps {
 }
 
 export default function TendikTable({ onSelectionChange, onDetail, searchTerm, completenessFilter, itemsPerPage, sekolahId }: TendikTableProps) {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [currentPage, setCurrentPage] = useState(1);
   const [allTendik, setAllTendik] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,7 +38,9 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, c
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas
+          ? await mandalaService.getSekolahBinaanFull()
+          : await dapodikService.getSekolah();
         let schoolList = [];
         if (response.status === 'success' || response.success === true) {
           schoolList = response.data || [];
@@ -48,7 +55,7 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, c
       }
     };
     fetchSchools();
-  }, []);
+  }, [isPengawas]);
 
   const getSchoolName = (sekolahId: string) => {
     const school = schools.find((s) => s.sekolah_id === sekolahId);
@@ -116,6 +123,11 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, c
           });
         }
 
+        if (isPengawas && schools.length > 0) {
+          const binaanIds = schools.map((s: any) => s.sekolah_id);
+          fetchedData = fetchedData.filter((item: any) => binaanIds.includes(item.identitas?.sekolah_id || item.sekolah_id));
+        }
+
         setAllTendik(fetchedData);
       } catch (error) {
         console.error("Gagal mengambil data tendik:", error);
@@ -124,7 +136,7 @@ export default function TendikTable({ onSelectionChange, onDetail, searchTerm, c
       }
     };
     fetchAllTendik();
-  }, [sekolahId]);
+  }, [sekolahId, isPengawas, schools]);
 
   // Client-side filtering & search
   const filteredTendik = useMemo(() => {
