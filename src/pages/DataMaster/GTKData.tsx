@@ -14,6 +14,7 @@ import RekapGTKUsiaTable from "../../components/gtk/RekapGTKUsiaTable";
 import { useModal } from "../../hooks/useModal";
 import EditGTKModal from "../../components/gtk/EditGTKModal";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
@@ -31,6 +32,7 @@ export default function GTKData() {
   const { user } = useAuth();
   const { sekolah } = useSekolah();
   const isOperator = user?.role?.toLowerCase().includes("operator");
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
   const mySchoolId = isOperator ? (sekolah?.sekolah_id || user?.instansi_id) : user?.instansi_id;
   
   // Initialize active tab safely
@@ -96,7 +98,9 @@ export default function GTKData() {
   useEffect(() => {
     const fetchFilterData = async () => {
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas 
+          ? await mandalaService.getSekolahBinaan() 
+          : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {
           schools = response.data || [];
@@ -123,7 +127,7 @@ export default function GTKData() {
       }
     };
     fetchFilterData();
-  }, []);
+  }, [isPengawas]);
 
   // Fetch GTK counts to show in schools list directory
   useEffect(() => {

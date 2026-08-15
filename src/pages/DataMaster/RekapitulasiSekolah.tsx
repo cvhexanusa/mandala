@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import Badge from "../../components/ui/badge/Badge";
 import { formatJenjang } from "../../utils/dapodikUtils";
@@ -33,6 +35,9 @@ interface KabupatenStats {
 export default function RekapitulasiSekolah() {
   const { role } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [data, setData] = useState<KabupatenStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedKabupaten, setExpandedKabupaten] = useState<Record<string, boolean>>({});
@@ -45,14 +50,12 @@ export default function RekapitulasiSekolah() {
     total: 0,
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await dapodikService.getSekolah();
+      const response = isPengawas
+        ? await mandalaService.getSekolahBinaan()
+        : await dapodikService.getSekolah();
       let schools = [];
       
       if (response.status === 'success' || response.success === true) {
@@ -168,7 +171,11 @@ export default function RekapitulasiSekolah() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isPengawas]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const toggleExpand = (kabName: string) => {
     setExpandedKabupaten((prev) => ({

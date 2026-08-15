@@ -68,6 +68,7 @@ export default function MandalaDashboard() {
   const { settings } = useSystemSettings();
   const roleSlug = role || 'admin';
   const isOperator = user?.role?.toLowerCase().includes("operator");
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
 
   // Global School List
   const [schools, setSchools] = useState<MandalaSchool[]>([]);
@@ -99,6 +100,7 @@ export default function MandalaDashboard() {
     if (user) {
       const userObj = user as any;
       const isOperatorUser = user.role?.toLowerCase().includes("operator");
+      const isPengawasUser = user.role?.toLowerCase().includes("pengawas") || user.jabatan === 6 || userObj.jabatan === '6';
       if (isOperatorUser) {
         if (sekolah?.nama) {
           setInstansiName(sekolah.nama);
@@ -109,6 +111,8 @@ export default function MandalaDashboard() {
         } else {
           setInstansiName("Sekolah Anda");
         }
+      } else if (isPengawasUser) {
+        setInstansiName("Sekolah Binaan Pengawas");
       } else {
         if (userObj.cadisdik) {
           setInstansiName(userObj.cadisdik);
@@ -162,7 +166,10 @@ export default function MandalaDashboard() {
     try {
       setLoadingSchools(true);
       setError(null);
-      const response = await mandalaService.getSchools();
+      const isPengawasUser = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+      const response = isPengawasUser
+        ? await mandalaService.getSekolahBinaan()
+        : await mandalaService.getSchools();
       
       let fetchedSchools: MandalaSchool[] = [];
       if (response && (response.status === 'success' || response.success === true)) {
@@ -312,8 +319,12 @@ export default function MandalaDashboard() {
     }
   }, [user, fetchAntrianData, fetchPelaporanData]);
 
-  const displaySiswa = globalSiswa !== null ? globalSiswa : 0;
-  const displayGuru = globalGuru !== null ? globalGuru : 0;
+  // Accumulate totals for active students and GTK across all loaded schools
+  const totalSiswaAll = schools.reduce((acc, s) => acc + (s.total_siswa || s.jumlah_siswa || 0), 0);
+  const totalGTKAll = schools.reduce((acc, s) => acc + (s.total_gtk || s.jumlah_guru || 0), 0);
+
+  const displaySiswa = isPengawas ? totalSiswaAll : (globalSiswa !== null ? globalSiswa : 0);
+  const displayGuru = isPengawas ? totalGTKAll : (globalGuru !== null ? globalGuru : 0);
   const displayTendik = globalTendik !== null ? globalTendik : 0;
 
   // Get Greeting based on current local hour
@@ -340,10 +351,6 @@ export default function MandalaDashboard() {
     .sort((a, b) => b.count - a.count);
 
   const maxKecamatanCount = kecamatanStats.length > 0 ? kecamatanStats[0].count : 1;
-
-  // Accumulate totals for active students and GTK across all schools
-  const totalSiswaAll = schools.reduce((acc, s) => acc + (s.total_siswa || s.jumlah_siswa || 0), 0);
-  const totalGTKAll = schools.reduce((acc, s) => acc + (s.total_gtk || s.jumlah_guru || 0), 0);
 
   const siswaChartOptions: ApexOptions = {
     colors: ["#3b82f6"],

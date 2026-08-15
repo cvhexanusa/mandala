@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap, useMapEvents, Polyline, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import PageMeta from '../../components/common/PageMeta';
 import { mandalaService, MandalaSchool } from '../../services/mandalaService';
+import { useAuth } from '../../context/AuthContext';
 import Select from '../../components/form/Select';
 import Badge from '../../components/ui/badge/Badge';
 import { formatJenjang } from '../../utils/dapodikUtils';
@@ -124,6 +125,9 @@ function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }
 }
 
 export default function SpasialData() {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [schools, setSchools] = useState<MandalaSchool[]>([]);
   const [loading, setLoading] = useState(true);
   const [mappings, setMappings] = useState<Record<string, string>>({});
@@ -156,28 +160,11 @@ export default function SpasialData() {
   const [searchResults, setSearchResults] = useState<MandalaSchool[]>([]);
   const [activePopupSchool, setActivePopupSchool] = useState<MandalaSchool | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setSearchResults([]);
-    } else {
-      const q = searchQuery.toLowerCase();
-      const results = schools.filter(s => 
-        (s.nama && s.nama.toLowerCase().includes(q)) || 
-        (s.npsn && s.npsn.toLowerCase().includes(q))
-      );
-      setSearchResults(results.slice(0, 5));
-    }
-  }, [searchQuery, schools]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [response, mappingResponse] = await Promise.all([
-        mandalaService.getSchools(),
+        isPengawas ? mandalaService.getSekolahBinaan() : mandalaService.getSchools(),
         mandalaService.getMappingPengawas().catch(err => {
           console.error("Gagal mengambil mapping pengawas:", err);
           return { data: [] };
@@ -240,7 +227,24 @@ export default function SpasialData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isPengawas]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setSearchResults([]);
+    } else {
+      const q = searchQuery.toLowerCase();
+      const results = schools.filter(s => 
+        (s.nama && s.nama.toLowerCase().includes(q)) || 
+        (s.npsn && s.npsn.toLowerCase().includes(q))
+      );
+      setSearchResults(results.slice(0, 5));
+    }
+  }, [searchQuery, schools]);
 
   const handleSelectSearchSchool = (school: MandalaSchool) => {
     const lat = parseFloat(school.lintang as string);

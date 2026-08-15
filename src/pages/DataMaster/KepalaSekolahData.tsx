@@ -16,6 +16,8 @@ import Avatar from "../../components/ui/avatar/Avatar";
 import { getFotoUrl } from "../../utils/image";
 import Badge from "../../components/ui/badge/Badge";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
@@ -23,6 +25,8 @@ import PrintReportLayout, { PrintSignature } from "../../components/common/Print
 export default function KepalaSekolahData() {
   const navigate = useNavigate();
   const { role } = useParams();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
   
   const [schools, setSchools] = useState<any[]>([]);
   const [headmasters, setHeadmasters] = useState<any[]>([]);
@@ -35,7 +39,7 @@ export default function KepalaSekolahData() {
       setLoading(true);
       try {
         const [schoolRes, gtkRes] = await Promise.all([
-          dapodikService.getSekolah(),
+          isPengawas ? mandalaService.getSekolahBinaan() : dapodikService.getSekolah(),
           dapodikService.getGTK(500, "", 1, "tendik", "aktif")
         ]);
 
@@ -72,7 +76,7 @@ export default function KepalaSekolahData() {
     };
 
     loadData();
-  }, []);
+  }, [isPengawas]);
 
   const schoolOptions = [
     { value: "all", label: "Pilih Sekolah" },

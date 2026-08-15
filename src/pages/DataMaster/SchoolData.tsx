@@ -5,9 +5,14 @@ import Select from "../../components/form/Select";
 import { SearchIcon } from "../../icons";
 import SchoolTable from "../../components/school/SchoolTable";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { formatJenjang } from "../../utils/dapodikUtils";
 
 export default function SchoolData() {
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [searchQuery, setSearchQuery] = useState("");
   const [kabKotaFilter, setKabKotaFilter] = useState("all");
   const [kecamatanFilter, setKecamatanFilter] = useState("all");
@@ -23,7 +28,9 @@ export default function SchoolData() {
   useEffect(() => {
     const fetchFilterData = async () => {
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas 
+          ? await mandalaService.getSekolahBinaan() 
+          : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {
           schools = response.data || [];
@@ -50,7 +57,7 @@ export default function SchoolData() {
       }
     };
     fetchFilterData();
-  }, []);
+  }, [isPengawas]);
 
   // Filter Kecamatan based on Kab/Kota
   useEffect(() => {
@@ -76,10 +83,12 @@ export default function SchoolData() {
         {/* Header Section */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 no-print">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            Data Satuan Pendidikan
+            {isPengawas ? "Data Sekolah Binaan" : "Data Satuan Pendidikan"}
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Daftar seluruh sekolah yang terhubung di bawah sistem Mandala.
+            {isPengawas 
+              ? "Daftar sekolah binaan yang dipetakan kepada Anda sebagai Pengawas Pembina." 
+              : "Daftar seluruh sekolah yang terhubung di bawah sistem Mandala."}
           </p>
         </div>
 

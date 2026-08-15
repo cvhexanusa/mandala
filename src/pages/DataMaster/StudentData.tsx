@@ -14,6 +14,7 @@ import EditStudentModal from "../../components/student/EditStudentModal";
 import Swal from "sweetalert2";
 import { exportToExcel } from "../../utils/exportUtils";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
 import { formatJenjang } from "../../utils/dapodikUtils";
 import { useAuth } from "../../context/AuthContext";
@@ -29,6 +30,7 @@ export default function StudentData() {
   const { user } = useAuth();
   const { sekolah } = useSekolah();
   const isOperator = user?.role?.toLowerCase().includes("operator");
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
   const mySchoolId = isOperator ? (sekolah?.sekolah_id || user?.instansi_id) : user?.instansi_id;
   
   // Initialize active tab safely
@@ -94,7 +96,9 @@ export default function StudentData() {
   useEffect(() => {
     const fetchFilterData = async () => {
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas 
+          ? await mandalaService.getSekolahBinaan() 
+          : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {
           schools = response.data || [];
@@ -121,13 +125,15 @@ export default function StudentData() {
       }
     };
     fetchFilterData();
-  }, []);
+  }, [isPengawas]);
 
   useEffect(() => {
     const fetchCounts = async () => {
       setLoadingCounts(true);
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas 
+          ? await mandalaService.getSekolahBinaan() 
+          : await dapodikService.getSekolah();
         let schools = [];
         if (response.status === 'success' || response.success === true) {
           schools = response.data || [];

@@ -9,6 +9,8 @@ import {
 import Badge from "../ui/badge/Badge";
 import Pagination from "../common/Pagination";
 import { dapodikService } from "../../services/dapodikService";
+import { mandalaService } from "../../services/mandalaService";
+import { useAuth } from "../../context/AuthContext";
 import { EyeIcon } from "../../icons";
 import { useNavigate, useParams } from "react-router";
 import { formatJenjang } from "../../utils/dapodikUtils";
@@ -67,6 +69,9 @@ export default function SchoolTable({
 }: SchoolTableProps) {
   const navigate = useNavigate();
   const { role } = useParams();
+  const { user } = useAuth();
+  const isPengawas = user?.role?.toLowerCase().includes("pengawas") || user?.jabatan === 6 || (user as any)?.jabatan === '6';
+
   const [allSchools, setAllSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,7 +81,9 @@ export default function SchoolTable({
     const fetchSchools = async () => {
       setLoading(true);
       try {
-        const response = await dapodikService.getSekolah();
+        const response = isPengawas 
+          ? await mandalaService.getSekolahBinaan() 
+          : await dapodikService.getSekolah();
         let sekolahData = [];
         
         if (response.status === 'success' || response.success === true) {
@@ -95,7 +102,7 @@ export default function SchoolTable({
     };
 
     fetchSchools();
-  }, []);
+  }, [isPengawas]);
 
   // Reset page when filters change
   useEffect(() => {

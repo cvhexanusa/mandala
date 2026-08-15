@@ -48,11 +48,12 @@ const isTokenExpired = (token: string): boolean => {
 
 const normalizeUser = (p: any): User | null => {
   if (!p) return null;
+  const isOp = p.role?.toLowerCase().includes('operator') || p.jabatan === 0 || p.jabatan === '0';
   return {
     ...p,
     id: p.id || p.pegawai_id || '',
     nama: p.nama || p.nama_lengkap || 'Pengguna',
-    role: p.role || (p.jabatan === 0 ? 'Operator Sekolah' : 'Pegawai'),
+    role: p.role || (isOp ? 'Operator Sekolah' : 'Pegawai'),
     instansi_id: p.instansi_id || p.sekolah_id || undefined,
   };
 };
@@ -94,7 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(null);
             }
           } else {
-            setUser(normalizeUser(JSON.parse(savedUser)));
+            const parsed = JSON.parse(savedUser);
+            const normalized = normalizeUser(parsed);
+            if (normalized && JSON.stringify(normalized) !== savedUser) {
+              localStorage.setItem('user_data', JSON.stringify(normalized));
+            }
+            setUser(normalized);
           }
         } catch (err) {
           console.error("Gagal membaca data user dari storage:", err);
