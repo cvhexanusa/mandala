@@ -137,7 +137,7 @@ export default function SchoolData() {
           </div>
 
           <SchoolTable 
-            searchTerm={searchQuery}
+            searchQuery={searchQuery}
             kabKotaFilter={kabKotaFilter}
             kecamatanFilter={kecamatanFilter}
             statusFilter={statusFilter}

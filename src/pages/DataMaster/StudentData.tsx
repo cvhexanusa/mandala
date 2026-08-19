@@ -16,6 +16,7 @@ import { exportToExcel } from "../../utils/exportUtils";
 import { dapodikService } from "../../services/dapodikService";
 import { mandalaService } from "../../services/mandalaService";
 import PrintReportLayout, { PrintSignature } from "../../components/common/PrintReportLayout";
+import Pagination from "../../components/common/Pagination";
 import { formatJenjang } from "../../utils/dapodikUtils";
 import { useAuth } from "../../context/AuthContext";
 import { useSekolah } from "../../context/SekolahContext";
@@ -83,6 +84,11 @@ export default function StudentData() {
   const [jenjangFilter, setJenjangFilter] = useState("all");
   const [sekolahFilter, setSekolahFilter] = useState("all");
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentSchoolPage, setCurrentSchoolPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentSchoolPage(1);
+  }, [searchQuery, kabKotaFilter, kecamatanFilter, statusFilter, jenjangFilter]);
 
   const [kabKotaOptions, setKabKotaOptions] = useState([{ value: "all", label: "Kab/Kota" }]);
   const [kecamatanOptions, setKecamatanOptions] = useState([{ value: "all", label: "Kecamatan" }]);
@@ -216,6 +222,10 @@ export default function StudentData() {
 
     return matchesSearch && matchesKabKota && matchesKecamatan && matchesStatus && matchesJenjang;
   });
+
+  const schoolItemsPerPage = 10;
+  const totalSchoolPages = Math.ceil(filteredSchoolsList.length / schoolItemsPerPage) || 1;
+  const currentSchoolsData = filteredSchoolsList.slice((currentSchoolPage - 1) * schoolItemsPerPage, currentSchoolPage * schoolItemsPerPage);
 
   const gradeOptions = [
     { value: "all", label: "Semua Tingkat" },
@@ -733,8 +743,9 @@ export default function StudentData() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-white/[0.05]">
-                        {filteredSchoolsList.length > 0 ? (
-                          filteredSchoolsList.map((school, index) => {
+                        {currentSchoolsData.length > 0 ? (
+                          currentSchoolsData.map((school, idx) => {
+                            const index = (currentSchoolPage - 1) * schoolItemsPerPage + idx;
                             const counts = studentCounts[school.sekolah_id] || { aktif: 0, keluar: 0 };
                             return (
                               <tr key={school.sekolah_id}>
@@ -767,6 +778,11 @@ export default function StudentData() {
                       </tbody>
                     </table>
                   </div>
+                  <Pagination 
+                    currentPage={currentSchoolPage} 
+                    totalPages={totalSchoolPages} 
+                    onPageChange={(page) => setCurrentSchoolPage(page)} 
+                  />
                 </div>
               ) : (
                 /* Selected School Student Table */

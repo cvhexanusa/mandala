@@ -49,7 +49,7 @@ const getSyncStatus = (dateStr: string) => {
     text = `${diffHour} jam yang lalu`;
   } else if (diffDay < 7) {
     text = `${diffDay} hari yang lalu`;
-  } else if (diffWeek < 4) {
+  } else if (diffDay < 30) {
     text = `${diffWeek} minggu yang lalu`;
   } else if (diffMonth < 12) {
     text = `${diffMonth} bulan yang lalu`;
