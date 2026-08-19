@@ -547,8 +547,21 @@ const EditGTKModal: React.FC<EditGTKModalProps> = ({ isOpen, onClose, selectedId
       await dapodikService.updateGtk(selectedIds[0], updatePayload);
       onClose(); 
       Swal.fire({ title: "Berhasil", text: "Data Berhasil disimpan", icon: "success", confirmButtonColor: "#465FFF" });
-    } catch (error) {
-      Swal.fire("Error", "Gagal menyimpan data", "error");
+    } catch (error: any) {
+      let errorMsg = "Gagal menyimpan data";
+      if (error?.response?.data?.message) {
+        errorMsg = typeof error.response.data.message === 'string' 
+          ? error.response.data.message 
+          : JSON.stringify(error.response.data.message);
+      } else if (error?.message) {
+        errorMsg = error.message;
+      }
+
+      if (errorMsg.includes("Unique constraint failed") && errorMsg.includes("email")) {
+        errorMsg = "Email sudah digunakan oleh data lain. Silakan gunakan email yang berbeda.";
+      }
+      
+      Swal.fire("Error", errorMsg, "error");
     } finally {
       setLoading(false);
     }

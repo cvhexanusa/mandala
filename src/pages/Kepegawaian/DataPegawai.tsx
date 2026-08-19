@@ -516,6 +516,11 @@ export default function DataPegawai({ showOnlyInactive = false }: DataPegawaiPro
         }
       }
       
+      // Friendly message for duplicate email
+      if (errorText && errorText.includes("Unique constraint failed") && errorText.includes("email")) {
+          errorText = "Email sudah digunakan oleh pegawai lain. Silakan gunakan email yang berbeda.";
+      }
+      
       Swal.fire({
         icon: "error",
         title: "Gagal Menyimpan",
