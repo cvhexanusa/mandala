@@ -6,7 +6,7 @@ PassengerAppType node
 PassengerStartupFile server.js
 # DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
 
-DirectoryIndex index.html dist/index.html
+DirectoryIndex dist/index.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -15,21 +15,21 @@ DirectoryIndex index.html dist/index.html
   # 1. Redirect request storage langsung ke backend SIMAK
   RewriteRule ^storage/(.*)$ https://centralsimak.smakniscjr.sch.id/storage/$1 [R=302,L,QSA]
 
-  # 2. Blokir akses ke file source typescript mentah
-  RewriteRule ^src/ - [F,L]
+  # 2. Blokir akses ke file source typescript mentah & konfigurasi
+  RewriteRule ^(src|\.git|\.env|node_modules|package\.json|vite\.config\.ts) - [F,L]
 
-  # 3. Jika file aset ada di root, serve langsung
-  RewriteCond %{REQUEST_FILENAME} -f
-  RewriteRule ^ - [L]
-
-  # 4. Jika file aset ada di dalam folder /dist/, serve dari /dist/
+  # 3. Jika file aset ada di dalam folder /dist/, serve dari /dist/
   RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
   RewriteRule ^(.*)$ dist/$1 [L]
 
-  # 5. SPA Fallback untuk React Router
+  # 4. Jika file aset ada di root (misal favicon), serve langsung
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # 5. SPA Fallback: arahkan semua route ke file hasil build (dist/index.html)
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^ index.html [L]
+  RewriteRule ^ dist/index.html [L]
 </IfModule>
 
 # DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION BEGIN
