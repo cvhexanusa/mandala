@@ -188,18 +188,22 @@ export default function MandalaDashboard() {
       const schoolsWithStats = await Promise.all(
         fetchedSchools.map(async (school) => {
           try {
-            const [aktifRes, gtkRes] = await Promise.all([
+            const [aktifRes, guruRes, tendikRes] = await Promise.all([
               dapodikService.getPesertaDidik(1, "", 1, undefined, "aktif", undefined, school.sekolah_id),
-              dapodikService.getGTK(1, "", 1, undefined, "aktif", school.sekolah_id)
+              dapodikService.getGTK(1, "", 1, "guru", "aktif", school.sekolah_id),
+              dapodikService.getGTK(1, "", 1, "tendik", "aktif", school.sekolah_id)
             ]);
             
             const totalActiveStudents = getCountHelper(aktifRes);
-            const totalActiveGTK = getCountHelper(gtkRes);
+            const totalActiveGuru = getCountHelper(guruRes);
+            const totalActiveTendik = getCountHelper(tendikRes);
             
             return {
               ...school,
               total_siswa: totalActiveStudents,
-              total_gtk: totalActiveGTK
+              total_gtk: totalActiveGuru + totalActiveTendik,
+              total_guru: totalActiveGuru,
+              total_tendik: totalActiveTendik
             };
           } catch (err) {
             console.error(`Gagal mengambil data riil dapodik untuk sekolah ${school.sekolah_id}:`, err);
@@ -321,11 +325,13 @@ export default function MandalaDashboard() {
 
   // Accumulate totals for active students and GTK across all loaded schools
   const totalSiswaAll = schools.reduce((acc, s) => acc + (s.total_siswa || s.jumlah_siswa || 0), 0);
+  const totalGuruAll = schools.reduce((acc, s) => acc + (s.total_guru || s.jumlah_guru || 0), 0);
+  const totalTendikAll = schools.reduce((acc, s) => acc + (s.total_tendik || 0), 0);
   const totalGTKAll = schools.reduce((acc, s) => acc + (s.total_gtk || s.jumlah_guru || 0), 0);
 
   const displaySiswa = isPengawas ? totalSiswaAll : (globalSiswa !== null ? globalSiswa : 0);
-  const displayGuru = isPengawas ? totalGTKAll : (globalGuru !== null ? globalGuru : 0);
-  const displayTendik = isPengawas ? 0 : (globalTendik !== null ? globalTendik : 0);
+  const displayGuru = isPengawas ? totalGuruAll : (globalGuru !== null ? globalGuru : 0);
+  const displayTendik = isPengawas ? totalTendikAll : (globalTendik !== null ? globalTendik : 0);
 
   // Get Greeting based on current local hour
   const getGreeting = () => {
