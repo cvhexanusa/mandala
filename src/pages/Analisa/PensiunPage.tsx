@@ -162,6 +162,11 @@ export default function PensiunPage() {
   const processedGTKData = useMemo(() => {
     return gtkData
       .filter((item) => {
+        if (isPengawas) {
+          const isMapped = schools.some(s => s.sekolah_id === item.identitas?.sekolah_id || s.id === item.identitas?.sekolah_id);
+          if (!isMapped) return false;
+        }
+
         const status = item.kepegawaian?.status_kepegawaian?.toUpperCase() || "";
         const isTargetStatus = status === "PNS" || status === "PPPK" || status === "P3K";
         const isPtkInduk = formatPtkInduk(item.kepegawaian?.ptk_induk) === "Ya";

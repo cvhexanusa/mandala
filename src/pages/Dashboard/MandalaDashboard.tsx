@@ -325,7 +325,7 @@ export default function MandalaDashboard() {
 
   const displaySiswa = isPengawas ? totalSiswaAll : (globalSiswa !== null ? globalSiswa : 0);
   const displayGuru = isPengawas ? totalGTKAll : (globalGuru !== null ? globalGuru : 0);
-  const displayTendik = globalTendik !== null ? globalTendik : 0;
+  const displayTendik = isPengawas ? 0 : (globalTendik !== null ? globalTendik : 0);
 
   // Get Greeting based on current local hour
   const getGreeting = () => {
